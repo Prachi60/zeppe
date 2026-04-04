@@ -17,6 +17,22 @@ export function getStoreCoverImage(storeId) {
   return STORE_IMAGE_POOL[hash % STORE_IMAGE_POOL.length];
 }
 
+export function resolveStoreCoverImage(store = {}) {
+  return (
+    String(store.shopBanner || "").trim() ||
+    String(store.shopLogo || "").trim() ||
+    getStoreCoverImage(store._id || store.id || store.shopName || store.name || "store")
+  );
+}
+
+export function resolveStoreLogo(store = {}) {
+  return (
+    String(store.shopLogo || "").trim() ||
+    String(store.shopBanner || "").trim() ||
+    getStoreCoverImage(store._id || store.id || store.shopName || store.name || "store")
+  );
+}
+
 export function formatStoreAddress(store = {}) {
   return [
     store.address,
@@ -28,4 +44,3 @@ export function formatStoreAddress(store = {}) {
     .filter(Boolean)
     .join(", ");
 }
-

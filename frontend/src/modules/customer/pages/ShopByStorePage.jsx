@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MapPin, Search, ShieldCheck, Store } from "lucide-react";
 import { customerApi } from "../services/customerApi";
 import { useLocation as useAppLocation } from "../context/LocationContext";
-import { formatStoreAddress, getStoreCoverImage } from "../utils/storeVisuals";
+import { formatStoreAddress, resolveStoreCoverImage, resolveStoreLogo } from "../utils/storeVisuals";
 
 function formatDistance(distance) {
   const value = Number(distance || 0);
@@ -117,7 +117,8 @@ const ShopByStorePage = () => {
 
           {!isLoading &&
             filteredStores.map((store) => {
-              const coverImage = getStoreCoverImage(store._id);
+              const coverImage = resolveStoreCoverImage(store);
+              const storeLogo = resolveStoreLogo(store);
               const address = formatStoreAddress(store);
 
               return (
@@ -145,7 +146,15 @@ const ShopByStorePage = () => {
 
                   <div className="space-y-3 p-4 md:p-5">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                          <img
+                            src={storeLogo}
+                            alt={store.shopName || store.name || "Store logo"}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
                         <h2 className="text-xl font-black tracking-tight text-slate-900">
                           {store.shopName || store.name || "Store"}
                         </h2>
@@ -154,6 +163,7 @@ const ShopByStorePage = () => {
                             {store.category}
                           </p>
                         )}
+                        </div>
                       </div>
                     </div>
 

@@ -45,6 +45,16 @@ const sellerSchema = new mongoose.Schema(
       trim: true,
     },
 
+    shopLogo: {
+      type: String,
+      trim: true,
+    },
+
+    shopBanner: {
+      type: String,
+      trim: true,
+    },
+
     address: {
       type: String,
       trim: true,

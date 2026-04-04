@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   User,
@@ -13,6 +13,9 @@ import {
   Globe,
   MapPin,
   CheckCircle,
+  Upload,
+  Loader2,
+  ImagePlus,
 } from "lucide-react";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
@@ -20,12 +23,34 @@ import Card from "@shared/components/ui/Card";
 import Button from "@shared/components/ui/Button";
 import MapPicker from "../../../shared/components/MapPicker";
 
+const STORE_IMAGE_TAGS = ["seller", "store"];
+
+function getFileExtension(file) {
+  const fromName = String(file?.name || "")
+    .split(".")
+    .pop()
+    ?.trim()
+    .toLowerCase();
+  if (fromName) return fromName;
+
+  const mimeType = String(file?.type || "").toLowerCase();
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/gif") return "gif";
+  return "";
+}
+
 const SellerProfile = () => {
   const [profile, setProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const logoInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
   const [formData, setFormData] = useState({
     name: "",
     shopName: "",
@@ -35,6 +60,8 @@ const SellerProfile = () => {
     lng: null,
     radius: 5,
     address: "",
+    shopLogo: "",
+    shopBanner: "",
   });
 
   useEffect(() => {
@@ -55,6 +82,8 @@ const SellerProfile = () => {
         lng: data.location?.coordinates[0] || null,
         radius: data.serviceRadius || 5,
         address: data.address || "",
+        shopLogo: data.shopLogo || "",
+        shopBanner: data.shopBanner || "",
       });
     } catch (error) {
       toast.error("Failed to fetch profile");
@@ -91,6 +120,98 @@ const SellerProfile = () => {
     }
   };
 
+  const uploadStoreImage = async (file, type) => {
+    const extension = getFileExtension(file);
+    const mimeType = String(file?.type || "").toLowerCase();
+
+    const intentResponse = await sellerApi.createMediaUploadIntent({
+      entityType: "profile",
+      resourceType: "image",
+      mimeType,
+      fileSize: file.size,
+      extension,
+      tags: [...STORE_IMAGE_TAGS, type],
+    });
+
+    const intent = intentResponse?.data?.result ?? intentResponse?.data;
+    const uploadUrl = intent?.uploadUrl;
+    const uploadFields = intent?.uploadFields;
+    const intentId = intent?.intentId;
+
+    if (!uploadUrl || !uploadFields || !intentId) {
+      throw new Error("Failed to prepare image upload");
+    }
+
+    const cloudinaryFormData = new FormData();
+    Object.entries(uploadFields).forEach(([key, value]) => {
+      cloudinaryFormData.append(key, value);
+    });
+    cloudinaryFormData.append("file", file);
+
+    const cloudinaryResponse = await fetch(uploadUrl, {
+      method: "POST",
+      body: cloudinaryFormData,
+    });
+
+    const cloudinaryPayload = await cloudinaryResponse.json().catch(() => ({}));
+    if (!cloudinaryResponse.ok) {
+      throw new Error(
+        cloudinaryPayload?.error?.message || "Cloudinary upload failed",
+      );
+    }
+
+    const confirmResponse = await sellerApi.confirmMediaUpload({
+      intentId,
+      publicId: cloudinaryPayload.public_id,
+      secureUrl: cloudinaryPayload.secure_url,
+      resourceType: cloudinaryPayload.resource_type || "image",
+      format: cloudinaryPayload.format || extension,
+      mimeType,
+      width: cloudinaryPayload.width,
+      height: cloudinaryPayload.height,
+      bytes: cloudinaryPayload.bytes || file.size,
+      etag: cloudinaryPayload.etag,
+      entityType: "profile",
+      tags: [...STORE_IMAGE_TAGS, type],
+    });
+
+    const confirmedMedia = confirmResponse?.data?.result ?? confirmResponse?.data;
+    return confirmedMedia?.secureUrl || cloudinaryPayload.secure_url || "";
+  };
+
+  const handleStoreImageUpload = async (event, type) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const extension = getFileExtension(file);
+    const mimeType = String(file.type || "").toLowerCase();
+    if (!mimeType.startsWith("image/") || !extension) {
+      toast.error("Please select a valid image file.");
+      event.target.value = "";
+      return;
+    }
+
+    const setUploading =
+      type === "shopLogo" ? setLogoUploading : setBannerUploading;
+
+    setUploading(true);
+    try {
+      const url = await uploadStoreImage(file, type === "shopLogo" ? "logo" : "banner");
+      if (!url) throw new Error("No image URL returned");
+
+      setFormData((prev) => ({ ...prev, [type]: url }));
+      setProfile((prev) => (prev ? { ...prev, [type]: url } : prev));
+      toast.success(
+        `${type === "shopLogo" ? "Store logo" : "Store banner"} uploaded. Save changes to publish it.`,
+      );
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error?.message || "Image upload failed");
+    } finally {
+      setUploading(false);
+      event.target.value = "";
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Basic phone validation: must be exactly 10 digits
@@ -110,6 +231,8 @@ const SellerProfile = () => {
         lat: formData.lat,
         lng: formData.lng,
         radius: formData.radius,
+        shopLogo: formData.shopLogo,
+        shopBanner: formData.shopBanner,
       };
       await sellerApi.updateProfile(payload);
       toast.success("Profile updated successfully");
@@ -143,24 +266,73 @@ const SellerProfile = () => {
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8 font-['Outfit']">
+      <input
+        ref={logoInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        className="hidden"
+        onChange={(event) => handleStoreImageUpload(event, "shopLogo")}
+      />
+      <input
+        ref={bannerInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        className="hidden"
+        onChange={(event) => handleStoreImageUpload(event, "shopBanner")}
+      />
       {/* Header Section */}
       <div className="relative mb-24 px-4">
         {/* Banner Background */}
         <div className="bg-linear-to-r from-slate-900 via-slate-950 to-black h-64 rounded-lg shadow-2xl relative overflow-hidden">
+          {formData.shopBanner ? (
+            <img
+              src={formData.shopBanner}
+              alt={profile?.shopName || "Store banner"}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : null}
+          <div className="absolute inset-0 bg-slate-950/45" />
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
             <div className="absolute bottom-0 right-0 w-96 h-96 bg-slate-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
           </div>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={() => bannerInputRef.current?.click()}
+              className="absolute right-4 top-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 shadow-lg transition hover:bg-white"
+            >
+              {bannerUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+              {bannerUploading ? "Uploading" : "Change Banner"}
+            </button>
+          )}
         </div>
 
         {/* Profile Info Row */}
         <div className="absolute bottom-8 left-4 right-4 md:left-8 md:right-8 lg:left-12 lg:right-12 grid grid-cols-1 md:grid-cols-[176px_minmax(0,1fr)_auto] items-center md:items-end gap-6 md:gap-8">
           {/* Avatar Container */}
           <div className="h-44 w-44 rounded-full bg-white p-2 shadow-[0_30px_70px_rgba(0,0,0,0.15)] flex-shrink-0 mx-auto md:mx-0">
-            <div className="h-full w-full rounded-full bg-slate-50 flex items-center justify-center border-4 border-slate-50">
-              <span className="text-7xl font-black text-slate-900">
-                {profile?.name?.charAt(0)}
-              </span>
+            <div className="relative h-full w-full rounded-full bg-slate-50 flex items-center justify-center border-4 border-slate-50 overflow-hidden">
+              {formData.shopLogo ? (
+                <img
+                  src={formData.shopLogo}
+                  alt={profile?.shopName || "Store logo"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-7xl font-black text-slate-900">
+                  {profile?.name?.charAt(0)}
+                </span>
+              )}
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  className="absolute bottom-2 right-2 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-900 shadow-lg transition hover:scale-105"
+                >
+                  {logoUploading ? <Loader2 size={18} className="animate-spin" /> : <ImagePlus size={18} />}
+                </button>
+              )}
             </div>
           </div>
 
@@ -314,6 +486,98 @@ const SellerProfile = () => {
                 </div>
               </div>
             </form>
+          </Card>
+
+          <Card className="p-8 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-lg">
+            <div className="flex items-center justify-between gap-4 mb-8 border-b border-slate-50 pb-4">
+              <div>
+                <h3 className="text-xl font-black text-slate-900">Store Visual Identity</h3>
+                <p className="mt-1 text-sm font-medium text-slate-500">
+                  These images are shown to customers in the Stores tab and on your store page.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+              <div className="space-y-3">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-500">
+                  Store Logo
+                </p>
+                <div className="h-48 overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50">
+                  {formData.shopLogo ? (
+                    <img
+                      src={formData.shopLogo}
+                      alt="Store logo preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-slate-400">
+                      <Store size={40} />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={!isEditing || logoUploading}
+                    className="flex-1 bg-slate-900 text-white hover:bg-black rounded-lg py-3 text-[10px] font-black tracking-[2px] disabled:opacity-60"
+                  >
+                    {logoUploading ? "UPLOADING..." : "UPLOAD LOGO"}
+                  </Button>
+                  {isEditing && formData.shopLogo ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setFormData((prev) => ({ ...prev, shopLogo: "" }))}
+                      className="px-4 rounded-lg text-[10px] font-black tracking-[2px]"
+                    >
+                      REMOVE
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-500">
+                  Store Banner
+                </p>
+                <div className="h-48 overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50">
+                  {formData.shopBanner ? (
+                    <img
+                      src={formData.shopBanner}
+                      alt="Store banner preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center gap-3 text-slate-400">
+                      <ImagePlus size={36} />
+                      <p className="text-sm font-semibold">No banner uploaded yet</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    onClick={() => bannerInputRef.current?.click()}
+                    disabled={!isEditing || bannerUploading}
+                    className="flex-1 bg-slate-900 text-white hover:bg-black rounded-lg py-3 text-[10px] font-black tracking-[2px] disabled:opacity-60"
+                  >
+                    {bannerUploading ? "UPLOADING..." : "UPLOAD BANNER"}
+                  </Button>
+                  {isEditing && formData.shopBanner ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setFormData((prev) => ({ ...prev, shopBanner: "" }))}
+                      className="px-4 rounded-lg text-[10px] font-black tracking-[2px]"
+                    >
+                      REMOVE
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </Card>
 
           {/* Location & Radius Settings Card */}

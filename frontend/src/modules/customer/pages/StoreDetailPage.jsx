@@ -4,7 +4,11 @@ import { ArrowLeft, MapPin, Search, ShieldCheck, Store } from "lucide-react";
 import ProductCard from "../components/shared/ProductCard";
 import { customerApi } from "../services/customerApi";
 import { useLocation as useAppLocation } from "../context/LocationContext";
-import { formatStoreAddress, getStoreCoverImage } from "../utils/storeVisuals";
+import {
+  formatStoreAddress,
+  resolveStoreCoverImage,
+  resolveStoreLogo,
+} from "../utils/storeVisuals";
 
 function mapProduct(product) {
   return {
@@ -110,7 +114,8 @@ const StoreDetailPage = () => {
     );
   }, [products, searchQuery]);
 
-  const coverImage = getStoreCoverImage(storeId);
+  const coverImage = resolveStoreCoverImage(store || { _id: storeId });
+  const storeLogo = resolveStoreLogo(store || { _id: storeId });
   const address = formatStoreAddress(store || {});
 
   return (
@@ -173,12 +178,23 @@ const StoreDetailPage = () => {
                   Verified Store
                 </div>
                 <div className="absolute bottom-5 left-5 right-5">
-                  <p className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-sky-200">
-                    {store.category || "Local store"}
-                  </p>
-                  <h2 className="text-3xl font-black tracking-tight text-white md:text-4xl">
-                    {store.shopName || store.name}
-                  </h2>
+                  <div className="flex items-end gap-4">
+                    <div className="h-20 w-20 overflow-hidden rounded-3xl border-4 border-white/80 bg-white/90 shadow-xl">
+                      <img
+                        src={storeLogo}
+                        alt={store.shopName || store.name || "Store logo"}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-sky-200">
+                        {store.category || "Local store"}
+                      </p>
+                      <h2 className="text-3xl font-black tracking-tight text-white md:text-4xl">
+                        {store.shopName || store.name}
+                      </h2>
+                    </div>
+                  </div>
                   {store.description && (
                     <p className="mt-3 max-w-2xl text-sm font-medium text-slate-200 md:text-base">
                       {store.description}
