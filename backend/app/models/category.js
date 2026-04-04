@@ -30,6 +30,10 @@ const categorySchema = new mongoose.Schema(
       type: String, // SVG icon identifier
       trim: true,
     },
+    headerVisualKey: {
+      type: String,
+      trim: true,
+    },
     status: {
       type: String,
       enum: ["active", "inactive"],

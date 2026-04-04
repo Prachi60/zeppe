@@ -165,6 +165,7 @@ const ALL_CATEGORY = {
   _id: "all",
   name: "All",
   icon: HomeIcon,
+  image: "",
   theme: DEFAULT_CATEGORY_THEME,
   headerColor: "#0e7490",
   banner: {
@@ -536,7 +537,9 @@ const Home = () => {
               ...cat,
               id: cat._id,
               iconId: cat.iconId,
+              headerVisualKey: cat.headerVisualKey || "",
               icon: IconComp,
+              image: cat.image || "",
               theme: meta.theme,
               headerColor: cat.headerColor || null,
               banner: { ...meta.banner, textColor: "text-white" },
@@ -557,6 +560,8 @@ const Home = () => {
             headerColor:
               allHeaderFromAdmin.headerColor || ALL_CATEGORY.headerColor,
             icon: allHeaderFromAdmin.icon || ALL_CATEGORY.icon,
+            image: allHeaderFromAdmin.image || "",
+            headerVisualKey: allHeaderFromAdmin.headerVisualKey || "",
           }
           : ALL_CATEGORY;
 

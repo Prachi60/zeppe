@@ -19,6 +19,11 @@ import { toast } from "sonner";
 import IconSelector from "@shared/components/IconSelector";
 import Pagination from "@shared/components/ui/Pagination";
 import { getIconSvg } from "@shared/constants/categoryIcons";
+import {
+  headerCategoryVisuals,
+  HeaderCategoryVisual,
+  getHeaderCategoryVisualMeta,
+} from "@shared/constants/headerCategoryVisuals";
 
 // MUI icon library (shared with customer app & icon selector)
 import HomeIcon from "@mui/icons-material/Home";
@@ -75,6 +80,7 @@ const HeaderCategories = () => {
     type: "header",
     parentId: null,
     iconId: "",
+    headerVisualKey: "",
     adminCommission: "",
     handlingFees: "",
     headerColor: "#FF1E1E",
@@ -238,6 +244,7 @@ const HeaderCategories = () => {
       type: "header",
       parentId: null,
       iconId: "",
+      headerVisualKey: "",
       adminCommission: "",
       handlingFees: "",
       headerColor: "#FF1E1E",
@@ -257,6 +264,7 @@ const HeaderCategories = () => {
       type: "header",
       parentId: null,
       iconId: item.iconId || "",
+      headerVisualKey: item.headerVisualKey || "",
       adminCommission: item.adminCommission ?? "",
       handlingFees: item.handlingFees ?? "",
       headerColor: item.headerColor || "#FF1E1E",
@@ -371,7 +379,18 @@ const HeaderCategories = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center border border-gray-200">
-                        {cat.iconId && iconComponents[cat.iconId] ? (
+                        {cat.image ? (
+                          <img
+                            src={cat.image}
+                            alt={cat.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : cat.headerVisualKey ? (
+                          <HeaderCategoryVisual
+                            visualKey={cat.headerVisualKey}
+                            size={24}
+                          />
+                        ) : cat.iconId && iconComponents[cat.iconId] ? (
                           <div className="w-6 h-6 text-indigo-600 flex items-center justify-center">
                             {(() => {
                               const IconComp = iconComponents[cat.iconId];
@@ -384,12 +403,6 @@ const HeaderCategories = () => {
                             dangerouslySetInnerHTML={{
                               __html: getIconSvg(cat.iconId),
                             }}
-                          />
-                        ) : cat.image ? (
-                          <img
-                            src={cat.image}
-                            alt={cat.name}
-                            className="w-full h-full object-cover"
                           />
                         ) : (
                           <Image className="w-5 h-5 text-gray-400" />
@@ -483,7 +496,18 @@ const HeaderCategories = () => {
                     {/* SVG Icon Display */}
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-24 h-24 rounded-full bg-linear-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 flex items-center justify-center">
-                        {formData.iconId && iconComponents[formData.iconId] ? (
+                        {previewUrl ? (
+                          <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : formData.headerVisualKey ? (
+                          <HeaderCategoryVisual
+                            visualKey={formData.headerVisualKey}
+                            size={42}
+                          />
+                        ) : formData.iconId && iconComponents[formData.iconId] ? (
                           <div className="w-12 h-12 text-indigo-600 flex items-center justify-center">
                             {(() => {
                               const IconComp = iconComponents[formData.iconId];
@@ -545,7 +569,7 @@ const HeaderCategories = () => {
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 text-center">
-                    Choose an SVG icon or upload a custom image
+                    Upload a custom image to show it on the customer app. Icon stays as fallback if no image is uploaded.
                   </p>
                 </div>
 
@@ -590,6 +614,51 @@ const HeaderCategories = () => {
                       className="w-28 px-2 py-2 rounded-lg border border-gray-300 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       placeholder="#FF1E1E"
                     />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">
+                      Curated Visual
+                    </label>
+                    <span className="text-xs text-gray-400">
+                      Used when no custom image is uploaded
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {headerCategoryVisuals.map((visual) => {
+                      const isSelected = formData.headerVisualKey === visual.id;
+                      const meta = getHeaderCategoryVisualMeta(visual.id);
+                      return (
+                        <button
+                          key={visual.id}
+                          type="button"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              headerVisualKey: visual.id,
+                            })
+                          }
+                          className={cn(
+                            "flex flex-col items-center gap-2 rounded-xl border px-2 py-3 transition-all",
+                            isSelected
+                              ? "border-indigo-500 bg-indigo-50 shadow-sm"
+                              : "border-gray-200 bg-white hover:border-indigo-300",
+                          )}>
+                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
+                            <HeaderCategoryVisual
+                              visualKey={visual.id}
+                              size={24}
+                              color={meta?.color}
+                            />
+                          </div>
+                          <span className="text-[10px] font-semibold text-gray-600">
+                            {visual.label}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

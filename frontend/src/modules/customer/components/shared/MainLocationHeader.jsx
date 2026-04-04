@@ -13,6 +13,7 @@ import {
   buildSearchBarBackgroundColor,
   shiftHex,
 } from "../../utils/headerTheme";
+import { HeaderCategoryVisual } from "@/shared/constants/headerCategoryVisuals";
 import LogoImage from "../../../../assets/Logo.png";
 import shoppingCartAnimation from "../../../../assets/lottie/shopping-cart.json";
 
@@ -40,7 +41,6 @@ function CategoryNavColumn({
   categoryAccent,
   onCategorySelect,
 }) {
-  const iconColor = "#111111";
   const colRef = useRef(null);
   const labelRef = useRef(null);
   const [lr, setLr] = useState({ l: 22, r: 78 });
@@ -81,14 +81,32 @@ function CategoryNavColumn({
       style={{
         borderBottomColor: isActive ? "transparent" : categoryAccent,
       }}
-      className="relative z-[2] flex min-w-[48px] shrink-0 cursor-pointer flex-col items-center gap-0.5 border-b-2 px-2 pb-0.5 pt-0.5 snap-start md:min-w-[58px]">
-      <div className="relative z-10 flex h-9 w-9 items-center justify-center md:h-11 md:w-11">
-        {typeof cat.icon === "function" ||
-        (typeof cat.icon === "object" && cat.icon.$$typeof) ? (
+      className="relative z-[2] flex min-w-[56px] shrink-0 cursor-pointer flex-col items-center gap-1 border-b-2 px-2 pb-0.5 pt-0.5 snap-start md:min-w-[72px]">
+      <div
+        className={cn(
+          "relative z-10 flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border bg-white/80 shadow-sm transition-all duration-200 md:h-14 md:w-14",
+          isActive
+            ? "border-white/90 shadow-[0_10px_24px_rgba(15,23,42,0.18)]"
+            : "border-black/5",
+        )}>
+        {cat.image ? (
+          <img
+            src={cat.image}
+            alt={cat.name}
+            className="h-full w-full object-cover"
+            style={{ opacity: isActive ? 1 : 0.88 }}
+          />
+        ) : cat.headerVisualKey ? (
+          <HeaderCategoryVisual
+            visualKey={cat.headerVisualKey}
+            size={isActive ? 24 : 22}
+          />
+        ) : typeof cat.icon === "function" ||
+          (typeof cat.icon === "object" && cat.icon.$$typeof) ? (
           <cat.icon
             sx={{
               fontSize: { xs: 20, md: 24 },
-              color: iconColor,
+              color: "#111111",
               opacity: isActive ? 1 : 0.62,
               transition: "opacity 0.2s, transform 0.2s",
             }}
@@ -106,7 +124,7 @@ function CategoryNavColumn({
         <span
           ref={labelRef}
           className={cn(
-            "relative z-10 mx-auto block max-w-[72px] truncate px-1 pb-0.5 text-center text-[8px] uppercase tracking-tight md:max-w-[88px] md:text-[10px]",
+            "relative z-10 mx-auto block max-w-[72px] truncate px-1 pb-0.5 text-center text-[8px] tracking-tight md:max-w-[88px] md:text-[10px]",
             isActive ? "font-black" : "font-semibold",
           )}
           style={{
