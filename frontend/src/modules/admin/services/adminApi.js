@@ -31,6 +31,8 @@ export const adminApi = {
     updateSettings: (data) => axiosInstance.put('/settings', data),
     uploadSettingsImage: (formData, type = 'logo') =>
         axiosInstance.post(`/settings/upload?type=${type}`, formData),
+    createMediaUploadIntent: (data) => axiosInstance.post('/media/upload-intent', data),
+    confirmMediaUpload: (data) => axiosInstance.post('/media/confirm', data),
 
     // Category Management
     getCategories: (params) => axiosInstance.get('/admin/categories', { params }),

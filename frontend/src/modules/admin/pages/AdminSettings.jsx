@@ -25,6 +25,21 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@shared/components/ui/Toast';
 import { adminApi } from '../services/adminApi';
 
+const BRANDING_UPLOAD_TAGS = ['settings', 'branding'];
+
+function getFileExtension(file) {
+    const fromName = String(file?.name || '').split('.').pop()?.trim().toLowerCase();
+    if (fromName) return fromName;
+
+    const mimeType = String(file?.type || '').toLowerCase();
+    if (mimeType === 'image/png') return 'png';
+    if (mimeType === 'image/jpeg') return 'jpg';
+    if (mimeType === 'image/webp') return 'webp';
+    if (mimeType === 'image/gif') return 'gif';
+    if (mimeType === 'image/x-icon' || mimeType === 'image/vnd.microsoft.icon') return 'ico';
+    return '';
+}
+
 const AdminSettings = () => {
     const { showToast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
@@ -107,57 +122,110 @@ const AdminSettings = () => {
         setSettings(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleLogoUpload = async (e) => {
-        const file = e.target.files?.[0];
+    const uploadBrandingAsset = async (file, type) => {
+        const extension = getFileExtension(file);
+        const mimeType = String(file?.type || '').toLowerCase();
+        const intentResponse = await adminApi.createMediaUploadIntent({
+            entityType: 'other',
+            resourceType: 'image',
+            mimeType,
+            fileSize: file.size,
+            extension,
+            tags: [...BRANDING_UPLOAD_TAGS, type],
+        });
+
+        const intent = intentResponse?.data?.result ?? intentResponse?.data;
+        const uploadUrl = intent?.uploadUrl;
+        const uploadFields = intent?.uploadFields;
+        const intentId = intent?.intentId;
+
+        if (!uploadUrl || !uploadFields || !intentId) {
+            throw new Error('Failed to prepare Cloudinary upload');
+        }
+
+        const cloudinaryFormData = new FormData();
+        Object.entries(uploadFields).forEach(([key, value]) => {
+            cloudinaryFormData.append(key, value);
+        });
+        cloudinaryFormData.append('file', file);
+
+        const cloudinaryResponse = await fetch(uploadUrl, {
+            method: 'POST',
+            body: cloudinaryFormData,
+        });
+
+        const cloudinaryPayload = await cloudinaryResponse.json().catch(() => ({}));
+        if (!cloudinaryResponse.ok) {
+            throw new Error(cloudinaryPayload?.error?.message || 'Cloudinary upload failed');
+        }
+
+        const confirmResponse = await adminApi.confirmMediaUpload({
+            intentId,
+            publicId: cloudinaryPayload.public_id,
+            secureUrl: cloudinaryPayload.secure_url,
+            resourceType: cloudinaryPayload.resource_type || 'image',
+            format: cloudinaryPayload.format || extension,
+            mimeType,
+            width: cloudinaryPayload.width,
+            height: cloudinaryPayload.height,
+            bytes: cloudinaryPayload.bytes || file.size,
+            etag: cloudinaryPayload.etag,
+            entityType: 'other',
+            folder: uploadFields.folder,
+            tags: [...BRANDING_UPLOAD_TAGS, type],
+        });
+
+        const confirmedMedia = confirmResponse?.data?.result ?? confirmResponse?.data;
+        return confirmedMedia?.secureUrl || cloudinaryPayload.secure_url || '';
+    };
+
+    const handleBrandingUpload = async (event, type) => {
+        const file = event.target.files?.[0];
         if (!file) return;
-        if (!file.type.startsWith('image/')) {
-            showToast('Please select an image file (PNG, JPG, etc.)', 'error');
+
+        const mimeType = String(file.type || '').toLowerCase();
+        const extension = getFileExtension(file);
+        const isImageFile = mimeType.startsWith('image/') || extension === 'ico';
+        if (!isImageFile) {
+            showToast('Please select a valid image file.', 'error');
+            event.target.value = '';
             return;
         }
-        setLogoUploading(true);
+        if (!extension) {
+            showToast('Unable to determine the selected file type.', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        const setUploading = type === 'logo' ? setLogoUploading : setFaviconUploading;
+        const targetField = type === 'logo' ? 'logoUrl' : 'faviconUrl';
+
+        setUploading(true);
         try {
-            const fd = new FormData();
-            fd.append('image', file);
-            const res = await adminApi.uploadSettingsImage(fd, 'logo');
-            const url = res.data?.result?.url || res.data?.url;
+            const url = await uploadBrandingAsset(file, type);
             if (url) {
-                handleInputChange('logoUrl', url);
-                showToast('Logo uploaded. Click Save Changes to apply.', 'success');
+                handleInputChange(targetField, url);
+                showToast(
+                    `${type === 'logo' ? 'Logo' : 'Favicon'} uploaded to Cloudinary. Click Save Changes to apply.`,
+                    'success',
+                );
             } else throw new Error('No URL returned');
         } catch (err) {
             console.error(err);
-            showToast(err.response?.data?.message || 'Failed to upload logo', 'error');
+            showToast(
+                err?.response?.data?.message ||
+                err?.message ||
+                `Failed to upload ${type}`,
+                'error',
+            );
         } finally {
-            setLogoUploading(false);
-            e.target.value = '';
+            setUploading(false);
+            event.target.value = '';
         }
     };
 
-    const handleFaviconUpload = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (!file.type.startsWith('image/')) {
-            showToast('Please select an image file (PNG, ICO, etc.)', 'error');
-            return;
-        }
-        setFaviconUploading(true);
-        try {
-            const fd = new FormData();
-            fd.append('image', file);
-            const res = await adminApi.uploadSettingsImage(fd, 'favicon');
-            const url = res.data?.result?.url || res.data?.url;
-            if (url) {
-                handleInputChange('faviconUrl', url);
-                showToast('Favicon uploaded. Click Save Changes to apply.', 'success');
-            } else throw new Error('No URL returned');
-        } catch (err) {
-            console.error(err);
-            showToast(err.response?.data?.message || 'Failed to upload favicon', 'error');
-        } finally {
-            setFaviconUploading(false);
-            e.target.value = '';
-        }
-    };
+    const handleLogoUpload = (event) => handleBrandingUpload(event, 'logo');
+    const handleFaviconUpload = (event) => handleBrandingUpload(event, 'favicon');
 
     const tabs = [
         { id: 'general', label: 'General', icon: Settings },

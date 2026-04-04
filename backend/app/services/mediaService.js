@@ -16,7 +16,7 @@ function getSignedUrlExpirySeconds() {
 function getAllowedMimeTypes() {
   return (
     process.env.MEDIA_ALLOWED_MIME_TYPES ||
-    "image/jpeg,image/png,image/webp,image/gif,application/pdf"
+    "image/jpeg,image/png,image/webp,image/gif,image/x-icon,image/vnd.microsoft.icon,application/pdf"
   )
     .split(",")
     .map((mime) => mime.trim().toLowerCase())
@@ -176,12 +176,9 @@ function buildCloudinarySignedPayload({
   configureCloudinary();
   const cloudResourceType = RESOURCE_TYPE_MAP[resourceType] || "image";
   const timestamp = Math.floor(Date.now() / 1000);
-  const folder = buildUploadFolderFromObjectKey(objectKey);
   const signatureParams = {
     timestamp,
     public_id: objectKey,
-    folder,
-    resource_type: cloudResourceType,
   };
   const signature = cloudinary.utils.api_sign_request(
     signatureParams,
@@ -196,8 +193,6 @@ function buildCloudinarySignedPayload({
       timestamp,
       signature,
       public_id: objectKey,
-      folder,
-      resource_type: cloudResourceType,
     },
     expiresAt,
   };
