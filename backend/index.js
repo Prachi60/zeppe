@@ -91,6 +91,7 @@ function parseTrustProxy(value) {
 function createApp() {
   const app = express();
   const allowedOrigins = parseAllowedOrigins();
+  const uploadsRoot = path.resolve(__dirname, "uploads");
   
   app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
 
@@ -127,6 +128,7 @@ function createApp() {
 
   app.use(express.json({ limit: process.env.API_JSON_LIMIT || "1mb" }));
   app.use(express.urlencoded({ limit: process.env.API_URLENCODED_LIMIT || "1mb", extended: true }));
+  app.use("/uploads", express.static(uploadsRoot));
 
   // Root endpoint
   app.get("/", (req, res) => {

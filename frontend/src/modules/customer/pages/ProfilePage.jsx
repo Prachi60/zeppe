@@ -142,7 +142,7 @@ const ProfilePage = () => {
                         <div className="divide-y divide-slate-100">
                             <MenuItem
                                 icon={Package}
-                                label="Your Orders"
+                                label="My Orders"
                                 sub="Track, return or buy things again"
                                 path="/orders"
                                 color="#45B0E2"

@@ -1,11 +1,12 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from '../pages/Home';
 import CategoriesPage from '../pages/CategoriesPage';
 import CategoryProductsPage from '../pages/CategoryProductsPage';
 import WishlistPage from '../pages/WishlistPage';
 import CartPage from '../pages/CartPage';
 import OffersPage from '../pages/OffersPage';
+import ShopByStorePage from '../pages/ShopByStorePage';
 import ProfilePage from '../pages/ProfilePage';
 import OrdersPage from '../pages/OrdersPage';
 import OrderTransactionsPage from '../pages/OrderTransactionsPage';
@@ -21,6 +22,7 @@ import OrderDetailPage from '../pages/OrderDetailPage';
 import ProductDetailPage from '../pages/ProductDetailPage';
 import CheckoutPage from '../pages/CheckoutPage';
 import PaymentStatusPage from '../pages/PaymentStatusPage';
+import StoreDetailPage from '../pages/StoreDetailPage';
 import ScrollToTop from '../components/shared/ScrollToTop';
 import { WishlistProvider } from '../context/WishlistContext';
 import { CartProvider } from '../context/CartContext';
@@ -45,6 +47,9 @@ const CustomerRoutes = () => {
                             <Route path="privacy" element={<PrivacyPage />} />
                             <Route path="about" element={<AboutPage />} />
                             <Route path="offers" element={<OffersPage />} />
+                            <Route path="shop-by-store" element={<Navigate to="/stores" replace />} />
+                            <Route path="stores" element={<ShopByStorePage />} />
+                            <Route path="stores/:storeId" element={<StoreDetailPage />} />
 
                             {/* Protected Customer Routes */}
                             <Route path="wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />

@@ -1,281 +1,182 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { Tag, Sparkles, ChevronRight } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { MapPin, Search, ShieldCheck, Store } from "lucide-react";
 import { customerApi } from "../services/customerApi";
-import ProductCard from "../components/shared/ProductCard";
 import { useLocation as useAppLocation } from "../context/LocationContext";
-import {
-  getSideImageByKey,
-  getBackgroundColorByValue,
-} from "@/shared/constants/offerSectionOptions";
+import { formatStoreAddress, getStoreCoverImage } from "../utils/storeVisuals";
 
-const mapProduct = (p) => ({
-  id: p._id,
-  _id: p._id,
-  name: p.name,
-  image:
-    p.mainImage ||
-    p.image ||
-    "https://images.unsplash.com/photo-1550989460-0adf9ea622e2",
-  price: p.salePrice ?? p.price,
-  originalPrice: p.price,
-  weight: p.weight || "1 unit",
-  deliveryTime: "8-15 mins",
-});
+function formatDistance(distance) {
+  const value = Number(distance || 0);
+  if (!Number.isFinite(value)) return "Nearby";
+  return `${value.toFixed(1)} km`;
+}
 
 const ShopByStorePage = () => {
+  const navigate = useNavigate();
   const { currentLocation } = useAppLocation();
-  const [sections, setSections] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeStoreId, setActiveStoreId] = useState(null);
+  const [stores, setStores] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
+    const loadStores = async () => {
       const hasValidLocation =
         Number.isFinite(currentLocation?.latitude) &&
         Number.isFinite(currentLocation?.longitude);
       if (!hasValidLocation) {
+        setStores([]);
         setIsLoading(false);
-        setSections([]);
-        setActiveStoreId(null);
         return;
       }
 
       setIsLoading(true);
       try {
-        const res = await customerApi
-          .getOfferSections({
-            lat: currentLocation.latitude,
-            lng: currentLocation.longitude,
-          })
-          .catch(() => ({ data: {} }));
-        const list =
-          res.data?.results || res.data?.result || res.data || [];
-        const normalized = Array.isArray(list) ? list : [];
-        setSections(normalized);
-        if (normalized.length > 0) {
-          setActiveStoreId(normalized[0]._id);
-        }
-      } catch (e) {
-        console.error("Failed to load store sections", e);
+        const response = await customerApi.getNearbySellers({
+          lat: currentLocation.latitude,
+          lng: currentLocation.longitude,
+        });
+        const payload = response?.data;
+        const items = payload?.result || payload?.results || [];
+        setStores(Array.isArray(items) ? items : []);
+      } catch (error) {
+        console.error("Failed to load nearby stores:", error);
+        setStores([]);
       } finally {
         setIsLoading(false);
       }
     };
-    load();
+
+    loadStores();
   }, [currentLocation?.latitude, currentLocation?.longitude]);
 
-  const sortedStores = useMemo(
-    () => [...sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [sections]
-  );
+  const filteredStores = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return stores;
 
-  const activeStore = sortedStores.find((s) => s._id === activeStoreId) || null;
-
-  const activeProducts = useMemo(() => {
-    if (!activeStore) return [];
-    const raw =
-      (activeStore.productIds || []).filter(Boolean).map((p) =>
-        typeof p === "object" && p !== null ? mapProduct(p) : null
-      );
-    return raw.filter(Boolean);
-  }, [activeStore]);
+    return stores.filter((store) => {
+      const haystack = [
+        store.shopName,
+        store.name,
+        store.category,
+        store.address,
+        store.locality,
+        store.city,
+      ]
+        .map((item) => String(item || "").toLowerCase())
+        .join(" ");
+      return haystack.includes(query);
+    });
+  }, [searchQuery, stores]);
 
   return (
-    <div className="relative z-10 py-8 w-full max-w-[1920px] mx-auto px-4 md:px-[50px] animate-in fade-in slide-in-from-bottom-4 duration-700 mt-36 md:mt-24">
-      {/* Header */}
-      <div className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-        <div>
-          <p className="text-xs md:text-sm font-black uppercase tracking-[0.25em] text-[#45B0E2]/80 mb-2">
-            Shop by store
+    <div className="min-h-screen bg-slate-50 px-4 pt-4 pb-28 md:px-8 md:pt-8">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="mb-5">
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-[#45B0E2]">
+            Browse Stores
           </p>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 mb-3">
-            Curated Aisles,{" "}
-            <span className="text-[#45B0E2]">Just for You</span>
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900">
+            Nearby Stores
           </h1>
-          <p className="text-slate-500 text-sm md:text-lg font-medium max-w-2xl">
-            Jump straight into themed collections – from{" "}
-            <span className="font-semibold">Summer Coolers</span> to{" "}
-            <span className="font-semibold">Breakfast Essentials</span>. Every
-            store is hand–picked by your team in the admin panel.
+          <p className="mt-2 text-sm font-medium text-slate-500">
+            Choose a store to explore only that store&apos;s products.
           </p>
         </div>
-        {activeStore && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#45B0E2]/5 border border-[#45B0E2]/15 text-xs md:text-sm font-bold text-[#45B0E2]">
-            <Tag size={16} />
-            <span className="truncate max-w-[180px] md:max-w-xs">
-              Currently exploring: {activeStore.title}
-            </span>
-          </div>
-        )}
-      </div>
 
-      {/* Store selector strip */}
-      <div className="mb-8">
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2 md:mx-0 md:px-0">
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+          <label className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3">
+            <Search size={18} className="text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search for a store"
+              className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+            />
+          </label>
+        </div>
+
+        <div className="space-y-4">
           {isLoading && (
-            <div className="text-slate-400 text-sm font-medium">
-              Loading stores...
+            <div className="rounded-3xl border border-slate-200 bg-white px-6 py-10 text-center text-sm font-semibold text-slate-500 shadow-sm">
+              Loading nearby stores...
             </div>
           )}
+
+          {!isLoading && filteredStores.length === 0 && (
+            <div className="rounded-3xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                <Store size={24} />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">No stores found</h2>
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                Try another search or change your delivery location.
+              </p>
+            </div>
+          )}
+
           {!isLoading &&
-            sortedStores.map((store) => {
-              const isActive = store._id === activeStoreId;
-              const bgColor = getBackgroundColorByValue(store.backgroundColor);
-              const sideImageUrl = getSideImageByKey(store.sideImageKey);
+            filteredStores.map((store) => {
+              const coverImage = getStoreCoverImage(store._id);
+              const address = formatStoreAddress(store);
 
               return (
                 <button
                   key={store._id}
-                  onClick={() => setActiveStoreId(store._id)}
-                  className={`flex items-center gap-3 rounded-2xl border-2 min-w-[210px] md:min-w-[260px] pr-4 transition-all shadow-sm hover:shadow-lg ${
-                    isActive
-                      ? "border-[#45B0E2] bg-white"
-                      : "border-slate-100 bg-slate-50/60"
-                  }`}
+                  type="button"
+                  onClick={() => navigate(`/stores/${store._id}`)}
+                  className="w-full overflow-hidden rounded-[28px] border border-slate-200 bg-white text-left shadow-[0_14px_34px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(15,23,42,0.10)]"
                 >
-                  <div
-                    className="h-16 w-20 rounded-2xl overflow-hidden flex-shrink-0 shadow-inner"
-                    style={{ backgroundColor: bgColor }}
-                  >
+                  <div className="relative h-40 overflow-hidden md:h-48">
                     <img
-                      src={sideImageUrl}
-                      alt={store.title}
-                      className="w-full h-full object-cover"
+                      src={coverImage}
+                      alt={store.shopName || store.name || "Store"}
+                      className="h-full w-full object-cover"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/55 via-slate-900/10 to-transparent" />
+                    <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/92 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-slate-700">
+                      <ShieldCheck size={14} className="text-emerald-500" />
+                      Verified Store
+                    </div>
+                    <div className="absolute bottom-4 right-4 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 shadow-sm">
+                      {formatDistance(store.distance)}
+                    </div>
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-1 line-clamp-1">
-                      Curated store
-                    </p>
-                    <p className="text-sm md:text-base font-black text-slate-800 line-clamp-2">
-                      {store.title}
-                    </p>
+
+                  <div className="space-y-3 p-4 md:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h2 className="text-xl font-black tracking-tight text-slate-900">
+                          {store.shopName || store.name || "Store"}
+                        </h2>
+                        {store.category && (
+                          <p className="mt-1 text-xs font-black uppercase tracking-[0.22em] text-[#45B0E2]">
+                            {store.category}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {address && (
+                      <div className="flex items-start gap-2 text-sm font-medium text-slate-500">
+                        <MapPin size={16} className="mt-0.5 shrink-0 text-slate-400" />
+                        <span className="line-clamp-2">{address}</span>
+                      </div>
+                    )}
+
+                    {store.description && (
+                      <p className="line-clamp-2 text-sm font-medium text-slate-500">
+                        {store.description}
+                      </p>
+                    )}
                   </div>
-                  <ChevronRight
-                    size={18}
-                    className={`${
-                      isActive ? "text-[#45B0E2]" : "text-slate-400"
-                    }`}
-                  />
                 </button>
               );
             })}
         </div>
       </div>
-
-      {/* Active store hero + category style tiles */}
-      {activeStore && (
-        <section className="mb-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* Left: big summer–style hero */}
-          <div className="lg:col-span-5">
-            <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-sky-100 via-amber-50 to-rose-50 border border-slate-100 shadow-xl h-full flex flex-col">
-              <div className="p-6 md:p-8 flex-1 flex flex-col justify-between relative z-10">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.3em] text-sky-500 mb-2">
-                    {activeStore.categoryIds?.length || 0}+ categories
-                  </p>
-                  <h2 className="text-2xl md:text-3xl font-[1000] text-slate-900 leading-tight mb-2">
-                    {activeStore.title || "Featured Store"}
-                  </h2>
-                  <p className="text-sm text-slate-600 font-medium max-w-md">
-                    Explore all hand–picked items under this theme. Perfect for
-                    quick shopping with zero search.
-                  </p>
-                </div>
-                <div className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-700">
-                  <Sparkles size={16} className="text-amber-500" />
-                  <span>Tap a block on the right to see products instantly</span>
-                </div>
-              </div>
-              <div className="absolute -right-10 bottom-0 w-40 h-40 md:w-52 md:h-52 bg-sky-300/40 rounded-full blur-3xl" />
-              <div className="absolute -left-10 -top-10 w-40 h-40 md:w-52 md:h-52 bg-amber-200/40 rounded-full blur-3xl" />
-            </div>
-          </div>
-
-          {/* Right: summer–coolers style tiles for categories */}
-          <div className="lg:col-span-7">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-              {(activeStore.categoryIds || []).length === 0 && (
-                <div className="col-span-2 md:col-span-3 text-center text-slate-400 text-sm font-medium py-6">
-                  No categories linked to this store yet.
-                </div>
-              )}
-              {(activeStore.categoryIds || []).map((cat) => {
-                const name =
-                  typeof cat === "object" && cat?.name ? cat.name : "Category";
-                const key = cat?._id || String(name);
-                const sampleImage = getSideImageByKey(activeStore.sideImageKey);
-                return (
-                  <div
-                    key={key}
-                    className="relative rounded-[1.5rem] bg-gradient-to-b from-sky-50 to-amber-100 shadow-md border border-amber-100 overflow-hidden cursor-pointer group hover:-translate-y-1 transition-all"
-                  >
-                    <div className="absolute inset-x-0 top-0 h-16 bg-sky-200/40" />
-                    <div className="relative p-3 flex flex-col items-center text-center gap-2">
-                      <div className="h-16 w-full rounded-2xl overflow-hidden bg-white shadow-inner">
-                        <img
-                          src={sampleImage}
-                          alt={name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="mt-1">
-                        <p className="text-xs md:text-sm font-black text-slate-800 leading-snug line-clamp-2">
-                          {name}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Product carousel for active store */}
-      <section className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_18px_40px_rgba(15,23,42,0.06)] p-5 md:p-7">
-        <div className="flex items-center justify-between mb-4 md:mb-6 gap-3">
-          <div>
-            <h3 className="text-lg md:text-2xl font-[1000] text-slate-900 tracking-tight">
-              {activeStore ? "All products in this store" : "Stores coming soon"}
-            </h3>
-            <p className="text-xs md:text-sm text-slate-500 font-medium">
-              Scroll sideways to explore everything under this curated aisle.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex overflow-x-auto gap-4 pb-2 no-scrollbar scroll-smooth snap-x snap-mandatory">
-          {isLoading && (
-            <div className="w-full py-8 text-center text-slate-400 text-sm font-bold">
-              Loading products...
-            </div>
-          )}
-          {!isLoading && activeStore && activeProducts.length === 0 && (
-            <div className="w-full py-8 text-center text-slate-400 text-sm font-bold">
-              No products linked to this store yet.
-            </div>
-          )}
-          {!isLoading &&
-            activeProducts.map((product) => (
-              <div
-                key={product.id}
-                className="w-[180px] md:w-[200px] flex-shrink-0 snap-start"
-              >
-                <ProductCard
-                  product={product}
-                  className="bg-white border border-slate-100 shadow-sm hover:shadow-md"
-                  compact
-                />
-              </div>
-            ))}
-        </div>
-      </section>
     </div>
   );
 };
 
 export default ShopByStorePage;
-
-

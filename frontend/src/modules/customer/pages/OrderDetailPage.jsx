@@ -192,17 +192,12 @@ const OrderDetailPage = () => {
         setOrder(ord);
 
         try {
-<<<<<<< HEAD
-          const retRes = await customerApi.getReturnDetails(orderId);
+          const retRes = await customerApi.getReturnDetails(resolveOrderLookupId(ord));
           const ret = retRes.data.result;
           setReturnDetails(ret);
           if (ret?.returnPickupOtp) {
             setHandoffOtp(ret.returnPickupOtp);
           }
-=======
-          const retRes = await customerApi.getReturnDetails(resolveOrderLookupId(ord));
-          setReturnDetails(retRes.data.result);
->>>>>>> 4e9dc5d2792db297d5b3bd70a835c8adab9ec76b
         } catch {
           setReturnDetails(null);
         }

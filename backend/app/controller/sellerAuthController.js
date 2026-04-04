@@ -1,5 +1,9 @@
 import Seller from "../models/seller.js";
 import jwt from "jsonwebtoken";
+import fs from "fs/promises";
+import path from "path";
+import crypto from "crypto";
+import { fileURLToPath } from "url";
 import handleResponse from "../utils/helper.js";
 import {
     issueSellerVerificationOtp,
@@ -11,6 +15,10 @@ import { uploadToCloudinary } from "../services/mediaService.js";
 /* ===============================
    Utils
 ================================ */
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOCAL_SELLER_DOCS_DIR = path.resolve(__dirname, "../../uploads/seller-documents");
 
 const generateToken = (seller) =>
     jwt.sign({ id: seller._id, role: "seller" }, process.env.JWT_SECRET, {
@@ -74,6 +82,56 @@ const getMissingRequiredSellerDocuments = (documents = {}) =>
         (fieldName) => !isValidUploadedDocumentReference(documents[fieldName]),
     );
 
+const buildPublicBaseUrl = (req) => {
+    const configuredOrigin = String(
+        process.env.PUBLIC_BACKEND_URL ||
+        process.env.BACKEND_PUBLIC_URL ||
+        process.env.API_BASE_URL ||
+        "",
+    ).trim();
+    if (configuredOrigin) {
+        return configuredOrigin.replace(/\/+$/, "");
+    }
+
+    const forwardedProto = String(req.headers["x-forwarded-proto"] || "").trim();
+    const protocol = forwardedProto || req.protocol || "http";
+    return `${protocol}://${req.get("host")}`;
+};
+
+const isImageDocumentFile = (file) =>
+    String(file?.mimetype || "").toLowerCase().startsWith("image/");
+
+const sanitizeFileExtension = (file) => {
+    const fromMime = String(file?.mimetype || "").toLowerCase();
+    if (fromMime === "application/pdf") return ".pdf";
+    if (fromMime === "application/msword") return ".doc";
+    if (
+        fromMime ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+        return ".docx";
+    }
+
+    const ext = path.extname(String(file?.originalname || "")).toLowerCase();
+    if (/^\.[a-z0-9]{1,10}$/.test(ext)) return ext;
+    return "";
+};
+
+const saveSellerDocumentLocally = async (file, req) => {
+    await fs.mkdir(LOCAL_SELLER_DOCS_DIR, { recursive: true });
+
+    const safeFieldName = String(file?.fieldname || "document")
+        .replace(/[^a-z0-9_-]/gi, "")
+        .toLowerCase();
+    const extension = sanitizeFileExtension(file) || ".bin";
+    const uniqueName = `${safeFieldName}-${Date.now()}-${crypto.randomUUID()}${extension}`;
+    const targetPath = path.join(LOCAL_SELLER_DOCS_DIR, uniqueName);
+
+    await fs.writeFile(targetPath, file.buffer);
+
+    return `${buildPublicBaseUrl(req)}/uploads/seller-documents/${uniqueName}`;
+};
+
 /* ===============================
    SELLER SIGNUP
 ================================ */
@@ -109,11 +167,18 @@ export const signupSeller = async (req, res) => {
                 try {
                     const fieldName = file.fieldname;
                     if (fieldName && REQUIRED_SELLER_DOCUMENT_FIELDS.includes(fieldName)) {
-                        const url = await uploadToCloudinary(file.buffer, "docs");
+                        const url = isImageDocumentFile(file)
+                            ? await uploadToCloudinary(file.buffer, "docs")
+                            : await saveSellerDocumentLocally(file, req);
                         uploadedDocs[fieldName] = url;
                     }
                 } catch (err) {
                     console.error("Failed to upload document to Cloudinary", err);
+                    return handleResponse(
+                        res,
+                        500,
+                        `Failed to upload ${SELLER_DOCUMENT_FIELDS[file.fieldname] || "document"}`,
+                    );
                 }
             }
         }
