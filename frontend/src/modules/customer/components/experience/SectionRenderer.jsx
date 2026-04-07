@@ -3,8 +3,16 @@ import { useNavigate } from "react-router-dom";
 import ProductCard from "../shared/ProductCard";
 import { cn } from "@/lib/utils";
 import ExperienceBannerCarousel from "./ExperienceBannerCarousel";
+import { motion } from "framer-motion";
+import { mixHexColors } from "../../utils/headerTheme";
 
-const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}, subcategoriesById = {} }) => {
+const SectionRenderer = ({
+  sections = [],
+  productsById = {},
+  categoriesById = {},
+  subcategoriesById = {},
+  themeColor = "#45B0E2",
+}) => {
   const navigate = useNavigate();
 
   return (
@@ -49,8 +57,8 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
                   </span>
                 </div>
               )}
-              <div className="rounded-3xl bg-white shadow-[0_18px_45px_rgba(15,23,42,0.06)] border border-slate-100 px-3.5 py-3">
-                <div className="grid grid-cols-4 gap-3">
+              <div className="mt-4">
+                <div className="grid grid-cols-4 gap-y-7 gap-x-3">
                   {items.map((cat) => (
                     <button
                       key={cat._id}
@@ -62,25 +70,32 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
                           JSON.stringify({
                             headerId: section.headerId || null,
                             sectionId: section._id,
-                          })
+                          }),
                         );
                         navigate(`/category/${cat._id}`);
-                      }}
-                    >
-                      <div className="relative aspect-square w-full rounded-2xl bg-[#F8F9FA] border border-slate-100/80 flex items-center justify-center overflow-hidden p-1 transition-all duration-200 group-hover:border-[#45B0E2]/40 group-hover:bg-white group-hover:shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
+                      }}>
+                      <motion.div
+                        animate={{
+                          background: `radial-gradient(circle at center, ${mixHexColors("#FFFFFF", themeColor, 0.3)} 0%, ${themeColor} 65%, ${mixHexColors(themeColor, "#000000", 0.15)} 100%)`,
+                        }}
+                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                        className="relative aspect-square w-full rounded-2xl border border-white/30 flex items-center justify-center overflow-hidden p-3 shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)]">
+                        
                         {cat.image ? (
                           <img
                             src={cat.image}
                             alt={cat.name}
-                            className="w-full h-full object-contain object-center mix-blend-multiply transition-transform duration-200 group-hover:scale-105"
+                            className="w-[85%] h-[85%] object-contain object-center block mx-auto transition-transform duration-500 group-hover:scale-110 drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
                           />
                         ) : (
                           <div className="h-6 w-6 rounded-full bg-slate-100" />
                         )}
-                      </div>
-                      <div className="text-[11px] font-semibold text-slate-700 text-center leading-snug line-clamp-2 group-hover:text-[#45B0E2]">
+                      </motion.div>
+                      <motion.div 
+                        animate={{ color: "#1A1A1A" }}
+                        className="text-[11px] font-bold text-center leading-snug line-clamp-2 transition-colors duration-500">
                         {cat.name}
-                      </div>
+                      </motion.div>
                     </button>
                   ))}
                 </div>
@@ -115,53 +130,62 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
                   </span>
                 </div>
               )}
-              <div className="rounded-3xl bg-white shadow-[0_18px_45px_rgba(15,23,42,0.06)] border border-slate-100 px-3.5 py-3">
-                <div className="grid grid-cols-4 gap-3">
-                  {items.map((cat) => (
-                    <button
-                      key={cat._id}
-                      className="group flex flex-col items-center gap-1.5 focus:outline-none"
-                      onClick={() => {
-                        window.sessionStorage.setItem(
-                          "experienceReturn",
-                          JSON.stringify({
-                            headerId: section.headerId || null,
-                            sectionId: section._id,
-                          })
-                        );
-                        const parentId =
-                          cat.parentId?._id ||
-                          cat.parentId ||
-                          cat.categoryId?._id ||
-                          cat.categoryId ||
-                          null;
+              <div className="mt-4">
+                <div className="grid grid-cols-4 gap-y-7 gap-x-3">
+                  {items.map((cat) => {
+                    return (
+                      <button
+                        key={cat._id}
+                        className="group flex flex-col items-center gap-1.5 focus:outline-none"
+                        onClick={() => {
+                          window.sessionStorage.setItem(
+                            "experienceReturn",
+                            JSON.stringify({
+                              headerId: section.headerId || null,
+                              sectionId: section._id,
+                            }),
+                          );
+                          const parentId =
+                            cat.parentId?._id ||
+                            cat.parentId ||
+                            cat.categoryId?._id ||
+                            cat.categoryId ||
+                            null;
 
-                        if (parentId) {
-                          navigate(`/category/${parentId}`, {
-                            state: { activeSubcategoryId: cat._id },
-                          });
-                        } else {
-                          // Fallback to previous behavior if we can't resolve parent
-                          navigate(`/category/${cat._id}`);
-                        }
-                      }}
-                    >
-                      <div className="relative aspect-square w-full rounded-2xl bg-[#F8F9FA] border border-slate-100/80 flex items-center justify-center overflow-hidden p-1 transition-all duration-200 group-hover:border-[#45B0E2]/40 group-hover:bg-white group-hover:shadow-[0_10px_25px_rgba(15,23,42,0.08)]">
-                        {cat.image ? (
-                          <img
-                            src={cat.image}
-                            alt={cat.name}
-                            className="w-full h-full object-contain object-center mix-blend-multiply transition-transform duration-200 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="h-6 w-6 rounded-full bg-slate-100" />
-                        )}
-                      </div>
-                      <div className="text-[11px] font-semibold text-slate-700 text-center leading-snug line-clamp-2 group-hover:text-[#45B0E2]">
-                        {cat.name}
-                      </div>
-                    </button>
-                  ))}
+                          if (parentId) {
+                            navigate(`/category/${parentId}`, {
+                              state: { activeSubcategoryId: cat._id },
+                            });
+                          } else {
+                            // Fallback to previous behavior if we can't resolve parent
+                            navigate(`/category/${cat._id}`);
+                          }
+                        }}>
+                        <motion.div
+                        animate={{
+                          background: `radial-gradient(circle at center, ${mixHexColors("#FFFFFF", themeColor, 0.3)} 0%, ${themeColor} 65%, ${mixHexColors(themeColor, "#000000", 0.15)} 100%)`,
+                        }}
+                          transition={{ duration: 0.5, ease: "easeInOut" }}
+                          className="relative aspect-square w-full rounded-2xl border border-white/30 flex items-center justify-center overflow-hidden p-3 shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)]">
+                          
+                          {cat.image ? (
+                            <img
+                              src={cat.image}
+                              alt={cat.name}
+                              className="w-[85%] h-[85%] object-contain object-center block mx-auto transition-transform duration-500 group-hover:scale-110 drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
+                            />
+                          ) : (
+                            <div className="h-6 w-6 rounded-full bg-slate-100" />
+                          )}
+                        </motion.div>
+                        <motion.div 
+                          animate={{ color: "#1A1A1A" }}
+                          className="text-[11px] font-bold text-center leading-snug line-clamp-2 transition-colors duration-500">
+                          {cat.name}
+                        </motion.div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -205,14 +229,14 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
 
           if (singleRowScrollable) {
             return (
-            <div
-              key={section._id}
-              id={`section-${section._id}`}
-              className="-mx-2 md:-mx-4 px-2 md:px-4 mt-6 mb-2"
-            >
+              <div
+                key={section._id}
+                id={`section-${section._id}`}
+                className="-mx-2 md:-mx-4 px-2 md:px-4 mt-6 mb-2"
+              >
                 <div className="flex items-center justify-between mb-3">
                   {heading && (
-                    <h3 className="text-base font-black text-[#1A1A1A]">
+                    <h3 className="text-base font-bold text-[#1A1A1A]">
                       {heading}
                     </h3>
                   )}
@@ -282,4 +306,3 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
 };
 
 export default SectionRenderer;
-

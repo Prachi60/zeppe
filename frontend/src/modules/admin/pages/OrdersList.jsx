@@ -166,15 +166,9 @@ const OrdersList = () => {
             const safeLower = (value) => String(value || '').toLowerCase();
             const query = safeLower(searchTerm);
             const matchesSearch =
-<<<<<<< HEAD
                 safeLower(order.id).includes(query) ||
                 safeLower(order.customer).includes(query) ||
                 safeLower(order.seller).includes(query);
-=======
-                (order.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (order.customer || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (order.seller || '').toLowerCase().includes(searchTerm.toLowerCase());
->>>>>>> 4e9dc5d2792db297d5b3bd70a835c8adab9ec76b
 
             const matchesStatus = adminRouteMatchesOrder(status, order);
 

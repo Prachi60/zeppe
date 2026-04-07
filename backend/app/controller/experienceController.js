@@ -176,9 +176,9 @@ const validateAndNormalizeConfig = async (displayType, config = {}) => {
       : [];
     const subcategories = subcategoryIds.length
       ? await Category.find({
-          _id: { $in: subcategoryIds },
-          type: "subcategory",
-        }).select("_id")
+        _id: { $in: subcategoryIds },
+        type: "subcategory",
+      }).select("_id")
       : [];
     const products = productIds.length
       ? await Product.find({ _id: { $in: productIds } }).select("_id")
@@ -440,9 +440,9 @@ export const getPublicHeroConfig = async (req, res) => {
 
     const payload = config
       ? {
-          banners: config.banners || { items: [] },
-          categoryIds: config.categoryIds || [],
-        }
+        banners: config.banners || { items: [] },
+        categoryIds: config.categoryIds || [],
+      }
       : { banners: { items: [] }, categoryIds: [] };
 
     return handleResponse(res, 200, "Hero config fetched", payload);

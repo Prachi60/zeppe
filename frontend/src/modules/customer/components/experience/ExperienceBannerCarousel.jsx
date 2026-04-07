@@ -2,7 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap = 0, edgeToEdge = false }) => {
-  if (!items.length) return null;
+  if (!items || !items.length) return null;
 
   const effectiveSlideGap = fullWidth ? 0 : slideGap;
 
@@ -57,7 +57,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
             key={idx}
             className={cn(
               "relative shrink-0 overflow-hidden bg-slate-100 flex items-center justify-center box-border",
-              fullWidth ? "h-[190px] rounded-none px-0" : "h-[190px] px-4 md:px-8"
+              fullWidth ? "h-[220px] rounded-none px-0" : "h-[220px] px-4 md:px-8"
             )}
             style={{
               width: `${stepPercent}%`,

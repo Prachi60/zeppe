@@ -1,22 +1,36 @@
 import React from "react";
-import { FaAppleWhole, FaShirt, FaLaptop, FaPumpSoap } from "react-icons/fa6";
-import { GiLargeDress, GiLipstick, GiSofa, GiBabyBottle } from "react-icons/gi";
-import { MdOutlinePets, MdOutlineSportsBasketball } from "react-icons/md";
+import AllIcon from "@/assets/category-icons/all.png";
+import GroceryIcon from "@/assets/category-icons/grocery.png";
+import FashionIcon from "@/assets/category-icons/fashion.png";
+import ElectronicsIcon from "@/assets/category-icons/electronics.png";
+import BeautyIcon from "@/assets/category-icons/beauty.png";
+import WeddingIcon from "@/assets/category-icons/wedding.png";
+import HomeIcon from "@/assets/category-icons/home.png";
+import KidsIcon from "@/assets/category-icons/kids.png";
+import PetsIcon from "@/assets/category-icons/pets.png";
+import SportsIcon from "@/assets/category-icons/sports.png";
+import CosmeticsIcon from "@/assets/category-icons/cosmetics.png";
+import GardenIcon from "@/assets/category-icons/garden.png";
+import MusicIcon from "@/assets/category-icons/music.png";
 
-const VISUAL_COMPONENTS = {
-  grocery: FaAppleWhole,
-  fashion: FaShirt,
-  electronics: FaLaptop,
-  beauty: FaPumpSoap,
-  wedding: GiLargeDress,
-  home: GiSofa,
-  kids: GiBabyBottle,
-  pets: MdOutlinePets,
-  sports: MdOutlineSportsBasketball,
-  cosmetics: GiLipstick,
+export const VISUAL_IMAGES = {
+  all: AllIcon,
+  grocery: GroceryIcon,
+  fashion: FashionIcon,
+  electronics: ElectronicsIcon,
+  beauty: BeautyIcon,
+  wedding: WeddingIcon,
+  home: HomeIcon,
+  kids: KidsIcon,
+  pets: PetsIcon,
+  sports: SportsIcon,
+  cosmetics: CosmeticsIcon,
+  garden: GardenIcon,
+  music: MusicIcon,
 };
 
 export const headerCategoryVisuals = [
+  { id: "all", label: "All", color: "#111827" },
   { id: "grocery", label: "Grocery", color: "#f59e0b" },
   { id: "fashion", label: "Fashion", color: "#ec4899" },
   { id: "electronics", label: "Electronics", color: "#0ea5e9" },
@@ -27,27 +41,44 @@ export const headerCategoryVisuals = [
   { id: "pets", label: "Pets", color: "#f97316" },
   { id: "sports", label: "Sports", color: "#3b82f6" },
   { id: "cosmetics", label: "Cosmetics", color: "#d946ef" },
+  { id: "garden", label: "Garden", color: "#10b981" },
+  { id: "music", label: "Music", color: "#6366f1" },
 ];
 
-export function getHeaderCategoryVisualMeta(id) {
-  return headerCategoryVisuals.find((item) => item.id === id) || null;
+/**
+ * Enhanced lookup that matches by ID or Name
+ */
+export function getHeaderCategoryVisualMeta(identifier) {
+  if (!identifier) return null;
+  const idLower = identifier.toLowerCase();
+  
+  // Try direct ID match
+  let meta = headerCategoryVisuals.find((item) => item.id === idLower);
+  
+  // Try fuzzy name match if no ID match
+  if (!meta) {
+    meta = headerCategoryVisuals.find((item) => 
+      idLower.includes(item.id) || item.id.includes(idLower)
+    );
+  }
+  
+  return meta;
 }
 
 export function HeaderCategoryVisual({
   visualKey,
   className = "",
-  size = 28,
-  color,
+  size = 40,
 }) {
-  const Component = VISUAL_COMPONENTS[visualKey];
-  if (!Component) return null;
+  const imageUrl = VISUAL_IMAGES[visualKey] || VISUAL_IMAGES[getHeaderCategoryVisualMeta(visualKey)?.id];
+  if (!imageUrl) return null;
 
-  const meta = getHeaderCategoryVisualMeta(visualKey);
   return (
-    <Component
-      className={className}
-      size={size}
-      color={color || meta?.color || "#111827"}
+    <img
+      src={imageUrl}
+      alt={visualKey}
+      className={`object-contain ${className}`}
+      style={{ width: size, height: size }}
     />
   );
 }

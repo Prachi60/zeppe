@@ -35,127 +35,47 @@ function buildActiveTabPath(l, r) {
   return `M 0 ${y} L ${l} ${y} L ${l} 12 C ${mapX(2.6)} 7 ${mapX(8.2)} 1.55 ${mapX(15)} 1.55 L ${mapX(85)} 1.55 C ${mapX(91.8)} 1.55 ${mapX(97.4)} 7 ${mapX(98.5)} 12 V ${y} L 100 ${y}`;
 }
 
+import { LayoutGrid } from "lucide-react";
+
 function CategoryNavColumn({
   cat,
   isActive,
-  categoryAccent,
   onCategorySelect,
 }) {
-  const colRef = useRef(null);
-  const labelRef = useRef(null);
-  const [lr, setLr] = useState({ l: 22, r: 78 });
-
-  const measure = () => {
-    if (!isActive || !colRef.current || !labelRef.current) return;
-    const col = colRef.current.getBoundingClientRect();
-    const lab = labelRef.current.getBoundingClientRect();
-    if (col.width < 4) return;
-    const pad = 5;
-    const l = Math.max(0, ((lab.left - col.left - pad) / col.width) * 100);
-    const r = Math.min(100, ((lab.right - col.left + pad) / col.width) * 100);
-    if (r - l > 6) setLr({ l, r });
-  };
-
-  useLayoutEffect(() => {
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (colRef.current) ro.observe(colRef.current);
-    window.addEventListener("resize", measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [isActive, cat.name]);
-
-  const pathD = isActive ? buildActiveTabPath(lr.l, lr.r) : "";
+  const isAll = cat.id === "all" || cat.slug === "all";
 
   return (
-    <motion.div
-      ref={colRef}
-      layout
-      whileTap={{ scale: 0.96 }}
-      transition={{
-        layout: { type: "spring", stiffness: 520, damping: 38, mass: 0.55 },
-      }}
+    <div
       onClick={() => onCategorySelect && onCategorySelect(cat)}
-      style={{
-        borderBottomColor: isActive ? "transparent" : categoryAccent,
-      }}
-      className="relative z-[2] flex min-w-[56px] shrink-0 cursor-pointer flex-col items-center gap-1 border-b-2 px-2 pb-0.5 pt-0.5 snap-start md:min-w-[72px]">
-      <div
-        className={cn(
-          "relative z-10 flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border bg-white/80 shadow-sm transition-all duration-200 md:h-14 md:w-14",
-          isActive
-            ? "border-white/90 shadow-[0_10px_24px_rgba(15,23,42,0.18)]"
-            : "border-black/5",
-        )}>
-        {cat.image ? (
-          <img
-            src={cat.image}
-            alt={cat.name}
-            className="h-full w-full object-cover"
-            style={{ opacity: isActive ? 1 : 0.88 }}
-          />
-        ) : cat.headerVisualKey ? (
-          <HeaderCategoryVisual
-            visualKey={cat.headerVisualKey}
-            size={isActive ? 24 : 22}
-          />
-        ) : typeof cat.icon === "function" ||
-          (typeof cat.icon === "object" && cat.icon.$$typeof) ? (
-          <cat.icon
-            sx={{
-              fontSize: { xs: 20, md: 24 },
-              color: "#111111",
-              opacity: isActive ? 1 : 0.62,
-              transition: "opacity 0.2s, transform 0.2s",
-            }}
+      className={cn(
+        "relative flex min-w-[70px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 pb-1 transition-all active:scale-95",
+        isActive ? "border-b-2 border-[#2822e3]" : "border-b-2 border-transparent",
+      )}>
+      <div className="flex h-12 w-12 items-center justify-center">
+        {isAll ? (
+          <LayoutGrid
+            className={cn(
+              "h-6 w-6 translate-y-[2px] transition-colors",
+              isActive ? "text-white" : "text-white/60",
+            )}
+            strokeWidth={2.4}
           />
         ) : (
           <img
-            src={cat.icon}
+            src={cat.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png"}
             alt={cat.name}
-            className="h-5 w-5 object-contain md:h-6 md:w-6"
-            style={{ opacity: isActive ? 1 : 0.62 }}
+            className="h-full w-full object-contain"
           />
         )}
       </div>
-      <div className="relative mt-px w-full">
-        <span
-          ref={labelRef}
-          className={cn(
-            "relative z-10 mx-auto block max-w-[72px] truncate px-1 pb-0.5 text-center text-[8px] tracking-tight md:max-w-[88px] md:text-[10px]",
-            isActive ? "font-black" : "font-semibold",
-          )}
-          style={{
-            color: "#111111",
-            opacity: isActive ? 1 : 0.68,
-          }}>
-          {cat.name}
-        </span>
-      </div>
-      {isActive && (
-        <motion.svg
-          layoutId="active-category-curve"
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 left-0 right-0 z-[6] h-[22px] w-full overflow-visible"
-          viewBox="0 0 100 20"
-          preserveAspectRatio="none"
-          shapeRendering="geometricPrecision"
-          transition={{
-            layout: { type: "spring", stiffness: 560, damping: 40, mass: 0.5 },
-          }}>
-          <path
-            d={pathD}
-            fill="none"
-            stroke={categoryAccent}
-            strokeWidth="2"
-            strokeLinecap="butt"
-            strokeLinejoin="round"
-          />
-        </motion.svg>
-      )}
-    </motion.div>
+      <span
+        className={cn(
+          "whitespace-nowrap text-center text-xs tracking-tight transition-colors",
+          isActive ? "font-semibold text-white" : "font-medium text-white/80",
+        )}>
+        {cat.name}
+      </span>
+    </div>
   );
 }
 
@@ -288,7 +208,9 @@ const MainLocationHeader = ({
   );
 
   const baseHeaderColor = activeCategory?.headerColor || "#45B0E2";
-  const headerGradient = buildHeaderGradient(baseHeaderColor);
+  const headerBackground = {
+    backgroundImage: buildHeaderGradient(baseHeaderColor),
+  };
   const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
   const categoryAccent = "#111111";
 
@@ -319,11 +241,11 @@ const MainLocationHeader = ({
             borderBottomLeftRadius: headerRoundness,
             borderBottomRightRadius: headerRoundness,
             opacity: bgOpacity,
-            backgroundImage: headerGradient,
+            ...headerBackground,
           }}
-          className="px-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden transition-all duration-300 sticky top-0">
-          {/* Subtle Glow Overlay */}
-          <div className="absolute inset-0 bg-white/8 pointer-events-none" />
+          className="sticky top-0 z-10 overflow-hidden px-4 pb-4 shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all duration-300 rounded-b-2xl">
+          {/* Pure Base Layer */}
+          <div className="absolute inset-0 pointer-events-none" />
 
           {/* Corner Lottie */}
           <motion.button
@@ -443,71 +365,73 @@ const MainLocationHeader = ({
             </div>
           </div>
 
-          {/* Collapsible Delivery Info & Location (MOBILE ONLY) */}
-          <div className="md:hidden">
-            <motion.div
-              style={{
-                height: contentHeight,
-                opacity: contentOpacity,
-                marginBottom: navMargin,
-                display: displayContent,
-                overflow: "hidden",
-              }}
-              className="relative z-10">
-              <div className="mb-1">
-                <span className="inline-flex items-center rounded-full border border-black/10 bg-white/18 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-slate-900 backdrop-blur-sm">
-                  {appName}
-                </span>
+          {/* Header Rows (MOBILE ONLY) */}
+          <div className="md:hidden flex flex-col gap-1">
+            {/* Top Row: Delivery Info & Profile */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex flex-col gap-2.5">
+                <span className="text-sm font-bold text-white leading-none tracking-tight">Delivery in 12-15 mins</span>
+                <button
+                  type="button"
+                  onClick={() => setIsLocationOpen(true)}
+                  className="flex items-center gap-0.5 text-left text-xs font-semibold text-white/80 border-0 bg-transparent p-0">
+                  <span className="max-w-[240px] truncate">{currentLocation.name}</span>
+                  <ChevronDownIcon sx={{ fontSize: 13, opacity: 0.9, color: "white" }} />
+                </button>
               </div>
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <AccessTimeIcon sx={{ fontSize: 16, color: "#111827" }} />
-                    <span className="text-base font-bold text-slate-900 tracking-tight leading-none">
-                      {currentLocation.time}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    data-lenis-prevent
-                    data-lenis-prevent-touch
-                    onClick={() => {
-                      setIsLocationOpen(true);
-                    }}
-                    className="flex items-center gap-1 text-slate-800 cursor-pointer group active:scale-95 transition-transform border-0 bg-transparent p-0 text-left">
-                    <LocationOnIcon sx={{ fontSize: 14, color: "#111827" }} />
-                    <div className="text-[10px] font-medium leading-tight max-w-[280px] truncate">
-                      {isFetchingLocation
-                        ? "Detecting location..."
-                        : currentLocation.name}
-                    </div>
-                    <ChevronDownIcon
-                      sx={{ fontSize: 12, opacity: 0.5, color: "#111827" }}
-                    />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
 
-          {/* Search Bar (MOBILE ONLY) */}
-          <div className="relative z-10 mt-[1.5px] flex items-center gap-2 md:hidden">
-            <motion.div
-              onClick={handleSearchClick}
-              whileTap={{ scale: 0.98 }}
-              style={{ backgroundColor: searchBarBg }}
-              className="flex-1 rounded-[10px] px-3 h-10 shadow-md flex items-center border border-white/50 transition-all duration-200 focus-within:ring-2 focus-within:ring-cyan-400/60 cursor-pointer">
-              <SearchIcon sx={{ color: "#000000", fontSize: 18 }} />
-              <input
-                type="text"
-                placeholder={searchPlaceholder || "Search Products..."}
-                readOnly
-                className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-semibold placeholder:text-slate-300 text-[14px] cursor-pointer"
-              />
-              <div className="flex items-center gap-2 border-l border-slate-100 pl-2.5">
-                <MicIcon sx={{ color: "#000000", fontSize: 18 }} />
+              <button
+                onClick={() => navigate("/profile")}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 shadow-sm border border-white/10 active:scale-90 transition-transform">
+                <AccountCircleOutlinedIcon sx={{ fontSize: 22, color: "#fff" }} />
+              </button>
+            </div>
+
+            {/* Bottom Row: 60/40 Split Search & Refer/Earn - Dashboard Redesign */}
+            <div className="pb-3 flex items-center gap-2.5 pt-0.5">
+              <div className="flex-[0.6]">
+                <motion.div
+                  onClick={handleSearchClick}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full rounded-lg px-4 h-[40px] flex items-center bg-[#F2F2F2] border border-black/5 transition-colors duration-200 cursor-pointer">
+                  <SearchIcon sx={{ color: "#6B7280", fontSize: 18 }} />
+                  <input
+                    type="text"
+                    placeholder={searchPlaceholder || "Search products..."}
+                    readOnly
+                    className="flex-1 bg-transparent border-none outline-none pl-2 text-[#1A1A1A] font-medium placeholder:text-[#6B7280] text-[13px] cursor-pointer"
+                  />
+                  <div className="flex items-center gap-2 border-l border-gray-300/40 pl-2">
+                    <MicIcon sx={{ color: "#6B7280", fontSize: 18 }} />
+                  </div>
+                </motion.div>
               </div>
-            </motion.div>
+
+              <div className="flex-[0.4]">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  animate={{ scale: [1, 1.08, 1] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  onClick={() => navigate("/refer-earn")}
+                  className="relative w-full h-[40px] rounded-lg bg-gradient-to-br from-[#2a2a2a] to-[#050505] border-2 border-white shadow-[0_0_15px_rgba(255,255,255,0.1)] flex flex-col items-center justify-center transition-all active:brightness-125 px-1 overflow-hidden">
+
+                  {/* Gloss Shimmer Effect */}
+                  <motion.div
+                    initial={{ x: "-150%" }}
+                    animate={{ x: "150%" }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 0, ease: "linear" }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-25deg] pointer-events-none"
+                  />
+
+                  <span className="text-[11px] font-black leading-none text-[#D4AF37] tracking-[0.04em] uppercase whitespace-nowrap mb-1.5">
+                    Refer & Earn
+                  </span>
+                  <span className="text-[5px] font-semibold text-white/80 leading-none tracking-normal whitespace-nowrap">
+                    Unlock rewards together
+                  </span>
+                </motion.button>
+              </div>
+            </div>
           </div>
 
           {/* Categories Navigation - Smooth Collapse */}
@@ -529,8 +453,8 @@ const MainLocationHeader = ({
                 display: displayNav,
                 overflowY: "hidden",
               }}
-              className="relative flex items-end md:justify-center gap-0 overflow-x-auto no-scrollbar -mx-2 px-2 md:mx-0 md:px-0 z-10 snap-x pt-1 min-h-[68px] md:min-h-[76px] pb-0.5">
-              {categories.slice(0, 10).map((cat) => {
+              className="no-scrollbar relative z-10 flex min-h-[68px] items-center gap-6 overflow-x-auto px-4 py-2 scroll-smooth md:justify-center md:min-h-[76px]">
+              {categories.map((cat) => {
                 const isActive = activeCategory?.id === cat.id;
                 return (
                   <CategoryNavColumn

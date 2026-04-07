@@ -20,6 +20,29 @@ export function shiftHex(hex, amount) {
     .join("")}`;
 }
 
+/** Mix two hex colors with a weight t (0.0 to 1.0). */
+export function mixHexColors(hex1, hex2, t) {
+  const parse = (h) => {
+    const norm = h.length === 4 ? `#${h[1]}${h[1]}${h[2]}${h[2]}${h[3]}${h[3]}` : h;
+    return [
+      parseInt(norm.slice(1, 3), 16),
+      parseInt(norm.slice(3, 5), 16),
+      parseInt(norm.slice(5, 7), 16)
+    ];
+  };
+
+  const [r1, g1, b1] = parse(hex1);
+  const [r2, g2, b2] = parse(hex2);
+
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+
+  return `#${[r, g, b]
+    .map((c) => c.toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
 const DEFAULT_BASE = "#45B0E2";
 
 /** Blend hex toward white (t=0 base, t≈1 near-white). */
@@ -54,7 +77,9 @@ export function buildSearchBarBackgroundColor(baseHeaderColor) {
  */
 export function buildHeaderGradient(baseHeaderColor) {
   const base = baseHeaderColor || DEFAULT_BASE;
-  return `linear-gradient(to bottom, ${shiftHex(base, -18)} 0%, ${shiftHex(base, 20)} 54%, ${shiftHex(base, 165)} 100%)`;
+  // Blend with white for a soft, premium top-tint
+  const topTint = mixHexWithWhite(base, 0.4);
+  return `linear-gradient(to bottom, ${topTint} 0%, ${base} 70%, ${shiftHex(base, -10)} 100%)`;
 }
 
 /** Solid fill for floating cart pill: header mid tone, slightly darker. */
