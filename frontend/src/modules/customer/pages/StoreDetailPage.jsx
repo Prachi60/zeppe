@@ -6,7 +6,6 @@ import { customerApi } from "../services/customerApi";
 import { useLocation as useAppLocation } from "../context/LocationContext";
 import {
   formatStoreAddress,
-  resolveStoreCoverImage,
   resolveStoreLogo,
 } from "../utils/storeVisuals";
 
@@ -114,7 +113,6 @@ const StoreDetailPage = () => {
     );
   }, [products, searchQuery]);
 
-  const coverImage = resolveStoreCoverImage(store || { _id: storeId });
   const storeLogo = resolveStoreLogo(store || { _id: storeId });
   const address = formatStoreAddress(store || {});
 
@@ -165,76 +163,97 @@ const StoreDetailPage = () => {
 
         {!isLoading && !error && store && (
           <>
-            <section className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-              <div className="relative h-52 overflow-hidden md:h-72">
-                <img
-                  src={coverImage}
-                  alt={store.shopName || store.name || "Store"}
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/20 to-transparent" />
-                <div className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full bg-white/92 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-slate-700">
-                  <ShieldCheck size={14} className="text-emerald-500" />
-                  Verified Store
+            <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+              <div className="relative px-4 pb-5 pt-5 md:px-6 md:pb-6 md:pt-6">
+                <div className="flex items-end gap-4">
+                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] border-4 border-white bg-white shadow-lg md:h-28 md:w-28">
+                    <img
+                      src={storeLogo}
+                      alt={store.shopName || store.name || "Store logo"}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="pb-2">
+                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#45B0E2]">
+                      Store Info
+                    </p>
+                    <h2 className="mt-1 text-[28px] font-black leading-none tracking-tight text-slate-900 md:text-[34px]">
+                      {store.shopName || store.name}
+                    </h2>
+                  </div>
                 </div>
-                <div className="absolute bottom-5 left-5 right-5">
-                  <div className="flex items-end gap-4">
-                    <div className="h-20 w-20 overflow-hidden rounded-3xl border-4 border-white/80 bg-white/90 shadow-xl">
-                      <img
-                        src={storeLogo}
-                        alt={store.shopName || store.name || "Store logo"}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-sky-200">
-                        {store.category || "Local store"}
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-[#EEF8FD] px-3 py-1.5 text-[11px] font-bold text-[#1D9BD1]">
+                    <ShieldCheck size={14} />
+                    Trusted Store
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-600">
+                    Fast-moving groceries
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-600">
+                    Daily essentials
+                  </span>
+                </div>
+
+                <p className="mt-4 text-sm font-medium leading-6 text-slate-600 md:max-w-3xl">
+                  {store.shopName || store.name} me daily use grocery products, quick-repeat essentials,
+                  snacks, dairy aur home needs ka curated stock milta hai. Fresh availability ke saath
+                  fast dispatch aur nearby delivery experience ke liye ye store optimized hai.
+                </p>
+
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                      Address
+                    </p>
+                    <div className="mt-2 flex items-start gap-2">
+                      <MapPin size={16} className="mt-0.5 text-[#45B0E2]" />
+                      <p className="text-sm font-semibold leading-5 text-slate-700">
+                        {address || "Nearby store address available on delivery selection."}
                       </p>
-                      <h2 className="text-3xl font-black tracking-tight text-white md:text-4xl">
-                        {store.shopName || store.name}
-                      </h2>
                     </div>
                   </div>
-                  {store.description && (
-                    <p className="mt-3 max-w-2xl text-sm font-medium text-slate-200 md:text-base">
-                      {store.description}
-                    </p>
-                  )}
-                </div>
-              </div>
 
-              <div className="grid gap-4 px-5 py-5 md:grid-cols-3 md:px-6">
-                <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
-                    Distance
-                  </p>
-                  <p className="mt-2 text-base font-bold text-slate-900">
-                    {formatDistance(store.distance)}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-3 md:col-span-2">
-                  <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
-                    Address
-                  </p>
-                  <div className="mt-2 flex items-start gap-2 text-sm font-medium text-slate-600">
-                    <MapPin size={16} className="mt-0.5 shrink-0 text-slate-400" />
-                    <span>{address || "Address not available"}</span>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                      Delivery
+                    </p>
+                    <p className="mt-2 text-base font-black text-slate-900">8-15 mins</p>
+                    <p className="mt-1 text-sm font-medium text-slate-500">
+                      Quick order processing for nearby shoppers.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                      Reach
+                    </p>
+                    <p className="mt-2 text-base font-black text-slate-900">
+                      {formatDistance(store?.distance)}
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-slate-500">
+                      Best selling products visible based on nearby stock.
+                    </p>
                   </div>
                 </div>
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-              <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <section className="rounded-[32px] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)] md:p-6">
+              <div className="mb-5 flex flex-col gap-4">
                 <div>
-                  <h3 className="text-2xl font-black tracking-tight text-slate-900">
-                    Products from this store
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#45B0E2]">
+                    Product Catalog
+                  </p>
+                  <h3 className="mt-1 text-3xl font-black tracking-tight text-slate-900">
+                    Products of Shop
                   </h3>
-                  <p className="mt-1 text-sm font-medium text-slate-500">
-                    Explore items available only from {store.shopName || store.name}.
+                  <p className="mt-2 text-sm font-medium text-slate-500">
+                    {store.shopName || store.name} ke available products yahan browse karo.
                   </p>
                 </div>
-                <label className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 md:min-w-[320px]">
+                <label className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <Search size={18} className="text-slate-400" />
                   <input
                     type="text"
@@ -254,13 +273,14 @@ const StoreDetailPage = () => {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
                   {filteredProducts.map((product) => (
                     <ProductCard
                       key={product.id}
                       product={product}
-                      compact
+                      storeWide
                       neutralBg
+                      className="w-full max-w-none"
                     />
                   ))}
                 </div>

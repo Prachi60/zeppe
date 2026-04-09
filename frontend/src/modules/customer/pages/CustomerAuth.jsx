@@ -1,455 +1,433 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@core/context/AuthContext';
-import { useSettings } from '@core/context/SettingsContext';
-import {
-    Phone,
-    ShieldCheck,
-    User,
-    ShoppingBag,
-    ChevronRight,
-    MapPin,
-    Zap,
-    Utensils,
-    Smartphone,
-    ShoppingBasket,
-    Heart,
-    Star,
-    ChevronLeft
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { customerApi } from '../services/customerApi';
+import React, { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowRight, ChevronLeft, LoaderCircle, User } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@core/context/AuthContext";
+import { useSettings } from "@core/context/SettingsContext";
+import { customerApi } from "../services/customerApi";
+import ZeppeAuthLogo from "@/assets/ZeppeAuthLogo.svg";
 
-const CATEGORIES = [
-    {
-        title: "Grocery",
-        icon: <ShoppingBasket size={28} />,
-        color: "#ecfeff",
-        ring: "#45B0E2",
-        text: "#0ea5e9",
-        theme: "#45B0E2",
-        shadow: "rgba(97, 218, 251, 0.3)",
-        img: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=600"
-    },
-    {
-        title: "Store",
-        icon: <Smartphone size={28} />,
-        color: "#f0f9ff",
-        ring: "#38bdf8",
-        text: "#0369a1",
-        theme: "#0ea5e9",
-        shadow: "rgba(14, 165, 233, 0.3)",
-        img: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=600"
-    },
-    {
-        title: "Food",
-        icon: <Utensils size={28} />,
-        color: "#f0fdfa",
-        ring: "#22d3ee",
-        text: "#0e7490",
-        theme: "#0ea5e9",
-        shadow: "rgba(14, 165, 233, 0.3)",
-        img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=600"
-    },
-    {
-        title: "Health",
-        icon: <ShieldCheck size={28} />,
-        color: "#eff6ff",
-        ring: "#60a5fa",
-        text: "#1d4ed8",
-        theme: "#3b82f6",
-        shadow: "rgba(59, 130, 246, 0.3)",
-        img: "https://images.unsplash.com/photo-1512678080530-7760d81faba6?q=80&w=1200&auto=format&fit=crop"
-    },
+// Real product image URLs for the animated ribbons (verified working Unsplash IDs)
+const PRODUCT_ROWS = [
+  [
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=120&h=120&fit=crop&q=80",  // veggies
+    "https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=120&h=120&fit=crop&q=80",  // fruit bowl
+    "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=120&h=120&fit=crop&q=80",  // milk
+    "https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=120&h=120&fit=crop&q=80",  // bread
+    "https://images.unsplash.com/photo-1518492104633-130d0cc84637?w=120&h=120&fit=crop&q=80",  // eggs
+    "https://images.unsplash.com/photo-1559181567-c3190bafec14?w=120&h=120&fit=crop&q=80",  // cherries
+  ],
+  [
+    "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=120&h=120&fit=crop&q=80",  // dal/lentils
+    "https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?w=120&h=120&fit=crop&q=80",  // rice
+    "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=120&h=120&fit=crop&q=80",  // coffee
+    "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=120&h=120&fit=crop&q=80",  // biscuits
+    "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=120&h=120&fit=crop&q=80",  // oil
+    "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=120&h=120&fit=crop&q=80",  // yogurt
+  ],
+  [
+    "https://images.unsplash.com/photo-1481391243133-f96216dcb5d2?w=120&h=120&fit=crop&q=80",  // chocolate
+    "https://images.unsplash.com/photo-1563291074-2bf8677ac0e5?w=120&h=120&fit=crop&q=80",  // dry fruits
+    "https://images.unsplash.com/photo-1477308806442-e5bce33b0595?w=120&h=120&fit=crop&q=80",  // cereal
+    "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=120&h=120&fit=crop&q=80",  // chips
+    "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=120&h=120&fit=crop&q=80",  // juice
+    "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=120&h=120&fit=crop&q=80",  // grocery
+  ],
 ];
 
-const CustomerAuth = () => {
-    const [isLogin, setIsLogin] = useState(true);
-    const [isLoading, setIsLoading] = useState(false);
-    const [showOtp, setShowOtp] = useState(false);
-    const [timer, setTimer] = useState(0);
-    const [carouselIndex, setCarouselIndex] = useState(0);
-    const { login } = useAuth();
-    const { settings } = useSettings();
-    const appName = settings?.appName || 'App';
-    const logoUrl = settings?.logoUrl || '';
-    const navigate = useNavigate();
+const SIGNUP_HINT_PATTERNS = [
+  "signup",
+  "sign up",
+  "register",
+  "create account",
+  "new user",
+  "not found",
+  "does not exist",
+];
 
-    const [formData, setFormData] = useState({
-        phone: '',
-        otp: '',
-        name: ''
-    });
+function ProductRibbon({ items, reverse = false, duration = 18 }) {
+  const repeatedItems = [...items, ...items];
 
-    const activeCategory = CATEGORIES[carouselIndex];
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCarouselIndex((prev) => (prev + 1) % CATEGORIES.length);
-        }, 3000);
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        let interval;
-        if (timer > 0) {
-            interval = setInterval(() => setTimer(t => t - 1), 1000);
-        }
-        return () => clearInterval(interval);
-    }, [timer]);
-
-    const handleSendOtp = async (e) => {
-        e?.preventDefault();
-        if (formData.phone.length !== 10) {
-            toast.error('Enter valid 10-digit number');
-            return;
-        }
-        setIsLoading(true);
-        try {
-            if (isLogin) {
-                await customerApi.sendLoginOtp({ phone: formData.phone });
-            } else {
-                await customerApi.sendSignupOtp({ name: formData.name, phone: formData.phone });
-            }
-            setShowOtp(true);
-            setTimer(30);
-            toast.success('OTP sent!');
-        } catch (error) {
-            toast.error('Failed to send OTP');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleVerifyOtp = async (e) => {
-        e.preventDefault();
-        if (formData.otp.length !== 4) {
-            toast.error('Enter 4-digit code');
-            return;
-        }
-        setIsLoading(true);
-        try {
-            const response = await customerApi.verifyOtp({ phone: formData.phone, otp: formData.otp });
-            const { token, customer } = response.data.result;
-            login({ ...customer, token, role: 'customer' });
-            toast.success('Successfully Logged In!');
-            navigate('/');
-        } catch (error) {
-            const apiMessage = error?.response?.data?.message;
-            toast.error(apiMessage || 'Invalid OTP');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit',_sans-serif] overflow-hidden">
-
-            {/* Dynamic Atmospheric Background */}
-            <motion.div
-                animate={{ backgroundColor: activeCategory.color }}
-                transition={{ duration: 1.5 }}
-                className="absolute inset-0 z-0"
+  return (
+    <div className="overflow-hidden">
+      <motion.div
+        animate={{ x: reverse ? ["-50%", "0%"] : ["0%", "-50%"] }}
+        transition={{ duration, repeat: Infinity, ease: "linear" }}
+        className="flex w-max gap-3"
+      >
+        {repeatedItems.map((imgUrl, index) => (
+          <div
+            key={`${imgUrl}-${index}`}
+            className="flex h-[56px] w-[56px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-[#eef1f5] bg-[#f7f7f8] shadow-[0_10px_18px_rgba(15,23,42,0.05)] sm:h-[62px] sm:w-[62px]"
+          >
+            <img
+              src={imgUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
+              onError={(e) => {
+                // Hide the entire tile if image fails to load
+                const tile = e.currentTarget.parentElement;
+                if (tile) tile.style.display = 'none';
+              }}
             />
-
-            {/* Animated Blurred Blobs */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-                <motion.div
-                    animate={{
-                        backgroundColor: activeCategory.theme,
-                        x: [0, 50, 0],
-                        y: [0, 30, 0],
-                        scale: [1, 1.2, 1]
-                    }}
-                    transition={{
-                        backgroundColor: { duration: 1.5 },
-                        x: { duration: 8, repeat: Infinity, ease: "easeInOut" },
-                        y: { duration: 10, repeat: Infinity, ease: "easeInOut" },
-                        scale: { duration: 12, repeat: Infinity, ease: "easeInOut" }
-                    }}
-                    className="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-[100px] opacity-20"
-                />
-                <motion.div
-                    animate={{
-                        backgroundColor: activeCategory.theme,
-                        x: [0, -40, 0],
-                        y: [0, -60, 0],
-                        scale: [1, 1.1, 1]
-                    }}
-                    transition={{
-                        backgroundColor: { duration: 1.5 },
-                        x: { duration: 9, repeat: Infinity, ease: "easeInOut" },
-                        y: { duration: 7, repeat: Infinity, ease: "easeInOut" },
-                        scale: { duration: 15, repeat: Infinity, ease: "easeInOut" }
-                    }}
-                    className="absolute -bottom-24 -right-24 w-[500px] h-[500px] rounded-full blur-[120px] opacity-30"
-                />
-            </div>
-
-            {/* Premium Centered Card Container */}
-            <div className="w-[92%] max-w-[400px] h-[85vh] max-h-[780px] bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
-
-                {/* Scrollable Content Container */}
-                <div className="h-full overflow-y-auto no-scrollbar pb-20">
-
-                    {/* Header: Immersive Category Visuals */}
-                    <motion.div
-                        animate={{ backgroundColor: activeCategory.theme }}
-                        transition={{ duration: 1 }}
-                        className="relative h-[35%] w-full overflow-hidden"
-                    >
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={carouselIndex}
-                                initial={{ opacity: 0, scale: 1.1 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 1.05 }}
-                                transition={{ duration: 0.8 }}
-                                className="absolute inset-0"
-                            >
-                                <img
-                                    src={activeCategory.img}
-                                    className="w-full h-full object-cover"
-                                    alt="banner"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-transparent opacity-60" style={{ backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.1), ${activeCategory.theme})` }} />
-                            </motion.div>
-                        </AnimatePresence>
-
-                        {/* Top Branding Bar */}
-                        <div className="absolute top-8 left-0 w-full px-6 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center border border-white/30">
-                                    <ShoppingBag size={20} className="text-white" />
-                                </div>
-                                <span className="text-white font-black tracking-tighter text-xl">{appName.toUpperCase()}</span>
-                            </div>
-                        </div>
-
-                        {/* Centered App Message */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 text-white pt-10">
-                            <motion.h2
-                                key={carouselIndex}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="text-2xl font-black tracking-tight leading-none mb-2"
-                            >
-                                {activeCategory.title.toUpperCase()} INSIDE
-                            </motion.h2>
-                            <p className="text-[10px] font-bold uppercase tracking-[4px] opacity-70">Everything delivered fast</p>
-                        </div>
-
-                        {/* S-Curve Divider */}
-                        <div className="absolute -bottom-1 left-0 w-full leading-[0]">
-                            <svg viewBox="0 0 1440 320" preserveAspectRatio="none" className="w-full h-24">
-                                <path
-                                    fill="#ffffff"
-                                    d="M0,224L40,213.3C80,203,160,181,240,186.7C320,192,400,224,480,240C560,256,640,256,720,234.7C800,213,880,171,960,165.3C1040,160,1120,192,1200,208C1280,224,1360,224,1400,224L1440,224L1440,320L1400,320C1360,320,1280,320,1200,320C1120,320,1040,320,960,320C880,320,800,320,720,320C640,320,560,320,480,320C400,320,320,320,240,320C160,320,80,320,40,320L0,320Z"
-                                />
-                            </svg>
-                        </div>
-                    </motion.div>
-
-                    {/* Circular Carousel Control */}
-                    <div className="relative -mt-14 flex justify-center z-20">
-                        <div className="w-28 h-28 rounded-full bg-white border-4 border-white shadow-[0_15px_40px_rgba(97,218,251,0.2)] flex items-center justify-center overflow-hidden transition-shadow duration-1000" style={{ boxShadow: `0 15px 40px ${activeCategory.shadow}` }}>
-                            <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={carouselIndex}
-                                        initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
-                                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                                        exit={{ opacity: 0, scale: 1.5, rotate: 20 }}
-                                        className="w-full h-full"
-                                        style={{ color: activeCategory.text }}
-                                    >
-                                        {logoUrl ? (
-                                            <img
-                                                src={logoUrl}
-                                                alt={`${appName} logo`}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: activeCategory.color }}>
-                                                {activeCategory.icon}
-                                            </div>
-                                        )}
-                                    </motion.div>
-                            </AnimatePresence>
-                        </div>
-                    </div>
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  );
+}
 
 
-                    {/* Authentication Form Block */}
-                    <div className="px-6 pt-6 pb-10">
-                        <AnimatePresence mode="wait">
-                            {!showOtp ? (
-                                <motion.div
-                                    key="main-form"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="space-y-5"
-                                >
-                                    {/* App Style Tab Switcher */}
-                                    <div className="flex bg-gray-50 rounded-2xl p-1.5 border border-gray-100">
-                                        <button
-                                            onClick={() => setIsLogin(true)}
-                                            className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${isLogin ? 'bg-white shadow-sm' : 'text-gray-400'}`}
-                                            style={{ color: isLogin ? activeCategory.theme : undefined }}
-                                        >
-                                            Login
-                                        </button>
-                                        <button
-                                            onClick={() => setIsLogin(false)}
-                                            className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${!isLogin ? 'bg-white shadow-sm' : 'text-gray-400'}`}
-                                            style={{ color: !isLogin ? activeCategory.theme : undefined }}
-                                        >
-                                            Sign Up
-                                        </button>
-                                    </div>
 
-                                    <div className="space-y-2 text-center">
-                                        <h3 className="text-xl font-black text-gray-900 tracking-tight">
-                                            {isLogin ? 'Welcome Back!' : 'Create Account'}
-                                        </h3>
-                                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest leading-none">
-                                            OTP will be sent for verification
-                                        </p>
-                                    </div>
+const CustomerAuth = () => {
+  const navigate = useNavigate();
+  const routeLocation = useLocation();
+  const { login } = useAuth();
+  const { settings } = useSettings();
+  const appName = settings?.appName || "Zeppe";
+  const logoUrl = ZeppeAuthLogo;
 
-                                    <form onSubmit={handleSendOtp} className="space-y-4">
-                                        {!isLogin && (
-                                            <div className="relative group">
-                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 transition-colors" style={{ color: 'inherit' }}>
-                                                    <User size={18} className="group-focus-within:text-[var(--theme-color)]" style={{ color: 'inherit' }} />
-                                                </div>
-                                                <input
-                                                    required
-                                                    name="name"
-                                                    placeholder="Full Name"
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
-                                                    style={{ '--theme-color': activeCategory.theme }}
-                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                    onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
-                                                    onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
-                                                />
-                                            </div>
-                                        )}
-                                        <div className="relative group">
-                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 transition-colors">
-                                                <Phone size={18} />
-                                            </div>
-                                            <div className="absolute left-11 top-1/2 -translate-y-1/2 font-black text-sm text-gray-400 border-r border-gray-200 pr-2">
-                                                +91
-                                            </div>
-                                            <input
-                                                required
-                                                name="phone"
-                                                maxLength={10}
-                                                placeholder="Mobile Number"
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-20 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
-                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
-                                                onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
-                                                onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
-                                            />
-                                        </div>
+  const isSignupRoute = routeLocation.pathname === "/signup";
+  const [isSignupMode, setIsSignupMode] = useState(isSignupRoute);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [formData, setFormData] = useState({
+    phone: "",
+    otp: "",
+    name: "",
+  });
+  const otpRefs = useRef([]);
 
-                                        <button
-                                            type="submit"
-                                            disabled={isLoading}
-                                            className="w-full text-white py-5 rounded-[24px] text-xs font-black tracking-[4px] flex items-center justify-center gap-3 active:scale-95 transition-all uppercase"
-                                            style={{ backgroundColor: activeCategory.theme, boxShadow: `0 20px 40px ${activeCategory.shadow}` }}
-                                        >
-                                            {isLoading ? 'Verifying...' : 'Continue'}
-                                            <ChevronRight size={18} />
-                                        </button>
-                                    </form>
-                                </motion.div>
-                            ) : (
-                                <motion.div
-                                    key="otp-view"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="space-y-10"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() => setShowOtp(false)}
-                                            className="w-10 h-10 bg-gray-50 border border-gray-100 rounded-full flex items-center justify-center text-gray-400"
-                                        >
-                                            <ChevronLeft size={20} />
-                                        </button>
-                                        <div>
-                                            <h3 className="text-xl font-black text-gray-900 tracking-tight">Verify Device</h3>
-                                            <p className="text-[10px] font-black tracking-widest text-gray-400 uppercase">+91 {formData.phone}</p>
-                                        </div>
-                                    </div>
+  useEffect(() => {
+    setIsSignupMode(isSignupRoute);
+    setShowOtp(false);
+    setFormData((prev) => ({ ...prev, otp: "" }));
+  }, [isSignupRoute]);
 
-                                    <form onSubmit={handleVerifyOtp} className="space-y-10">
-                                        <div className="flex justify-between gap-3 px-1">
-                                            {[...Array(4)].map((_, i) => (
-                                                <input
-                                                    key={i}
-                                                    type="tel"
-                                                    maxLength={1}
-                                                    className="w-14 h-16 bg-white border-2 border-gray-200 rounded-3xl text-center text-2xl font-black outline-none shadow-[0_18px_45px_rgba(15,23,42,0.35)] focus:bg-white focus:border-[var(--theme-color)] focus:shadow-[0_24px_65px_rgba(15,23,42,0.55)] transition-all"
-                                                    style={{ color: activeCategory.theme }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Backspace' && !e.target.value && i > 0) {
-                                                            e.target.previousElementSibling.focus();
-                                                        }
-                                                    }}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        if (val && i < 3) (e.target.nextElementSibling).focus();
-                                                        const otpArr = formData.otp.split('');
-                                                        otpArr[i] = val;
-                                                        setFormData({ ...formData, otp: otpArr.join('') });
-                                                    }}
-                                                    onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
-                                                    onBlur={(e) => e.target.style.borderColor = ''}
-                                                />
-                                            ))}
-                                        </div>
+  useEffect(() => {
+    if (timer <= 0) return undefined;
+    const interval = setInterval(() => setTimer((current) => current - 1), 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
 
-                                        <div className="space-y-4">
-                                            <button
-                                                type="submit"
-                                                disabled={isLoading}
-                                                className="w-full bg-gray-900 text-white py-5 rounded-[24px] text-xs font-black tracking-[4px] shadow-2xl flex items-center justify-center gap-3 uppercase active:scale-95 transition-all"
-                                            >
-                                                {isLoading ? 'Authenticating...' : `Enter ${appName}`}
-                                            </button>
-                                            <div className="flex justify-center">
-                                                <button
-                                                    type="button"
-                                                    disabled={timer > 0}
-                                                    onClick={handleSendOtp}
-                                                    className={`text-[10px] font-black uppercase tracking-widest ${timer > 0 ? 'text-gray-300' : 'underline'}`}
-                                                    style={{ color: timer > 0 ? undefined : activeCategory.theme }}
-                                                >
-                                                    {timer > 0 ? `Resend Code in ${timer}s` : 'Resend Now'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+  const updateFormField = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
-                </div>
-            </div>
+  const toggleAuthMode = (mode) => {
+    if (mode === "signup") {
+      navigate("/signup");
+      return;
+    }
+    navigate("/login");
+  };
 
-            {/* Desktop Message */}
-            <div className="hidden md:block absolute bottom-10 right-10 text-white/20 text-xs font-bold uppercase tracking-[4px]">
-                Adaptive Theme Simulator
-            </div>
+  const sendOtpRequest = async () => {
+    if (formData.phone.length !== 10) {
+      toast.error("Enter valid 10-digit mobile number");
+      return;
+    }
+
+    if (isSignupMode && !formData.name.trim()) {
+      toast.error("Enter your full name to create account");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (isSignupMode) {
+        await customerApi.sendSignupOtp({
+          name: formData.name.trim(),
+          phone: formData.phone,
+        });
+      } else {
+        try {
+          await customerApi.sendLoginOtp({ phone: formData.phone });
+        } catch (error) {
+          const apiMessage = String(
+            error?.response?.data?.message || error?.message || "",
+          ).toLowerCase();
+
+          if (SIGNUP_HINT_PATTERNS.some((pattern) => apiMessage.includes(pattern))) {
+            setIsSignupMode(true);
+            toast.info("New account ke liye name add karke continue karo");
+            return;
+          }
+
+          throw error;
+        }
+      }
+
+      setShowOtp(true);
+      setTimer(30);
+      toast.success("OTP sent successfully");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (event) => {
+    event.preventDefault();
+
+    if (formData.otp.length !== 4) {
+      toast.error("Enter the 4-digit OTP");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await customerApi.verifyOtp({
+        phone: formData.phone,
+        otp: formData.otp,
+      });
+      const { token, customer } = response.data.result;
+      login({ ...customer, token, role: "customer" });
+      toast.success("Successfully logged in");
+      navigate("/");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Invalid OTP");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOtpInput = (index, value) => {
+    const nextValue = value.replace(/\D/g, "").slice(-1);
+    const otpArray = formData.otp.padEnd(4, " ").split("");
+    otpArray[index] = nextValue || " ";
+    updateFormField("otp", otpArray.join("").replace(/\s/g, ""));
+
+    if (nextValue && index < 3) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !formData.otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f3f4f6] px-0 py-0 md:flex md:items-center md:justify-center md:p-6">
+      <div className="relative min-h-screen w-full overflow-hidden bg-white md:min-h-[820px] md:max-w-[430px] md:rounded-[34px] md:shadow-[0_28px_80px_rgba(15,23,42,0.18)]">
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="absolute right-4 top-4 z-20 rounded-full bg-black px-3 py-1.5 text-[11px] font-bold text-white shadow-sm"
+        >
+          Skip
+        </button>
+
+        <div className="relative overflow-hidden px-4 pb-4 pt-4">
+          <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f9fbff] to-transparent" />
+          <div className="relative space-y-3 pt-8">
+            <ProductRibbon items={PRODUCT_ROWS[0]} duration={18} />
+            <ProductRibbon items={PRODUCT_ROWS[1]} reverse duration={20} />
+            <ProductRibbon items={PRODUCT_ROWS[2]} duration={22} />
+          </div>
         </div>
-    );
+
+        <div className="relative z-10 flex flex-1 flex-col px-5 pb-8 pt-2">
+          <div className="mt-2 flex flex-col items-center text-center">
+            <div className="flex min-h-[130px] items-center justify-center">
+              <img
+                src={logoUrl}
+                alt={`${appName} logo`}
+                className="h-[120px] w-[120px] rounded-[28px] object-cover shadow-[0_20px_40px_rgba(15,23,42,0.12)]"
+              />
+            </div>
+            <h1 className="mt-3 text-[1.9rem] font-black tracking-tight text-[#111827]">
+              India&apos;s Quickest App
+            </h1>
+            <p className="mt-1 text-sm font-medium text-slate-500">
+              Log In or Sign Up
+            </p>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {!showOtp ? (
+              <motion.form
+                key="auth-entry"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void sendOtpRequest();
+                }}
+                className="mt-7"
+              >
+                {isSignupMode && (
+                  <div className="mb-3 rounded-xl border border-[#d9dde5] bg-white px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <User size={18} className="text-slate-400" />
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(event) => updateFormField("name", event.target.value)}
+                        placeholder="Enter full name"
+                        className="w-full border-0 bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex overflow-hidden rounded-xl border border-[#d9dde5] bg-white">
+                  <div className="flex w-[62px] items-center justify-center border-r border-[#d9dde5] text-sm font-semibold text-slate-700">
+                    +91
+                  </div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={formData.phone}
+                    onChange={(event) =>
+                      updateFormField("phone", event.target.value.replace(/\D/g, "").slice(0, 10))
+                    }
+                    placeholder="Enter mobile number"
+                    className="h-12 w-full border-0 bg-transparent px-4 text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-black text-sm font-black text-white transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isLoading ? (
+                    <LoaderCircle size={18} className="animate-spin" />
+                  ) : (
+                    "Continue"
+                  )}
+                </button>
+
+                <div className="mt-4 text-center">
+                  {isSignupMode ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleAuthMode("login")}
+                      className="text-xs font-semibold text-slate-500 underline underline-offset-2"
+                    >
+                      Already have an account? Log in
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => toggleAuthMode("signup")}
+                      className="text-xs font-semibold text-slate-500 underline underline-offset-2"
+                    >
+                      New here? Create account
+                    </button>
+                  )}
+                </div>
+              </motion.form>
+            ) : (
+              <motion.form
+                key="otp-entry"
+                initial={{ opacity: 0, x: 18 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -18 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                onSubmit={handleVerifyOtp}
+                className="mt-7"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtp(false);
+                    updateFormField("otp", "");
+                  }}
+                  className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-500"
+                >
+                  <ChevronLeft size={16} />
+                  Change number
+                </button>
+
+                <div className="mb-5 text-center">
+                  <h2 className="text-xl font-black tracking-tight text-[#111827]">
+                    Verify your mobile number
+                  </h2>
+                  <p className="mt-1 text-sm font-medium text-slate-500">
+                    OTP sent to +91 {formData.phone}
+                  </p>
+                </div>
+
+                <div className="flex justify-center gap-3">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <input
+                      key={index}
+                      ref={(element) => {
+                        otpRefs.current[index] = element;
+                      }}
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={formData.otp[index] || ""}
+                      onChange={(event) => handleOtpInput(index, event.target.value)}
+                      onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                      className="h-14 w-14 rounded-2xl border border-[#d9dde5] bg-white text-center text-xl font-black text-slate-900 outline-none focus:border-black"
+                    />
+                  ))}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-black text-sm font-black text-white transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isLoading ? (
+                    <LoaderCircle size={18} className="animate-spin" />
+                  ) : (
+                    <>
+                      Verify & Continue
+                      <ArrowRight size={16} className="ml-2" />
+                    </>
+                  )}
+                </button>
+
+                <div className="mt-4 flex items-center justify-center gap-2 text-xs font-semibold text-slate-500">
+                  <span>Didn&apos;t receive OTP?</span>
+                  <button
+                    type="button"
+                    disabled={timer > 0 || isLoading}
+                    onClick={() => {
+                      void sendOtpRequest();
+                    }}
+                    className="font-bold text-slate-700 underline underline-offset-2 disabled:text-slate-300"
+                  >
+                    {timer > 0 ? `Resend in ${timer}s` : "Resend"}
+                  </button>
+                </div>
+              </motion.form>
+            )}
+          </AnimatePresence>
+
+          <p className="mt-6 text-center text-[10px] font-medium leading-4 text-slate-400">
+            By continuing, you agree to our{" "}
+            <Link
+              to="/terms"
+              className="font-semibold text-slate-500 underline underline-offset-2"
+            >
+              Terms of service
+            </Link>{" "}
+            &{" "}
+            <Link
+              to="/privacy"
+              className="font-semibold text-slate-500 underline underline-offset-2"
+            >
+              Privacy policy
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default CustomerAuth;
-
-

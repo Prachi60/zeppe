@@ -1,14 +1,32 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Search, ShieldCheck, Store } from "lucide-react";
+import { MapPin, Search, Star, Store } from "lucide-react";
 import { customerApi } from "../services/customerApi";
 import { useLocation as useAppLocation } from "../context/LocationContext";
-import { formatStoreAddress, resolveStoreCoverImage, resolveStoreLogo } from "../utils/storeVisuals";
+import { formatStoreAddress, resolveStoreLogo } from "../utils/storeVisuals";
 
-function formatDistance(distance) {
-  const value = Number(distance || 0);
-  if (!Number.isFinite(value)) return "Nearby";
-  return `${value.toFixed(1)} km`;
+function resolveStoreRating(store = {}) {
+  const candidates = [
+    store.rating,
+    store.averageRating,
+    store.avgRating,
+    store.sellerRating,
+    store.metrics?.rating,
+  ];
+
+  const realRating = candidates.find((value) => Number.isFinite(Number(value)));
+  if (Number.isFinite(Number(realRating)) && Number(realRating) > 0) {
+    return Math.min(5, Number(realRating)).toFixed(1);
+  }
+
+  const seed = String(
+    store._id || store.id || store.shopName || store.name || "store",
+  );
+  const hash = seed
+    .split("")
+    .reduce((acc, char) => ((acc * 33) + char.charCodeAt(0)) >>> 0, 17);
+
+  return (4 + (hash % 9) / 10).toFixed(1);
 }
 
 const ShopByStorePage = () => {
@@ -71,7 +89,7 @@ const ShopByStorePage = () => {
   return (
     <div className="min-h-screen bg-slate-50 px-4 pt-4 pb-28 md:px-8 md:pt-8">
       <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-5">
+        <div className="mb-6">
           <p className="text-[11px] font-black uppercase tracking-[0.3em] text-[#45B0E2]">
             Browse Stores
           </p>
@@ -83,8 +101,8 @@ const ShopByStorePage = () => {
           </p>
         </div>
 
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <label className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3">
+        <div className="mb-7 rounded-[28px] border border-slate-200/80 bg-white p-3.5 shadow-[0_18px_38px_rgba(15,23,42,0.08)]">
+          <label className="flex items-center gap-3 rounded-[22px] bg-slate-50 px-4 py-3.5">
             <Search size={18} className="text-slate-400" />
             <input
               type="text"
@@ -96,7 +114,7 @@ const ShopByStorePage = () => {
           </label>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           {isLoading && (
             <div className="rounded-3xl border border-slate-200 bg-white px-6 py-10 text-center text-sm font-semibold text-slate-500 shadow-sm">
               Loading nearby stores...
@@ -117,68 +135,66 @@ const ShopByStorePage = () => {
 
           {!isLoading &&
             filteredStores.map((store) => {
-              const coverImage = resolveStoreCoverImage(store);
+              const storeName = store.shopName || store.name || "Store";
               const storeLogo = resolveStoreLogo(store);
               const address = formatStoreAddress(store);
+              const rating = resolveStoreRating(store);
+              const initial = (storeName || "S")[0].toUpperCase();
 
               return (
                 <button
                   key={store._id}
                   type="button"
                   onClick={() => navigate(`/stores/${store._id}`)}
-                  className="w-full overflow-hidden rounded-[28px] border border-slate-200 bg-white text-left shadow-[0_14px_34px_rgba(15,23,42,0.06)] transition-all hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(15,23,42,0.10)]"
+                  className="group w-full flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 active:scale-[0.99]"
                 >
-                  <div className="relative h-40 overflow-hidden md:h-48">
-                    <img
-                      src={coverImage}
-                      alt={store.shopName || store.name || "Store"}
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/55 via-slate-900/10 to-transparent" />
-                    <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/92 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-slate-700">
-                      <ShieldCheck size={14} className="text-emerald-500" />
-                      Verified Store
-                    </div>
-                    <div className="absolute bottom-4 right-4 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 shadow-sm">
-                      {formatDistance(store.distance)}
+                  {/* Store Logo */}
+                  <div className="relative flex-shrink-0">
+                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
+                      {storeLogo ? (
+                        <img
+                          src={storeLogo}
+                          alt={storeName}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        className="text-xl font-black text-slate-400"
+                        style={{ display: storeLogo ? 'none' : 'flex' }}
+                      >
+                        {initial}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="space-y-3 p-4 md:p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                          <img
-                            src={storeLogo}
-                            alt={store.shopName || store.name || "Store logo"}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                        <h2 className="text-xl font-black tracking-tight text-slate-900">
-                          {store.shopName || store.name || "Store"}
-                        </h2>
-                        {store.category && (
-                          <p className="mt-1 text-xs font-black uppercase tracking-[0.22em] text-[#45B0E2]">
-                            {store.category}
-                          </p>
-                        )}
-                        </div>
+                  {/* Store Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-[15px] font-bold text-slate-900 truncate">
+                        {storeName}
+                      </h2>
+                      <div className="flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                        <Star size={11} className="fill-current" />
+                        <span className="text-[11px] font-black">{rating}</span>
                       </div>
                     </div>
-
-                    {address && (
-                      <div className="flex items-start gap-2 text-sm font-medium text-slate-500">
-                        <MapPin size={16} className="mt-0.5 shrink-0 text-slate-400" />
-                        <span className="line-clamp-2">{address}</span>
-                      </div>
-                    )}
-
-                    {store.description && (
-                      <p className="line-clamp-2 text-sm font-medium text-slate-500">
-                        {store.description}
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <MapPin size={11} className="shrink-0 text-slate-400" />
+                      <p className="text-[12px] font-medium text-slate-400 truncate">
+                        {address || "Location not available"}
                       </p>
-                    )}
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <div className="flex-shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
                 </button>
               );

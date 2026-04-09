@@ -59,7 +59,6 @@ import {
 } from "@/shared/constants/headerCategoryVisuals";
 import { useProductDetail } from "../context/ProductDetailContext";
 import { cn } from "@/lib/utils";
-import CardBanner from "@/assets/CardBanner.jpg";
 import QuickCategoriesBg from "@/assets/Catagorysection_bg.png";
 import SectionRenderer from "../components/experience/SectionRenderer";
 import ExperienceBannerCarousel from "../components/experience/ExperienceBannerCarousel";
@@ -74,6 +73,7 @@ import {
 } from "@/shared/constants/offerSectionOptions";
 import { resolveStoreLogo } from "../utils/storeVisuals";
 import { mixHexColors, shiftHex } from "../utils/headerTheme";
+import { getCategoryImage } from "@/shared/constants/categoryImageMap";
 
 const DEFAULT_CATEGORY_THEME = {
   gradient: "linear-gradient(to bottom, #45B0E2, #38bdf8)",
@@ -404,6 +404,576 @@ const MARQUEE_MESSAGES = [
   "Save Big on Essentials!",
 ];
 
+const DRY_FRUITS_DISCOVERY_KEYWORDS = [
+  "dry fruit",
+  "dry fruits",
+  "almond",
+  "almonds",
+  "cashew",
+  "cashews",
+  "kishmish",
+  "raisin",
+  "raisins",
+  "pista",
+  "dates",
+  "anjeer",
+  "fig",
+  "walnut",
+  "nuts",
+  "seeds",
+  "makhana",
+];
+
+const SPECIAL_TILE_COLOR_PALETTES = [
+  ["#c63f2f", "#f3d8c5", "#9f2d1f"],
+  ["#f0a12c", "#f8e1a8", "#b96e00"],
+  ["#3e3a39", "#e8ddd1", "#1f1a18"],
+  ["#2d8a4d", "#d6edd4", "#1f6136"],
+];
+
+const encodeTileSvg = (svgMarkup) =>
+  `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgMarkup)}`;
+
+const getTileLabelMonogram = (label = "") =>
+  label
+    .split(/[^a-z0-9]+/i)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("") || "SP";
+
+const buildStapleTileImage = (label, paletteIndex = 0) => {
+  const [primaryColor, surfaceColor, accentColor] =
+    SPECIAL_TILE_COLOR_PALETTES[paletteIndex % SPECIAL_TILE_COLOR_PALETTES.length];
+  const monogram = getTileLabelMonogram(label);
+
+  return encodeTileSvg(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="${label}">
+      <defs>
+        <linearGradient id="packTop" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="${primaryColor}" />
+          <stop offset="100%" stop-color="${accentColor}" />
+        </linearGradient>
+        <linearGradient id="packBody" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="100%" stop-color="${surfaceColor}" />
+        </linearGradient>
+      </defs>
+      <rect x="34" y="14" width="92" height="132" rx="18" fill="url(#packBody)" />
+      <rect x="34" y="14" width="92" height="24" rx="18" fill="url(#packTop)" />
+      <rect x="34" y="28" width="92" height="12" fill="url(#packTop)" />
+      <rect x="44" y="50" width="72" height="62" rx="12" fill="#fffdf8" />
+      <rect x="54" y="120" width="52" height="8" rx="4" fill="${primaryColor}" opacity="0.16" />
+      <text x="80" y="90" text-anchor="middle" font-size="28" font-weight="800" font-family="Arial, sans-serif" fill="${primaryColor}">
+        ${monogram}
+      </text>
+      <text x="80" y="109" text-anchor="middle" font-size="11" font-weight="700" font-family="Arial, sans-serif" fill="${accentColor}">
+        ${label.slice(0, 12).toUpperCase()}
+      </text>
+    </svg>
+  `);
+};
+
+const SHOWCASE_PRODUCT_PALETTES = [
+  { bg: "#fff8ef", panel: "#ffffff", accent: "#222222", soft: "#f59e0b" },
+  { bg: "#f6f7fb", panel: "#ffffff", accent: "#2563eb", soft: "#c2410c" },
+  { bg: "#fff7f3", panel: "#ffffff", accent: "#0f766e", soft: "#dc2626" },
+  { bg: "#f7fbf7", panel: "#ffffff", accent: "#166534", soft: "#f59e0b" },
+];
+
+const buildShowcaseProductImage = ({
+  brand = "",
+  label = "",
+  kind = "pack",
+  paletteIndex = 0,
+}) => {
+  const palette =
+    SHOWCASE_PRODUCT_PALETTES[
+      paletteIndex % SHOWCASE_PRODUCT_PALETTES.length
+    ];
+
+  const artMarkup = {
+    lighter: `
+      <rect x="10" y="22" width="58" height="88" rx="10" fill="#ffffff" stroke="#d9e0e8"/>
+      <rect x="18" y="30" width="42" height="18" rx="4" fill="#f3f4f6"/>
+      <text x="39" y="42" text-anchor="middle" font-size="7" font-weight="800" fill="#4b5563" font-family="Arial, sans-serif">LIGHTER</text>
+      <rect x="28" y="60" width="22" height="38" rx="7" fill="#1f2937"/>
+      <rect x="31" y="55" width="16" height="13" rx="4" fill="#9ca3af"/>
+      <rect x="25" y="99" width="28" height="5" rx="2.5" fill="${palette.soft}" opacity="0.55"/>
+    `,
+    knives: `
+      <rect x="10" y="20" width="58" height="92" rx="10" fill="#fbfbfc" stroke="#d8dce4"/>
+      <path d="M22 28 L28 28 L26 68 L18 68 Z" fill="#dbe4ee"/>
+      <path d="M40 28 L46 28 L44 68 L36 68 Z" fill="#dbe4ee"/>
+      <path d="M58 28 L64 28 L62 68 L54 68 Z" fill="#dbe4ee"/>
+      <rect x="17" y="68" width="10" height="30" rx="5" fill="#ef4444"/>
+      <rect x="35" y="68" width="10" height="30" rx="5" fill="#f59e0b"/>
+      <rect x="53" y="68" width="10" height="30" rx="5" fill="#111827"/>
+    `,
+    knifebox: `
+      <g transform="translate(8 18) rotate(-11 32 34)">
+        <rect x="8" y="18" width="58" height="54" rx="8" fill="#111827"/>
+        <rect x="12" y="24" width="50" height="16" rx="5" fill="#2c3341"/>
+        <rect x="18" y="48" width="36" height="4" rx="2" fill="#e5e7eb"/>
+        <rect x="18" y="56" width="24" height="3" rx="1.5" fill="#9ca3af"/>
+        <rect x="44" y="52" width="12" height="10" rx="3" fill="#ef4444"/>
+      </g>
+    `,
+    foil: `
+      <rect x="8" y="56" width="62" height="18" rx="6" fill="#dc2626"/>
+      <rect x="57" y="56" width="13" height="18" rx="0 6 6 0" fill="#fbbf24"/>
+      <rect x="13" y="60" width="28" height="4" rx="2" fill="#fef2f2"/>
+      <rect x="13" y="67" width="24" height="3" rx="1.5" fill="#fee2e2"/>
+      <rect x="43" y="60" width="10" height="10" rx="3" fill="#fde68a"/>
+    `,
+    wrap: `
+      <rect x="8" y="56" width="62" height="14" rx="7" fill="#22c55e"/>
+      <rect x="50" y="56" width="20" height="14" rx="7" fill="#f59e0b"/>
+      <rect x="14" y="60" width="22" height="3" rx="1.5" fill="#ecfdf5"/>
+      <rect x="38" y="60" width="10" height="3" rx="1.5" fill="#bbf7d0"/>
+    `,
+    ricebag: `
+      <rect x="16" y="16" width="46" height="94" rx="10" fill="#ffffff" stroke="#d6dce6"/>
+      <rect x="16" y="16" width="46" height="20" rx="10" fill="#1d4ed8"/>
+      <rect x="20" y="22" width="38" height="8" rx="4" fill="#ffffff" opacity="0.2"/>
+      <rect x="22" y="46" width="34" height="38" rx="8" fill="#fef3c7"/>
+      <path d="M28 74 C32 56 42 56 48 74" stroke="#92400e" stroke-width="3" fill="none"/>
+      <circle cx="39" cy="67" r="11" fill="#fff7ed" opacity="0.45"/>
+    `,
+    drinkbox: `
+      <rect x="18" y="18" width="42" height="90" rx="10" fill="#fff7ed" stroke="#f4d7a6"/>
+      <rect x="18" y="18" width="42" height="20" rx="10" fill="#b91c1c"/>
+      <circle cx="39" cy="62" r="14" fill="#dcfce7"/>
+      <path d="M31 62 q8 -12 16 0 q-8 12 -16 0Z" fill="#86efac"/>
+      <rect x="27" y="82" width="24" height="8" rx="4" fill="#f59e0b" opacity="0.45"/>
+    `,
+    platter: `
+      <circle cx="39" cy="62" r="28" fill="#854d0e"/>
+      <circle cx="39" cy="62" r="22" fill="#fde68a"/>
+      <path d="M39 40 L39 84" stroke="#92400e" stroke-width="3"/>
+      <path d="M17 62 L61 62" stroke="#92400e" stroke-width="3"/>
+      <path d="M24 47 L54 77" stroke="#92400e" stroke-width="3"/>
+      <path d="M54 47 L24 77" stroke="#92400e" stroke-width="3"/>
+      <circle cx="39" cy="62" r="4" fill="#92400e"/>
+    `,
+    chilli: `
+      <path d="M20 72 q10 -18 22 -10 q-3 15 -18 18 q-7 1 -4 -8Z" fill="#16a34a"/>
+      <path d="M34 60 q12 -16 24 -6 q-2 12 -16 16 q-11 3 -8 -10Z" fill="#22c55e"/>
+      <path d="M16 68 q4 -6 9 -8" stroke="#166534" stroke-width="3" fill="none"/>
+      <path d="M31 57 q4 -6 9 -8" stroke="#166534" stroke-width="3" fill="none"/>
+      <circle cx="27" cy="74" r="2" fill="#15803d"/>
+    `,
+    sweetbox: `
+      <rect x="14" y="24" width="50" height="72" rx="10" fill="#fef3c7" stroke="#f59e0b"/>
+      <rect x="14" y="24" width="50" height="14" rx="10" fill="#dc2626"/>
+      <circle cx="28" cy="56" r="7" fill="#fde68a"/>
+      <circle cx="40" cy="56" r="7" fill="#f59e0b"/>
+      <circle cx="52" cy="56" r="7" fill="#fcd34d"/>
+      <circle cx="28" cy="72" r="7" fill="#fbbf24"/>
+      <circle cx="40" cy="72" r="7" fill="#fde68a"/>
+      <circle cx="52" cy="72" r="7" fill="#f59e0b"/>
+    `,
+    cerealbox: `
+      <rect x="16" y="18" width="44" height="90" rx="8" fill="#ef4444"/>
+      <rect x="22" y="28" width="32" height="20" rx="5" fill="#fff7ed"/>
+      <rect x="24" y="54" width="28" height="18" rx="6" fill="#fde68a"/>
+      <circle cx="33" cy="66" r="4" fill="#92400e"/>
+      <circle cx="43" cy="62" r="4" fill="#b45309"/>
+      <circle cx="39" cy="74" r="3" fill="#f59e0b"/>
+      <rect x="24" y="82" width="28" height="8" rx="4" fill="#fee2e2"/>
+    `,
+    chocos: `
+      <rect x="16" y="18" width="44" height="90" rx="8" fill="#92400e"/>
+      <rect x="22" y="28" width="32" height="20" rx="5" fill="#fef3c7"/>
+      <circle cx="39" cy="67" r="14" fill="#fff7ed"/>
+      <circle cx="35" cy="65" r="4" fill="#78350f"/>
+      <circle cx="43" cy="70" r="4" fill="#a16207"/>
+      <rect x="25" y="84" width="28" height="8" rx="4" fill="#fbbf24" opacity="0.35"/>
+    `,
+    oatspack: `
+      <rect x="16" y="18" width="44" height="90" rx="10" fill="#f59e0b"/>
+      <rect x="22" y="28" width="32" height="18" rx="5" fill="#fff7ed"/>
+      <rect x="25" y="52" width="26" height="20" rx="8" fill="#ffffff"/>
+      <rect x="25" y="78" width="26" height="12" rx="6" fill="#fef3c7"/>
+    `,
+    daliyabox: `
+      <rect x="16" y="18" width="44" height="90" rx="8" fill="#f7efe7" stroke="#ead8ca"/>
+      <rect x="22" y="28" width="32" height="22" rx="5" fill="#ede9fe"/>
+      <rect x="24" y="55" width="28" height="28" rx="10" fill="#ddd6fe"/>
+      <rect x="28" y="69" width="20" height="10" rx="5" fill="#fde68a"/>
+    `,
+    jar: `
+      <rect x="24" y="26" width="30" height="70" rx="10" fill="#fff7ed" stroke="#d6d3d1"/>
+      <rect x="28" y="16" width="22" height="14" rx="4" fill="#dc2626"/>
+      <rect x="29" y="42" width="20" height="30" rx="6" fill="#fcd34d" opacity="0.65"/>
+      <rect x="31" y="49" width="16" height="16" rx="5" fill="#b45309" opacity="0.22"/>
+    `,
+    default: `
+      <rect x="16" y="18" width="46" height="92" rx="10" fill="${palette.panel}" stroke="#d6dce6"/>
+      <rect x="16" y="18" width="46" height="20" rx="10" fill="${palette.soft}"/>
+      <rect x="24" y="52" width="30" height="24" rx="8" fill="${palette.bg}"/>
+    `,
+  }[kind] || "";
+
+  return encodeTileSvg(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 78 126" role="img" aria-label="${label}">
+      <defs>
+        <linearGradient id="bgFade" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="100%" stop-color="${palette.bg}"/>
+        </linearGradient>
+        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.12"/>
+        </filter>
+      </defs>
+      <rect width="78" height="126" rx="18" fill="url(#bgFade)" />
+      <rect x="6" y="8" width="66" height="110" rx="16" fill="${palette.panel}" filter="url(#softShadow)" />
+      <path d="M12 14 H66" stroke="#f3f4f6" stroke-width="1.5"/>
+      ${artMarkup}
+      <text x="14" y="16" font-size="7" font-weight="800" font-family="Arial, sans-serif" fill="${palette.accent}">
+        ${brand.slice(0, 14).toUpperCase()}
+      </text>
+    </svg>
+  `);
+};
+
+const DEFAULT_DISCOVERY_TILE_IMAGE = buildStapleTileImage("Special");
+const KITCHEN_TOOL_IMAGES = {
+  gasLighter:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Gas%20stove%20lighter..jpg",
+  knifeSet:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Chef-knives.jpg",
+  clingFilm:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Clingfilm.jpg",
+  clingFilmShelf:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Cling%20film%20on%20a%20shelf.jpg",
+  foilRoll:
+    "https://commons.wikimedia.org/wiki/Special:FilePath/A%20roll%20of%20aluminum%20foil.jpg",
+};
+const DAILY_GROCERY_IMAGES = {
+  rice:
+    "https://images.unsplash.com/photo-1586985289688-cacf35b67f47?auto=format&fit=crop&q=80&w=600&h=900",
+  thandai:
+    "https://images.unsplash.com/photo-1599599810694-b5ac4dd64e1d?auto=format&fit=crop&q=80&w=600&h=900",
+  dryFruitHamper:
+    "https://images.unsplash.com/photo-1585239852251-5a264af6f1c5?auto=format&fit=crop&q=80&w=600&h=900",
+  greenChilli:
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=600&h=900",
+  sweets:
+    "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?auto=format&fit=crop&q=80&w=600&h=900",
+};
+const CEREALS_NUTS_IMAGES = {
+  muesli:
+    "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&q=80&w=600&h=900",
+  chocos:
+    "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=600&h=900",
+  oats:
+    "https://images.unsplash.com/photo-1515543904379-3d757afe72e4?auto=format&fit=crop&q=80&w=600&h=900",
+  combo:
+    "https://images.unsplash.com/photo-1571748982800-fa51082c2224?auto=format&fit=crop&q=80&w=600&h=900",
+  daliya:
+    "https://images.unsplash.com/photo-1576186726580-a310c1f4c0d0?auto=format&fit=crop&q=80&w=600&h=900",
+  vermicelli:
+    "https://images.unsplash.com/photo-1612960980031-5b5f7d2a9f2f?auto=format&fit=crop&q=80&w=600&h=900",
+};
+
+const SPECIAL_TILE_IMAGES = {
+  atta:
+    "https://images.unsplash.com/photo-1608198093002-ad4e005484ec?auto=format&fit=crop&q=80&w=600&h=600",
+  besan:
+    "https://images.unsplash.com/photo-1612257999760-2af2f2fc2e8e?auto=format&fit=crop&q=80&w=600&h=600",
+  millet:
+    "https://images.unsplash.com/photo-1515543904379-3d757afe72e4?auto=format&fit=crop&q=80&w=600&h=600",
+  moong:
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=600&h=600",
+  poha:
+    "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=600&h=600",
+  rajma:
+    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&q=80&w=600&h=600",
+  rice:
+    "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=600&h=600",
+  toor:
+    "https://images.unsplash.com/photo-1627485937980-221c88ac04f9?auto=format&fit=crop&q=80&w=600&h=600",
+};
+
+const SPECIAL_DISCOVERY_TILES = [
+  {
+    name: "Atta",
+    query: "atta flour",
+    image: SPECIAL_TILE_IMAGES.atta,
+    fallbackImage: buildStapleTileImage("Atta", 0),
+  },
+  {
+    name: "Besan, Sooji & Maida",
+    query: "besan sooji maida",
+    image: SPECIAL_TILE_IMAGES.besan,
+    fallbackImage: buildStapleTileImage("Besan", 1),
+  },
+  {
+    name: "Millet & Other Flours",
+    query: "millet flour",
+    image: SPECIAL_TILE_IMAGES.millet,
+    fallbackImage: buildStapleTileImage("Millet", 2),
+  },
+  {
+    name: "Moong & Masoor",
+    query: "moong masoor dal",
+    image: SPECIAL_TILE_IMAGES.moong,
+    fallbackImage: buildStapleTileImage("Moong", 3),
+  },
+  {
+    name: "Poha, Daliya & Others",
+    query: "poha daliya",
+    image: SPECIAL_TILE_IMAGES.poha,
+    fallbackImage: buildStapleTileImage("Poha", 1),
+  },
+  {
+    name: "Rajma, Chhole & Chana",
+    query: "rajma chhole chana",
+    image: SPECIAL_TILE_IMAGES.rajma,
+    fallbackImage: buildStapleTileImage("Rajma", 3),
+  },
+  {
+    name: "Rice",
+    query: "rice",
+    image: SPECIAL_TILE_IMAGES.rice,
+    fallbackImage: buildStapleTileImage("Rice", 0),
+  },
+  {
+    name: "Toor, Urad & Chana",
+    query: "toor urad chana dal",
+    image: SPECIAL_TILE_IMAGES.toor,
+    fallbackImage: buildStapleTileImage("Toor", 2),
+  },
+];
+
+const MOBILE_SHOWCASE_SECTIONS = [
+  {
+    id: "kitchen-tools-appliances",
+    title: "Kitchen tools & appliances",
+    productsLayout: "showcaseGrid",
+    hideItemCount: true,
+    products: [
+      {
+        id: "kitchen-lighter-topper",
+        name: "topper cook like pro gas lighter",
+        query: "gas lighter",
+        weight: "1pc",
+        price: 100,
+        originalPrice: 199,
+        discountText: "50% OFF",
+        image: KITCHEN_TOOL_IMAGES.gasLighter,
+      },
+      {
+        id: "kitchen-knife-maxsenso",
+        name: "Max Senso Kitchen Knife Set",
+        query: "kitchen knife set",
+        weight: "1pc",
+        price: 20,
+        originalPrice: 35,
+        discountText: "43% OFF",
+        image: KITCHEN_TOOL_IMAGES.knifeSet,
+      },
+      {
+        id: "kitchen-lighter-skn",
+        name: "Gas Lighter for Kitchen (SKN)",
+        query: "kitchen lighter",
+        weight: "1 unit",
+        price: 80,
+        originalPrice: 99,
+        badgeText: "Bestseller",
+        discountText: "19% OFF",
+        image: KITCHEN_TOOL_IMAGES.gasLighter,
+      },
+      {
+        id: "kitchen-superwrap-foil",
+        name: "Superwrap Aluminium Foil",
+        query: "aluminium foil",
+        weight: "1pc",
+        price: 85,
+        originalPrice: 110,
+        discountText: "23% OFF",
+        image: KITCHEN_TOOL_IMAGES.foilRoll,
+      },
+      {
+        id: "kitchen-freshwrapp-food",
+        name: "Freshwrapp Food Wrapping Film",
+        query: "food wrapping film",
+        weight: "1pc",
+        price: 99,
+        originalPrice: 125,
+        discountText: "21% OFF",
+        image: KITCHEN_TOOL_IMAGES.clingFilm,
+      },
+      {
+        id: "kitchen-freshwrapp-roll",
+        name: "Freshwrapp Food Wrapping Roll",
+        query: "food wrapping roll",
+        weight: "1pc",
+        price: 95,
+        originalPrice: 120,
+        discountText: "21% OFF",
+        image: KITCHEN_TOOL_IMAGES.clingFilmShelf,
+      },
+    ],
+  },
+  {
+    id: "cereals-nuts-showcase",
+    title: "Cereals & Nuts",
+    productsLayout: "showcaseGrid",
+    hideItemCount: true,
+    products: [
+      {
+        id: "cereal-kelloggs-muesli",
+        name: "Kellogg's Muesli Fruit Nut Mix",
+        query: "kelloggs muesli",
+        weight: "500g",
+        price: 311,
+        originalPrice: 346,
+        discountText: "10% OFF",
+        image: CEREALS_NUTS_IMAGES.muesli,
+      },
+      {
+        id: "cereal-kelloggs-chocos",
+        name: "Kellogg's Multigrain Chocos",
+        query: "kelloggs chocos",
+        weight: "250g",
+        price: 125,
+        originalPrice: 136,
+        discountText: "8% OFF",
+        image: CEREALS_NUTS_IMAGES.chocos,
+      },
+      {
+        id: "cereal-saffola-oats",
+        name: "Saffola Masala Oats 500g",
+        query: "saffola oats",
+        weight: "500g",
+        price: 195,
+        originalPrice: 220,
+        discountText: "11% OFF",
+        image: CEREALS_NUTS_IMAGES.oats,
+      },
+      {
+        id: "cereal-saffola-combo",
+        name: "Saffola Oats (1kg with 300g pack)",
+        query: "saffola oats combo",
+        weight: "1.3kg(pack of 1)",
+        price: 499,
+        originalPrice: 579,
+        discountText: "14% OFF",
+        image: CEREALS_NUTS_IMAGES.combo,
+      },
+      {
+        id: "cereal-ruchi-daliya",
+        name: "Ruchi Daliya Crushed Wheat",
+        query: "ruchi daliya",
+        weight: "300g",
+        price: 59,
+        originalPrice: 67,
+        discountText: "12% OFF",
+        image: CEREALS_NUTS_IMAGES.daliya,
+      },
+      {
+        id: "cereal-ruchi-jar",
+        name: "Ruchi Roasted Short Vermicelli",
+        query: "ruchi roasted vermicelli",
+        weight: "400g",
+        price: 89,
+        originalPrice: 96,
+        discountText: "7% OFF",
+        image: CEREALS_NUTS_IMAGES.vermicelli,
+      },
+    ],
+  },
+];
+
+const EXTRA_HOME_DISCOVERY_PRESETS = [
+  {
+    id: "electronics",
+    title: "Electronics",
+    keywords: [
+      "electronics",
+      "electronic",
+      "mobile",
+      "charger",
+      "cable",
+      "earphone",
+      "earphones",
+      "earbuds",
+      "speaker",
+      "headphone",
+      "smartwatch",
+      "phone",
+      "gadget",
+      "appliance",
+      "appliances",
+    ],
+    fallbackTiles: [
+      { name: "Mobiles", query: "mobile" },
+      { name: "Chargers", query: "charger" },
+      { name: "Audio", query: "earbuds" },
+      { name: "Gadgets", query: "electronics" },
+    ],
+  },
+  {
+    id: "special",
+    title: "Special",
+    keywords: [
+      "atta",
+      "besan",
+      "sooji",
+      "maida",
+      "millet",
+      "flour",
+      "moong",
+      "masoor",
+      "poha",
+      "daliya",
+      "rajma",
+      "chhole",
+      "chana",
+      "rice",
+      "toor",
+      "urad",
+    ],
+    excludedKeywords: ["oil", "bran oil", "fortune"],
+    fallbackTiles: SPECIAL_DISCOVERY_TILES,
+    useFallbackTilesOnly: true,
+    maxTiles: 8,
+    tileImageFromProducts: false,
+  },
+  {
+    id: "dry-fruits",
+    title: "Dry Fruits",
+    keywords: DRY_FRUITS_DISCOVERY_KEYWORDS,
+    excludedKeywords: ["oil", "bran oil", "ghee", "fortune"],
+    fallbackTiles: [],
+    hideTiles: true,
+    productsLayout: "grid3",
+  },
+];
+
+const normalizeHomeDiscoveryText = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const matchesDiscoveryKeywords = (value, keywords = []) => {
+  const normalizedValue = normalizeHomeDiscoveryText(value);
+  if (!normalizedValue) return false;
+
+  return keywords.some((keyword) => {
+    const normalizedKeyword = normalizeHomeDiscoveryText(keyword);
+    return normalizedKeyword && normalizedValue.includes(normalizedKeyword);
+  });
+};
+
+const isDiscoveryPlaceholderProduct = (product) => {
+  const normalizedName = normalizeHomeDiscoveryText(product?.name);
+  return normalizedName.startsWith("test");
+};
+
 const Home = () => {
   const { scrollY } = useScroll();
   const { isOpen: isProductDetailOpen } = useProductDetail();
@@ -431,6 +1001,8 @@ const Home = () => {
   const [pendingReturn, setPendingReturn] = useState(null);
   const [offerSections, setOfferSections] = useState([]);
   const [nearbyStores, setNearbyStores] = useState([]);
+  const [categoriesBannerIndex, setCategoriesBannerIndex] = useState(0);
+  const [isHoveringCategoryBanner, setIsHoveringCategoryBanner] = useState(false);
 
   const scrollQuickCats = (direction) => {
     if (quickCatsRef.current) {
@@ -438,6 +1010,49 @@ const Home = () => {
       quickCatsRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
     }
   };
+
+  // Group categories by type/section
+  const groupedCategoryBanners = useMemo(() => {
+    if (!quickCategories || quickCategories.length === 0) return [];
+    
+    const banners = [];
+    const categoryGroups = {};
+    
+    // Group categories by first category or create logical groups
+    quickCategories.forEach((cat) => {
+      const section = cat.section || cat.parentSection || cat.name?.split(',')[0] || 'Other';
+      if (!categoryGroups[section]) {
+        categoryGroups[section] = [];
+      }
+      categoryGroups[section].push(cat);
+    });
+    
+    // Convert to banner format
+    Object.entries(categoryGroups).forEach(([sectionName, cats]) => {
+      if (cats.length > 0) {
+        banners.push({
+          id: sectionName,
+          name: sectionName,
+          categories: cats.slice(0, 6),
+        });
+      }
+    });
+    
+    // Limit to 7 banners
+    return banners.length > 0 ? banners.slice(0, 7) : [];
+  }, [quickCategories]);
+
+  // Auto-slide carousel
+  useEffect(() => {
+    if (!isHoveringCategoryBanner && groupedCategoryBanners.length > 0) {
+      const interval = setInterval(() => {
+        setCategoriesBannerIndex((prev) =>
+          (prev + 1) % groupedCategoryBanners.length
+        );
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [isHoveringCategoryBanner, groupedCategoryBanners.length]);
 
   const quickCategoryPalettes = [
     {
@@ -754,13 +1369,12 @@ const Home = () => {
     fetchHeroConfig();
   }, [activeCategory]);
 
-  // Autoplay for Mobile Banner Carousel (smooth, one-direction loop)
+  // Autoplay for Mobile Banner Carousel
   useEffect(() => {
-    const totalSlides = 3; // keep in sync with rendered slides
+    const totalSlides = 7; // 7 banners
     const intervalId = setInterval(() => {
       setMobileBannerIndex((prev) => {
-        // Prevent index from growing unbounded (which would push banners off-screen)
-        if (prev >= totalSlides - 1) return prev;
+        if (prev >= totalSlides - 1) return 0;
         return prev + 1;
       });
     }, 3500);
@@ -776,10 +1390,8 @@ const Home = () => {
   }, [isInstantBannerJump]);
 
   const handleBannerTransitionEnd = () => {
-    const totalSlides = 3; // real1, real2, clone(real1)
+    const totalSlides = 7;
     if (mobileBannerIndex === totalSlides - 1) {
-      // Instantly jump back to the first slide without any reverse animation
-      setIsInstantBannerJump(true);
       setMobileBannerIndex(0);
     }
   };
@@ -821,6 +1433,227 @@ const Home = () => {
   const effectiveQuickCategories = useMemo(() => {
     return quickCategories;
   }, [quickCategories]);
+
+  const browseEntries = useMemo(() => {
+    const seenNames = new Set();
+    const entries = [];
+
+    filteredCategorizedSections.forEach((section) => {
+      (section.subcategories || []).forEach((sub) => {
+        const normalizedName = normalizeHomeDiscoveryText(sub.name);
+        if (!normalizedName || seenNames.has(normalizedName)) return;
+
+        seenNames.add(normalizedName);
+        entries.push({
+          id: sub._id,
+          name: sub.name,
+          image:
+            sub.image ||
+            getCategoryImage(sub.name) ||
+            "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
+          targetPath: `/category/${section._id}`,
+          targetState: { activeSubcategoryId: sub._id },
+          matchText: sub.name,
+        });
+      });
+    });
+
+    effectiveQuickCategories.forEach((cat) => {
+      const normalizedName = normalizeHomeDiscoveryText(cat.name);
+      if (!normalizedName || seenNames.has(normalizedName)) return;
+
+      seenNames.add(normalizedName);
+      entries.push({
+        id: cat.id,
+        name: cat.name,
+        image:
+          cat.image ||
+          getCategoryImage(cat.name) ||
+          "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
+        targetPath: `/category/${cat.id}`,
+        targetState: undefined,
+        matchText: cat.name,
+      });
+    });
+
+    return entries;
+  }, [effectiveQuickCategories, filteredCategorizedSections]);
+
+  const mobileHomeTiles = useMemo(() => {
+    const seenIds = new Set();
+    const subcategoryTiles = filteredCategorizedSections
+      .flatMap((section) =>
+        (section.subcategories || []).map((sub) => ({
+          id: sub._id,
+          name: sub.name,
+          image:
+            sub.image ||
+            getCategoryImage(sub.name) ||
+            "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
+          targetPath: `/category/${section._id}`,
+          targetState: { activeSubcategoryId: sub._id },
+        })),
+      )
+      .filter((tile) => {
+        if (!tile.id || seenIds.has(tile.id)) return false;
+        seenIds.add(tile.id);
+        return true;
+      });
+
+    if (subcategoryTiles.length > 0) {
+      return subcategoryTiles.slice(0, 8);
+    }
+
+    return effectiveQuickCategories.slice(0, 8).map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      image:
+        cat.image ||
+        getCategoryImage(cat.name) ||
+        "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
+      targetPath: `/category/${cat.id}`,
+      targetState: undefined,
+    }));
+  }, [effectiveQuickCategories, filteredCategorizedSections]);
+
+  const mobileDiscoverySections = useMemo(() => {
+    const primarySections = mobileHomeTiles.length
+      ? [
+          {
+            id: "primary-category-discovery",
+            title: "Daily Grocery & Kirana",
+            tiles: mobileHomeTiles,
+            products: [],
+          },
+        ]
+      : [];
+
+    const derivedSections = EXTRA_HOME_DISCOVERY_PRESETS.map((preset) => {
+      const maxTiles = preset.maxTiles || 4;
+      const productKeywords = preset.productKeywords || preset.keywords;
+      const matchedProducts = products.filter(
+        (product) =>
+          !isDiscoveryPlaceholderProduct(product) &&
+          !normalizeHomeDiscoveryText(product.name).includes("fortune") &&
+          matchesDiscoveryKeywords(
+            [
+              product.name,
+              product.categoryId?.name,
+              product.subcategoryId?.name,
+            ]
+              .filter(Boolean)
+              .join(" "),
+            productKeywords,
+          ) &&
+          !matchesDiscoveryKeywords(
+            [
+              product.name,
+              product.categoryId?.name,
+              product.subcategoryId?.name,
+            ]
+              .filter(Boolean)
+              .join(" "),
+            preset.excludedKeywords || [],
+          ),
+      );
+
+      const sortedProducts = preset.useDiscountedProducts
+        ? [...matchedProducts].sort((left, right) => {
+            const leftOriginal = Number(
+              left.originalPrice || left.price || left.salePrice || 0,
+            );
+            const leftSale = Number(left.price || left.salePrice || 0);
+            const rightOriginal = Number(
+              right.originalPrice || right.price || right.salePrice || 0,
+            );
+            const rightSale = Number(right.price || right.salePrice || 0);
+
+            return rightOriginal - rightSale - (leftOriginal - leftSale);
+          })
+        : matchedProducts;
+
+      const matchedTiles = preset.useFallbackTilesOnly
+        ? []
+        : browseEntries
+            .filter((entry) =>
+              matchesDiscoveryKeywords(entry.matchText || entry.name, preset.keywords),
+            )
+            .slice(0, maxTiles)
+            .map((entry) => ({
+              id: entry.id,
+              name: entry.name,
+              image: entry.image,
+              targetPath: entry.targetPath,
+              targetState: entry.targetState,
+            }));
+
+      const usedTileNames = new Set(
+        matchedTiles.map((tile) => normalizeHomeDiscoveryText(tile.name)),
+      );
+
+      const fallbackTiles = (preset.fallbackTiles || [])
+        .filter((tile) => !usedTileNames.has(normalizeHomeDiscoveryText(tile.name)))
+        .slice(0, Math.max(0, maxTiles - matchedTiles.length))
+        .map((tile, index) => ({
+          id: `${preset.id}-${normalizeHomeDiscoveryText(tile.name) || index}`,
+          name: tile.name,
+          image:
+            tile.image ||
+            (preset.tileImageFromProducts === false
+              ? null
+              : sortedProducts[index]?.image) ||
+            getCategoryImage(tile.query || tile.name) ||
+            DEFAULT_DISCOVERY_TILE_IMAGE,
+          fallbackImage: tile.fallbackImage || DEFAULT_DISCOVERY_TILE_IMAGE,
+          targetPath: "/search",
+          targetState: { query: tile.query || tile.name },
+        }));
+
+      const sectionProducts = (sortedProducts.length
+        ? sortedProducts
+        : preset.useDiscountedProducts
+          ? [...products]
+              .filter(
+                (product) =>
+                  !isDiscoveryPlaceholderProduct(product) &&
+                  Number(product.originalPrice || 0) > Number(product.price || 0),
+              )
+              .sort(
+                (left, right) =>
+                  Number(right.originalPrice || 0) -
+                  Number(right.price || 0) -
+                  (Number(left.originalPrice || 0) - Number(left.price || 0)),
+              )
+          : []
+      ).slice(0, 6);
+
+      const sectionTiles = [...matchedTiles, ...fallbackTiles].slice(0, maxTiles);
+
+      if (!sectionTiles.length && !sectionProducts.length) {
+        return null;
+      }
+
+      return {
+        id: preset.id,
+        title: preset.title,
+        tiles: preset.hideTiles ? [] : sectionTiles,
+        products:
+          preset.showBanner && !preset.keepProductsWithBanner
+            ? []
+            : sectionProducts,
+        productsLayout: preset.productsLayout || "scroll",
+        banner: null,
+      };
+    }).filter(Boolean);
+
+    const showcaseSections = MOBILE_SHOWCASE_SECTIONS.map((section) => ({
+      ...section,
+      tiles: [],
+      banner: null,
+    }));
+
+    return [...derivedSections, ...showcaseSections];
+  }, [browseEntries, mobileHomeTiles, products]);
 
   // Experience sections for main content (all sections; hero is separate)
   const sectionsForRenderer = headerSections.length
@@ -937,7 +1770,7 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pt-[216px] md:pt-[250px] pb-10">
+    <div className="min-h-screen bg-white pt-[calc(env(safe-area-inset-top,_0px)+304px)] md:pt-[250px] pb-10">
       <MainLocationHeader
         categories={categories}
         activeCategory={activeCategory}
@@ -967,275 +1800,836 @@ const Home = () => {
         </div>
       ) : (
         <>
-
-          {/* Dynamic Hierarchical Category Sections (Level 2 & 3) */}
-          {filteredCategorizedSections.length > 0 && (
-            <div className="w-full space-y-8 px-4 relative z-20 mb-8 mt-2">
-              {filteredCategorizedSections.map((section) => (
-                <div key={section._id} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-[#1A1A1A] tracking-tight">
-                      {section.name}
-                    </h3>
-                  </div>
-
-                  <div className="mt-4">
-                    <div className="grid grid-cols-4 gap-y-8 gap-x-3">
-                      {section.subcategories.map((sub) => {
-                        const themeColor = activeCategory?.headerColor || "#45B0E2";
-                        const darkBase = "#0F172A"; // Rich slate dark base
-                        const midTint = mixHexColors(darkBase, themeColor, 0.15); // Subtle 15% tint
-                        const spotlightTint = mixHexColors(darkBase, themeColor, 0.35); // 35% spotlight tint
-
-                        return (
-                          <motion.div
-                            key={sub._id}
-                            initial={false}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => {
-                              // Remember context for back navigation
-                              window.sessionStorage.setItem(
-                                "experienceReturn",
-                                JSON.stringify({
-                                  headerId: activeCategory?._id,
-                                  sectionId: section._id,
-                                }),
-                              );
-                              navigate(`/category/${section._id}`, {
-                                state: { activeSubcategoryId: sub._id },
-                              });
-                            }}
-                            className="flex flex-col items-center gap-2 cursor-pointer group">
-                            <motion.div
-                              animate={{
-                                background: `radial-gradient(circle at center, ${mixHexColors("#FFFFFF", themeColor, 0.3)} 0%, ${themeColor} 65%, ${mixHexColors(themeColor, "#000000", 0.15)} 100%)`,
-                              }}
-                              transition={{ duration: 0.5, ease: "easeInOut" }}
-                              className="w-20 h-20 rounded-2xl flex items-center justify-center p-2.5 shadow-md border border-white/30 relative overflow-hidden transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)]">
-
-                              <img
-                                src={
-                                  sub.image ||
-                                  "https://cdn-icons-png.flaticon.com/128/2321/2321831.png"
-                                }
-                                alt={sub.name}
-                                className="w-[85%] h-[85%] object-contain block mx-auto relative z-10 transition-transform duration-500 group-hover:scale-110 drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
-                              />
-                            </motion.div>
-                            <motion.span
-                              animate={{ color: "#1A1A1A" }}
-                              className="text-[11px] font-bold text-center leading-tight line-clamp-2 px-0.5 tracking-tight transition-colors duration-500">
-                              {sub.name}
-                            </motion.span>
-                          </motion.div>
-                        );
-                      })}
+          {/* Full-Width Category Banner Carousel - Mobile Only */}
+          {categories && categories.filter(c => c.id !== "all").length > 0 && (
+            <div className="relative z-20 w-full overflow-visible bg-white md:hidden px-4 pt-16 pb-4">
+              <div className="relative h-[160px] overflow-hidden rounded-lg shadow-lg">
+                {/* Sliding Container */}
+                <div
+                  className="absolute inset-0 flex transition-all duration-700 ease-in-out"
+                  style={{
+                    transform: `translateX(-${(categories.filter(c => c.id !== "all").findIndex(c => c.id === activeCategory?.id) || 0) * 100}%)`,
+                  }}>
+                  {categories.filter(c => c.id !== "all").map((category, idx) => (
+                    <div
+                      key={category.id}
+                      className="min-w-full h-full flex-shrink-0 relative overflow-hidden rounded-lg">
+                      {/* Background Image */}
+                      <img
+                        src={
+                          category.image ||
+                          getCategoryImage(category.name) ||
+                          "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=500&h=300"
+                        }
+                        alt={category.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent" />
+                      {/* Content */}
+                      <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          setActiveCategory(category);
+                          navigate(`/category/${category.id}`);
+                        }}
+                        className="absolute inset-0 flex flex-col items-start justify-end p-4 text-left group">
+                        <h3 className="text-2xl font-black text-white drop-shadow-lg mb-2 group-hover:text-yellow-300 transition-colors">
+                          {category.name}
+                        </h3>
+                        <span className="text-xs font-semibold text-white/90 drop-shadow-md bg-black/30 px-3 py-1 rounded-full">
+                          Shop Now
+                        </span>
+                      </motion.button>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+
+                {/* Navigation Dots */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                  {categories.filter(c => c.id !== "all").map((category, idx) => (
+                    <motion.button
+                      key={category.id}
+                      whileHover={{ scale: 1.2 }}
+                      onClick={() => {
+                        setActiveCategory(category);
+                      }}
+                      className={`h-2 rounded-full transition-all cursor-pointer ${
+                        category.id === activeCategory?.id
+                          ? "w-6 bg-white"
+                          : "w-2 bg-white/50 hover:bg-white/70"
+                      }`}
+                      aria-label={`Go to ${category.name}`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Hero Banners: Prominent carousel after categories */}
-          <div className="w-full mt-3 px-4 relative z-20 overflow-hidden">
+          {mobileDiscoverySections.length > 0 && (
+            <div className="relative z-20 bg-white md:hidden mt-2">
+              {mobileDiscoverySections.map((section, sectionIndex) => {
+                const isPrimaryCategoryDiscovery =
+                  section.id === "primary-category-discovery";
+                const isSoftHeadingSection =
+                  section.id === "electronics" || section.id === "special";
+                const isDryFruitsSection = section.id === "dry-fruits";
+
+                return (
+                <div key={section.id}>
+                <section
+                  className={cn(
+                    "px-4",
+                    sectionIndex === 0
+                      ? isPrimaryCategoryDiscovery
+                        ? "pb-6 pt-8"
+                        : "pb-6 pt-4"
+                      : "pb-6 pt-2",
+                  )}>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2
+                      className={cn(
+                        "tracking-tight text-[#1b1b1b]",
+                        isPrimaryCategoryDiscovery
+                          ? "text-[15px] font-extrabold leading-none text-[#3f3f3f]"
+                          : isDryFruitsSection
+                            ? "text-[14px] font-bold text-[#484848]"
+                          : isSoftHeadingSection
+                            ? "text-[24px] font-extrabold text-[#404040]"
+                          : "text-[24px] font-black",
+                      )}>
+                      {section.title}
+                    </h2>
+                    {!section.banner &&
+                      !section.hideItemCount &&
+                      section.products?.length > 0 && (
+                      <span
+                        className={cn(
+                          "uppercase tracking-[0.18em] text-[#7a7a7a]",
+                          isDryFruitsSection
+                            ? "text-[9px] font-bold text-[#8a8a8a]"
+                            : "text-[10px] font-black",
+                        )}>
+                        {section.products.length} items
+                      </span>
+                      )}
+                  </div>
+
+                  {section.tiles.length > 0 && (
+                    <div className="grid grid-cols-4 gap-x-3 gap-y-4">
+                      {section.tiles.map((tile) => (
+                        <motion.button
+                          key={tile.id}
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() =>
+                            navigate(
+                              tile.targetPath,
+                              tile.targetState ? { state: tile.targetState } : undefined,
+                            )
+                          }
+                          className="flex flex-col items-center">
+                          <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[18px] border border-[#d0b391] bg-[radial-gradient(circle_at_50%_26%,_rgba(255,255,255,0.98)_0%,_rgba(255,255,255,0.42)_36%,_rgba(255,255,255,0)_60%),linear-gradient(160deg,_#d6ab73_0%,_#8b562f_100%)] p-2.5 shadow-[inset_0_10px_18px_rgba(255,255,255,0.22),0_10px_18px_rgba(92,58,28,0.18)]">
+                            <img
+                              src={tile.image}
+                              alt={tile.name}
+                              onError={(event) => {
+                                if (
+                                  event.currentTarget.dataset.fallbackApplied === "true"
+                                ) {
+                                  return;
+                                }
+                                event.currentTarget.dataset.fallbackApplied = "true";
+                                event.currentTarget.src =
+                                  tile.fallbackImage || DEFAULT_DISCOVERY_TILE_IMAGE;
+                              }}
+                              className="h-full w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.18)]"
+                            />
+                          </div>
+                          <span
+                            className={cn(
+                              "mt-2 line-clamp-2 text-center text-[#1f1f1f]",
+                              isPrimaryCategoryDiscovery
+                                ? "min-h-[22px] px-0.5 text-[9px] font-semibold leading-[1.2] text-[#111111]"
+                                : "min-h-[24px] text-[10px] font-semibold leading-[1.15]",
+                            )}>
+                            {tile.name}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  )}
+
+                  {section.products?.length > 0 &&
+                  section.productsLayout === "showcaseGrid" ? (
+                    <div className="mt-2 grid grid-cols-3 gap-x-2.5 gap-y-4">
+                      {section.products.filter(p => !p.badgeText).slice(0, 6).map((product) => (
+                        <motion.div
+                          key={product.id}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() =>
+                            navigate("/search", {
+                              state: { query: product.query || product.name },
+                            })
+                          }
+                          className="cursor-pointer text-left">
+                          <div className="relative overflow-hidden rounded-[16px] bg-white">
+                            <div className="relative overflow-hidden rounded-[14px] border border-[#eef1f5] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.06)]">
+                              {product.badgeText && (
+                                <span className="absolute left-1.5 top-1.5 z-10 rounded-[3px] bg-black px-1.5 py-1 text-[8px] font-black uppercase tracking-[0.04em] text-white">
+                                  {product.badgeText}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(event) => event.stopPropagation()}
+                                className="absolute right-1.5 top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm">
+                                <Heart size={10} className="text-[#b7bfcb]" />
+                              </button>
+
+                              <div className="relative flex aspect-[0.88] items-center justify-center bg-white p-2">
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  onError={(event) => {
+                                    if (
+                                      event.currentTarget.dataset.fallbackApplied ===
+                                      "true"
+                                    ) {
+                                      return;
+                                    }
+                                    event.currentTarget.dataset.fallbackApplied = "true";
+                                    event.currentTarget.src =
+                                      product.fallbackImage ||
+                                      buildShowcaseProductImage({
+                                        brand: product.name.split(" ")[0],
+                                        label: product.name,
+                                        kind: "default",
+                                      });
+                                  }}
+                                  className="h-full w-full object-contain"
+                                />
+                                <motion.button
+                                  type="button"
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    navigate("/search", {
+                                      state: { query: product.query || product.name },
+                                    });
+                                  }}
+                                  className="absolute bottom-1.5 right-1.5 rounded-[8px] border border-[#1f2937] bg-white px-3 py-1 text-[10px] font-black text-[#1f2937] shadow-[0_3px_8px_rgba(15,23,42,0.08)]">
+                                  ADD
+                                </motion.button>
+                              </div>
+                            </div>
+
+                            <div className="px-0.5 pt-1.5">
+                              <span className="inline-flex rounded-[4px] bg-[#f3f5f8] px-1.5 py-0.5 text-[8px] font-semibold text-[#4b5563]">
+                                {product.weight}
+                              </span>
+                              <h3 className="mt-1.5 line-clamp-2 min-h-[32px] text-[11px] font-bold leading-[1.22] text-[#111827]">
+                                {product.name}
+                              </h3>
+                              <p className="mt-1 text-[9px] font-extrabold uppercase tracking-[0.01em] text-[#2563eb]">
+                                {product.discountText}
+                              </p>
+                              <div className="mt-0.5 flex items-baseline gap-1">
+                                <span className="text-[11px] font-black text-[#111827]">
+                                  Rs{product.price}
+                                </span>
+                                <span className="text-[9px] font-semibold text-[#9ca3af] line-through">
+                                  MRP {product.originalPrice}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : section.products?.length > 0 && section.productsLayout === "grid3" ? (
+                    <div className="mt-4 grid grid-cols-3 gap-2.5">
+                      {section.products.slice(0, 3).map((product) => (
+                        <div key={product.id || product._id}>
+                          <ProductCard
+                            product={product}
+                            compact
+                            neutralBg
+                            className="h-full border border-[#efe8df] shadow-[0_8px_22px_rgba(92,58,28,0.08)]"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : section.products?.length > 0 && (
+                    <div className="mt-5 flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+                      {section.products.map((product) => (
+                        <div
+                          key={product.id || product._id}
+                          className="w-[146px] flex-shrink-0">
+                          <ProductCard
+                            product={product}
+                            compact
+                            neutralBg
+                            className="border border-[#efe8df] shadow-[0_8px_22px_rgba(92,58,28,0.08)]"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {false && section.banner && (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => navigate(section.banner.targetPath)}
+                      className="mt-4 block h-[168px] w-full overflow-hidden rounded-[22px] border border-[#f1dfdf] bg-[#fff4f6] shadow-[0_12px_24px_rgba(198,99,116,0.18)]">
+                      <img
+                        src={section.banner.image}
+                        alt={section.banner.alt}
+                        className="h-full w-full object-cover"
+                      />
+                    </motion.button>
+                  )}
+                </section>
+
+                {/* Promotional Banner between Special and Dry Fruits */}
+                {section.id === "special" && (
+                  <div className="relative z-10 px-4 py-5">
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => navigate("/search", { state: { query: "health wellness" } })}
+                      className="relative w-full overflow-hidden rounded-[20px] bg-gradient-to-r from-[#15B8A6] to-[#1DCDBE] px-6 py-5 shadow-lg transition-all active:shadow-md"
+                    >
+                      <div className="absolute inset-0 opacity-30">
+                        <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-white/10 to-transparent"></div>
+                      </div>
+                      
+                      <div className="relative flex items-stretch justify-between gap-4">
+                        {/* Left Content */}
+                        <div className="flex flex-1 flex-col justify-center py-1">
+                          <h3 className="text-lg font-black leading-tight text-white mb-1">
+                            Health & Wellness
+                          </h3>
+                          <p className="text-xs font-semibold text-white/95 line-clamp-2 mb-3">
+                            Wellness products & more
+                          </p>
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            className="w-fit"
+                          >
+                            <span className="inline-block rounded-full bg-white px-5 py-1.5 text-xs font-black text-[#15B8A6] shadow-md">
+                              Shop Now
+                            </span>
+                          </motion.div>
+                        </div>
+
+                        {/* Right Image Area */}
+                        <div className="flex items-center justify-center h-[100px] w-[100px] flex-shrink-0">
+                          <div className="relative h-full w-full">
+                            <svg
+                              className="h-full w-full"
+                              viewBox="0 0 100 100"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              {/* Pill bottle */}
+                              <rect x="35" y="20" width="30" height="60" rx="4" fill="rgba(255,255,255,0.9)" stroke="rgba(255,255,255,0.5)" strokeWidth="1"/>
+                              <rect x="40" y="15" width="20" height="8" rx="2" fill="rgba(255,255,255,0.8)"/>
+                              <circle cx="50" cy="50" r="8" fill="#FF6B6B" opacity="0.8"/>
+                              
+                              {/* Heartbeat graph */}
+                              <path d="M 15 40 L 20 40 L 22 35 L 25 50 L 28 40 L 60 40" 
+                                    stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.button>
+                  </div>
+                )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+          {groupedCategoryBanners && groupedCategoryBanners.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative w-full rounded-2xl overflow-hidden shadow-md border border-slate-100 transition-all duration-200">
-              <div className="relative w-full overflow-hidden">
-                {heroConfig.banners?.items?.length ? (
-                  <ExperienceBannerCarousel
-                    section={{ title: "" }}
-                    items={heroConfig.banners.items}
-                    fullWidth
-                    edgeToEdge
-                  />
-                ) : (
-                  <div className="flex transition-transform duration-500 ease-out"
-                    style={{ transform: `translateX(-${mobileBannerIndex * 100}%)` }}>
-                    {[1, 2, 3].map((_, idx) => (
-                      <motion.div
-                        key={idx}
-                        onClick={() => navigate("/category/all")}
-                        className="min-w-full relative">
-                        <div className="absolute inset-0 bg-black/5 z-10 pointer-events-none" />
-                        <div className={cn(
-                          "w-full h-[220px] p-6 relative overflow-hidden flex items-center",
-                          idx % 2 === 0 ? "bg-[#ecfeff]" : "bg-white"
-                        )}>
-                          <div className="relative z-20 w-3/5 flex flex-col items-start gap-1">
-                            <h4 className="text-xl font-[1000] text-[#1A1A1A] tracking-tighter leading-none">
-                              {idx % 2 === 0 ? "Get " : "Big "}
-                              <span className="text-[#45B0E2]">{idx % 2 === 0 ? "Products" : "Savings"}</span>
-                            </h4>
-                            <p className="text-[10px] font-bold text-gray-500 max-w-[140px] leading-tight">
-                              Best quality groceries delivered
-                            </p>
-                          </div>
-                          <div className="absolute right-[-10px] bottom-0 top-0 w-2/5 flex items-center justify-center z-0">
-                            <img
-                              src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400"
-                              alt="Promo"
-                              className="w-full h-full object-contain rotate-2 scale-110"
-                            />
-                          </div>
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="relative z-20 hidden w-full px-4 md:block md:mt-6 md:mb-12">
+              <div
+                onMouseEnter={() => setIsHoveringCategoryBanner(true)}
+                onMouseLeave={() => setIsHoveringCategoryBanner(false)}
+                className="relative -mx-4">
+                {/* Main Carousel Container - FULL BANNER WITH BIG IMAGES */}
+                <div className="relative w-screen overflow-hidden rounded-[32px] shadow-2xl bg-white border border-gray-100 h-[290px] sm:h-[340px] md:h-[380px]">
+                  {/* Sliding Container */}
+                  <div
+                    className="absolute inset-0 flex transition-transform duration-700 ease-in-out"
+                    style={{
+                      transform: `translateX(-${categoriesBannerIndex * 100}%)`,
+                    }}>
+                    {groupedCategoryBanners.map((banner, bannerIdx) => (
+                      <div
+                        key={banner.id || bannerIdx}
+                        className="min-w-full h-full flex items-center justify-center p-0 flex-shrink-0 relative">
+                        {/* Categories - Fill entire banner */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 w-full h-full">
+                          {banner.categories.slice(0, 4).map((cat, idx) => (
+                            <motion.button
+                              key={cat._id || idx}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => {
+                                setActiveCategory(cat);
+                                navigate(`/category/${cat._id}`);
+                              }}
+                              className="relative flex flex-col items-center justify-center group cursor-pointer overflow-hidden h-full">
+                              {/* Full Height Image */}
+                              <div className="absolute inset-0 w-full h-full">
+                                <img
+                                  src={
+                                    cat.image ||
+                                    getCategoryImage(cat.name) ||
+                                    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=600&h=600"
+                                  }
+                                  alt={cat.name}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                />
+                              </div>
+                            </motion.button>
+                          ))}
                         </div>
-                      </motion.div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Left Arrow Button */}
+                  {groupedCategoryBanners.length > 1 && (
+                    <motion.button
+                      whileHover={{ scale: 1.15, x: -3 }}
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() =>
+                        setCategoriesBannerIndex((prev) =>
+                          prev === 0 ? groupedCategoryBanners.length - 1 : prev - 1
+                        )
+                      }
+                      className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 md:w-14 md:h-14 rounded-full bg-white shadow-xl flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all border-2 border-gray-200">
+                      <ChevronLeft size={24} className="text-gray-800 md:h-7 md:w-7" />
+                    </motion.button>
+                  )}
+
+                  {/* Right Arrow Button */}
+                  {groupedCategoryBanners.length > 1 && (
+                    <motion.button
+                      whileHover={{ scale: 1.15, x: 3 }}
+                      whileTap={{ scale: 0.85 }}
+                      onClick={() =>
+                        setCategoriesBannerIndex((prev) =>
+                          (prev + 1) % groupedCategoryBanners.length
+                        )
+                      }
+                      className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 md:w-14 md:h-14 rounded-full bg-white shadow-xl flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all border-2 border-gray-200">
+                      <ChevronRight size={24} className="text-gray-800 md:h-7 md:w-7" />
+                    </motion.button>
+                  )}
+                </div>
+
+                {/* Dots Indicator */}
+                {groupedCategoryBanners.length > 1 && (
+                  <div className="flex gap-3 justify-center mt-4 md:mt-6">
+                    {groupedCategoryBanners.map((_, idx) => (
+                      <motion.button
+                        key={idx}
+                        whileHover={{ scale: 1.25 }}
+                        onClick={() => setCategoriesBannerIndex(idx)}
+                        className={`h-3 rounded-full transition-all cursor-pointer ${
+                          idx === categoriesBannerIndex
+                            ? "w-10 bg-[#2822e3]"
+                            : "w-3 bg-gray-300 hover:bg-gray-400"
+                        }`}
+                      />
                     ))}
                   </div>
                 )}
               </div>
             </motion.div>
+          )}
+
+          {/* Dynamic Hierarchical Category Sections (Level 2 & 3) */}
+          {filteredCategorizedSections.length > 0 && (
+            <div className="relative z-20 mb-10 mt-8 hidden w-full space-y-8 px-4 md:block">
+              {filteredCategorizedSections.map((section) => (
+                <motion.div 
+                  key={section._id} 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.5 }}
+                  className="animate-in fade-in slide-in-from-bottom-2 duration-500 px-2 sm:px-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-bold text-[#1A1A1A] tracking-tight">
+                      {section.name}
+                    </h3>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-4 md:gap-5 px-2">
+                      {section.subcategories.slice(0, 8).map((sub) => (
+                        <motion.div
+                          key={sub._id}
+                          initial={false}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            // Remember context for back navigation
+                            window.sessionStorage.setItem(
+                              "experienceReturn",
+                              JSON.stringify({
+                                headerId: activeCategory?._id,
+                                sectionId: section._id,
+                              }),
+                            );
+                            navigate(`/category/${section._id}`, {
+                              state: { activeSubcategoryId: sub._id },
+                            });
+                          }}
+                          className="flex flex-col items-center cursor-pointer group transition-all duration-300">
+                          {/* Premium Brown Gradient Card with Soft White Center Glow */}
+                          <div 
+                            className="w-full aspect-square rounded-xl shadow-md p-1.5 hover:shadow-lg transition-all duration-300 flex items-center justify-center overflow-hidden"
+                            style={{
+                              background: `radial-gradient(circle at center, rgba(255,255,255,0.35), transparent 60%), linear-gradient(135deg, #c89b63, #8b5e34)`,
+                              boxShadow: `inset 0 8px 20px rgba(255,255,255,0.2), 0 4px 12px rgba(0,0,0,0.15)`
+                            }}>
+                            <img
+                              src={
+                                sub.image ||
+                                getCategoryImage(sub.name) ||
+                                "https://cdn-icons-png.flaticon.com/128/2321/2321831.png"
+                              }
+                              alt={sub.name}
+                              className="w-full h-full object-contain drop-shadow-md"
+                            />
+                          </div>
+                          {/* Name Label Below */}
+                          <p className="text-xs sm:text-sm font-medium text-gray-800 mt-1 sm:mt-2 text-center line-clamp-2 px-1 w-full">
+                            {sub.name}
+                          </p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Hero Banners: hidden on mobile to keep the curated home flow clean */}
+          <div className="relative z-20 hidden w-full mt-1 md:mt-0 md:block">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full overflow-hidden">
+              {heroConfig.banners?.items?.length ? (
+                <ExperienceBannerCarousel
+                  section={{ title: "" }}
+                  items={heroConfig.banners.items}
+                  fullWidth
+                  edgeToEdge
+                />
+              ) : (
+                <div className="w-full px-3 sm:px-4">
+                  <div 
+                    className="relative mx-auto h-[184px] w-full max-w-[286px] overflow-hidden rounded-[18px] bg-black shadow-[0_12px_28px_rgba(15,23,42,0.16)] sm:h-[220px] sm:max-w-[520px] sm:rounded-[22px] md:h-[250px] md:max-w-none"
+                    onMouseEnter={() => setIsHoveringCategoryBanner(true)}
+                    onMouseLeave={() => setIsHoveringCategoryBanner(false)}>
+                  
+                  {/* Slides - Simple Absolute Positioning */}
+                  {[
+                    { title: "Fresh Veggies", subtitle: "Delivered daily", color: "#10b981", image: "https://images.unsplash.com/photo-1488459716781-6f3ee007e730?auto=format&fit=crop&q=80&w=2000&h=600" },
+                    { title: "Organic Goods", subtitle: "100% Pure", color: "#8b5e34", image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=2000&h=600" },
+                    { title: "Healthy Choices", subtitle: "Wellness First", color: "#f59e0b", image: "https://images.unsplash.com/photo-1585518419759-e8e0ecae0620?auto=format&fit=crop&q=80&w=2000&h=600" },
+                    { title: "Premium Quality", subtitle: "Best Price", color: "#06b6d4", image: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?auto=format&fit=crop&q=80&w=2000&h=600" },
+                    { title: "Daily Fresh", subtitle: "Farm Direct", color: "#8b5cf6", image: "https://images.unsplash.com/photo-1488459716781-6f3ee007e730?auto=format&fit=crop&q=80&w=2000&h=600" },
+                    { title: "Pure Organic", subtitle: "Natural Best", color: "#d97706", image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&q=80&w=2000&h=600" },
+                    { title: "Special Offers", subtitle: "Limited Time", color: "#dc2626", image: "https://images.unsplash.com/photo-1576014328437-1e90c7d1e0ec?auto=format&fit=crop&q=80&w=2000&h=600" }
+                  ].map((banner, idx) => (
+                    <div
+                      key={idx}
+                      className="absolute inset-0 w-full h-full overflow-hidden transition-opacity duration-700"
+                      style={{ 
+                        opacity: idx === mobileBannerIndex ? 1 : 0,
+                        pointerEvents: idx === mobileBannerIndex ? 'auto' : 'none'
+                      }}
+                      onClick={() => navigate("/category/all")}>
+                      
+                      {/* Banner Image - Full Coverage */}
+                      <img
+                        src={banner.image}
+                        alt={banner.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        loading="eager"
+                      />
+                      
+                      {/* Dark Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-5" />
+                      
+                      {/* Text Content */}
+                      <div className="absolute inset-0 z-10 flex cursor-pointer flex-col justify-center pl-5 pr-5 sm:pl-8 sm:pr-6 md:pl-16">
+                        <h2 className="mb-1 text-2xl font-[1000] tracking-tight text-white drop-shadow-xl sm:mb-2 sm:text-4xl md:text-5xl">
+                          {banner.title}
+                        </h2>
+                        <p className="mb-3 text-xs font-semibold text-white/90 drop-shadow-lg sm:mb-4 sm:text-base md:text-lg">
+                          {banner.subtitle}
+                        </p>
+                        <button className="w-fit rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-white drop-shadow-lg transition-all hover:scale-105 sm:px-6 sm:py-3 sm:text-sm"
+                          style={{ backgroundColor: `${banner.color}` }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate("/category/all");
+                          }}>
+                          Shop Now →
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Left Arrow */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setMobileBannerIndex((prev) => (prev === 0 ? 6 : prev - 1))}
+                    className="absolute left-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-xl transition-all hover:bg-gray-100 sm:left-4 sm:h-12 sm:w-12">
+                    <ChevronLeft size={20} className="text-gray-900 sm:h-6 sm:w-6" />
+                  </motion.button>
+
+                  {/* Right Arrow */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setMobileBannerIndex((prev) => (prev === 6 ? 0 : prev + 1))}
+                    className="absolute right-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-xl transition-all hover:bg-gray-100 sm:right-4 sm:h-12 sm:w-12">
+                    <ChevronRight size={20} className="text-gray-900 sm:h-6 sm:w-6" />
+                  </motion.button>
+
+                  {/* Dots Indicator */}
+                  <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-6">
+                    {[0, 1, 2, 3, 4, 5, 6].map((idx) => (
+                      <motion.button
+                        key={idx}
+                        whileHover={{ scale: 1.2 }}
+                        onClick={() => setMobileBannerIndex(idx)}
+                        className={`rounded-full transition-all ${
+                          idx === mobileBannerIndex 
+                            ? 'w-8 h-2 bg-white' 
+                            : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
           </div>
 
 
-          {/* Lowest Prices Section - Clean Horizontal Scroll */}
-          <div className="py-6 mb-8 px-4 relative overflow-hidden">
-            <div className="container mx-auto relative z-10">
-              <div className="flex justify-between items-end mb-4">
+          {/* Best Sellers: hidden on mobile to keep the curated home flow clean */}
+          <div className="hidden py-6 mb-6 px-0 md:block">
+            <div className="px-4">
+              <div className="flex justify-between items-end mb-5">
                 <div className="flex flex-col">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-[#2822e3]/70 mb-0.5">
-                    Maximum Savings
-                  </p>
-                  <h2 className="text-xl font-bold text-[#1A1A1A] tracking-tight">
-                    Lowest Prices
+                  <h2 className="text-2xl font-bold text-[#1A1A1A] tracking-tight">
+                    Best Sellers
                   </h2>
                 </div>
                 <button
                   onClick={() => navigate("/offers")}
-                  className="text-[#2822e3] text-xs font-bold transition-all p-1">
-                  See all
+                  className="text-[#2822e3] text-sm font-bold hover:underline transition-all">
+                  See all products →
                 </button>
               </div>
-
-              <div className="relative z-10 flex overflow-x-auto gap-4 pb-6 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory scroll-smooth">
-                {products.slice(0, 12).map((product) => (
-                  <div
-                    key={product.id}
-                    className="w-[160px] md:w-[180px] shrink-0 snap-start">
-                    <ProductCard
-                      product={product}
-                      className="hover:shadow-md transition-shadow"
-                      compact={true}
-                    />
-                  </div>
-                ))}
-              </div>
             </div>
-          </div>
 
-          {/* Offer Sections (admin-configured: Trending, etc.) */}
-          {offerSections.length > 0 && (
-            <div className="w-full px-0 pt-0 pb-6 md:pb-10">
-              {[...offerSections]
-                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-                .map((section) => {
-                  const bgColor = getBackgroundColorByValue(
-                    section.backgroundColor,
-                  );
-                  const sectionProducts = (section.productIds || [])
-                    .filter((p) => typeof p === "object" && p !== null)
-                    .map((p) => ({
-                      id: p._id,
-                      _id: p._id,
-                      name: p.name,
-                      image: p.mainImage || p.image || "",
-                      price: p.salePrice ?? p.price,
-                      originalPrice: p.price ?? p.salePrice,
-                      weight: p.weight,
-                      deliveryTime: p.deliveryTime,
-                    }));
+            <div className="px-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {products.slice(0, 5).map((product) => {
+                  const originalPrice = product.price;
+                  const salePrice = product.salePrice;
+                  const discountPercent = originalPrice && salePrice 
+                    ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
+                    : 0;
+
                   return (
                     <motion.div
-                      key={section._id}
-                      initial={{ opacity: 0, y: 16 }}
+                      key={product.id || product._id}
+                      initial={{ opacity: 0, y: 12 }}
                       whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, amount: 0.25 }}
-                      transition={{ duration: 0.4 }}
-                      className="mb-8 rounded-none overflow-hidden bg-transparent">
-                      <div className="relative flex items-center justify-between px-4 mb-4">
-                        <div className="flex flex-col">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#2822e3]/70">
-                            Trending Now
-                          </p>
-                          <h3 className="text-xl font-bold text-[#1A1A1A] tracking-tight">
-                            {section.title}
-                          </h3>
-                        </div>
-                        <button className="text-[#2822e3] text-xs font-bold">
-                          See all
-                        </button>
+                      viewport={{ once: true, amount: 0.2 }}
+                      transition={{ duration: 0.3 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => navigate(`/product/${product.id || product._id}`)}
+                      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer border border-gray-200">
+                      
+                      {/* Product Image Container */}
+                      <div className="relative h-40 bg-gray-50 overflow-hidden flex items-center justify-center">
+                        {/* Bestseller Badge */}
+                        {discountPercent >= 20 && (
+                          <div className="absolute top-2 left-2 bg-gray-900 text-white px-2 py-1 rounded-sm text-xs font-bold z-10">
+                            Bestseller
+                          </div>
+                        )}
+                        
+                        {/* Discount Badge */}
+                        {discountPercent > 0 && (
+                          <div className="absolute top-2 right-2 bg-gray-900 text-white px-2 py-1 rounded-sm text-xs font-bold z-10">
+                            {discountPercent}% OFF
+                          </div>
+                        )}
+
+                        <img
+                          src={product.image || product.mainImage || "https://via.placeholder.com/200"}
+                          alt={product.name}
+                          className="w-full h-full object-contain p-2"
+                        />
                       </div>
-                      <div className="px-4">
-                        <div className="flex overflow-x-auto gap-3 pb-4 no-scrollbar snap-x snap-mandatory">
-                          {sectionProducts.length === 0 ? (
-                            <div className="w-full py-10 flex flex-col items-center justify-center text-center">
-                              <div className="w-32 h-32 mb-3">
-                                <Lottie animationData={noServiceAnimation} loop={true} />
-                              </div>
-                              <p className="text-sm md:text-base text-slate-400 font-bold">
-                                Looking for the best items in this category...
-                              </p>
-                            </div>
-                          ) : (
-                            sectionProducts.map((product) => (
-                              <div
-                                key={product.id}
-                                className="w-[140px] md:w-[140px] flex-shrink-0 snap-start">
-                                <ProductCard
-                                  product={product}
-                                  className="bg-white border border-slate-100 shadow-[0_10px_24px_rgba(15,23,42,0.08)]"
-                                  compact
-                                />
-                              </div>
-                            ))
+
+                      {/* Product Info */}
+                      <div className="p-3">
+                        <h3 className="text-sm font-bold text-gray-900 line-clamp-2 mb-2 leading-tight">
+                          {product.name}
+                        </h3>
+
+                        {/* Weight/Size */}
+                        {product.weight && (
+                          <p className="text-xs text-gray-500 mb-2">
+                            {product.weight}
+                          </p>
+                        )}
+
+                        {/* Price Section */}
+                        <div className="flex items-baseline gap-2 mb-3">
+                          <span className="text-base font-bold text-gray-900">
+                            ₹{salePrice || originalPrice}
+                          </span>
+                          {salePrice && originalPrice > salePrice && (
+                            <span className="text-xs text-gray-400 line-through">
+                              ₹{originalPrice}
+                            </span>
                           )}
                         </div>
+
+                        {/* Add Button */}
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="w-full bg-black hover:bg-gray-900 text-white py-2 rounded-lg font-bold text-sm transition-all">
+                          ADD
+                        </motion.button>
                       </div>
                     </motion.div>
                   );
                 })}
+              </div>
+            </div>
 
-              {/* Shop by Store - Standardized Clean Grid Section */}
-              {nearbyStores.length > 0 && (
-                <div className="py-6 mb-8 mt-4">
-                  <div className="px-4 mb-4 flex justify-between items-end">
-                    <div className="flex flex-col">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#2822e3]/70">
-                        Local Favorites
-                      </p>
-                      <h3 className="text-xl font-bold text-[#1A1A1A] tracking-tight">
-                        Shop by Store
-                      </h3>
+          {/* Category-wise Products Section - HIDDEN TO REDUCE CLUTTER */}
+
+          {/* Shop by Store - Professional Redesign */}
+              {false && nearbyStores.length > 0 && (
+                <div className="py-8 mb-8">
+                  <div className="px-4 mb-6">
+                    <div className="flex justify-between items-end mb-2">
+                      <div className="flex flex-col">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-1">
+                          Browse Stores
+                        </p>
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+                          Shop by Store
+                        </h2>
+                      </div>
+                      <button
+                        onClick={() => navigate("/stores")}
+                        className="text-gray-900 text-sm font-bold hover:underline">
+                        View all stores →
+                      </button>
                     </div>
-                    <button
-                      onClick={() => navigate("/stores")}
-                      className="text-[#2822e3] text-xs font-bold">
-                      View all
-                    </button>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Choose a store to explore only that store's products.
+                    </p>
                   </div>
 
                   <div className="px-4">
-                    <div className="grid grid-cols-3 gap-3">
-                      {nearbyStores.map((store) => (
-                        <motion.button
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {nearbyStores.slice(0, 10).map((store) => (
+                        <motion.div
                           key={store._id}
+                          initial={{ opacity: 0, y: 12 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, amount: 0.2 }}
+                          transition={{ duration: 0.3 }}
+                          whileHover={{ y: -4 }}
                           whileTap={{ scale: 0.97 }}
                           onClick={() => navigate(`/stores/${store._id}`)}
-                          className="flex flex-col items-center bg-white rounded-2xl p-3 shadow-[0_4px_12px_rgba(0,0,0,0.06)] border border-gray-100/50"
-                        >
-                          <div className="w-12 h-12 aspect-square rounded-full bg-gray-50 flex items-center justify-center overflow-hidden mb-2">
-                            <img
-                              src={resolveStoreLogo(store)}
-                              alt={store.shopName}
-                              className="w-10 h-10 object-contain"
-                            />
+                          className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all border border-gray-100 cursor-pointer">
+                          
+                          {/* Verified Store Label */}
+                          <div className="px-4 pt-3 pb-0">
+                            <div className="flex items-center gap-1 mb-3">
+                              <div className="w-5 h-5 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0">
+                                <span className="text-green-700 text-xs font-bold">✓</span>
+                              </div>
+                              <span className="text-xs font-bold uppercase tracking-wider text-green-700">
+                                Verified Store
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-[11px] font-semibold text-[#1A1A1A] text-center line-clamp-1">
-                            {store.shopName || store.name || "Store"}
-                          </span>
-                        </motion.button>
+
+                          {/* Store Info */}
+                          <div className="p-4 pt-2">
+                            {/* Logo + Name */}
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <img
+                                  src={resolveStoreLogo(store)}
+                                  alt={store.shopName}
+                                  className="w-11 h-11 object-contain"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="text-base font-bold text-gray-900 line-clamp-2">
+                                  {store.shopName || store.name || "Store"}
+                                </h3>
+                              </div>
+                            </div>
+
+                            {/* Location */}
+                            <div className="flex gap-2 mb-3">
+                              <span className="text-gray-400 text-lg flex-shrink-0">📍</span>
+                              <p className="text-sm text-gray-600 line-clamp-3">
+                                {store.address || store.location?.address || "Address not available"}
+                              </p>
+                            </div>
+
+                            {/* Delivery Time & Distance */}
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                              <div className="text-xs text-gray-600 font-medium">
+                                ⏱ {store.deliveryTime || "8-12 mins"}
+                              </div>
+                              <div className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                {store.distance ? `${store.distance.toFixed(1)} km` : "0.0 km"}
+                              </div>
+                            </div>
+
+                            {/* View Button */}
+                            <button className="w-full mt-3 bg-gray-900 hover:bg-black text-white py-2.5 rounded-lg font-semibold text-sm transition-all">
+                              View Store
+                            </button>
+                          </div>
+                        </motion.div>
                       ))}
                     </div>
                   </div>

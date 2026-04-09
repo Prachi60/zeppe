@@ -14,7 +14,14 @@ import { Clock } from "lucide-react";
 import { useProductDetail } from "../../context/ProductDetailContext";
 
 const ProductCard = React.memo(
-  ({ product, badge, className, compact = false, neutralBg = false }) => {
+  ({
+    product,
+    badge,
+    className,
+    compact = false,
+    neutralBg = false,
+    storeWide = false,
+  }) => {
     const { toggleWishlist: toggleWishlistGlobal, isInWishlist } =
       useWishlist();
     const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
@@ -158,19 +165,23 @@ const ProductCard = React.memo(
       <motion.div
         whileTap={{ scale: 0.97 }}
         className={cn(
-          "flex-shrink-0 w-full rounded-2xl overflow-hidden flex flex-col h-full shadow-[0_4px_12px_rgba(0,0,0,0.06)] cursor-pointer transition-all duration-300 bg-white border border-gray-100/50",
+          "group flex h-full w-full flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-100/60 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:border-[#9edcf3] hover:bg-[#f7fcff] hover:shadow-[0_10px_26px_rgba(69,176,226,0.14)] focus-within:border-[#74c8ea] focus-within:bg-[#f7fcff]",
           className,
         )}
         onClick={handleProductClick}>
         {/* Top Image Section */}
-        <div className={cn("relative pb-0", compact ? "p-2" : "p-3")}>
+        <div
+          className={cn(
+            "relative pb-0",
+            storeWide ? "p-2" : compact ? "p-2" : "p-3",
+          )}>
           {/* Badge (Custom or Discount) */}
           {(badge ||
             product.discount ||
             product.originalPrice > product.price) && (
               <div
                 className={cn(
-                  "absolute z-10 bg-[#2822e3] text-white font-bold rounded-full shadow-sm uppercase tracking-wider flex items-center justify-center top-2 left-2 px-2 py-1 text-[9px]",
+                  "absolute z-10 bg-black text-white font-bold rounded-full shadow-sm uppercase tracking-wider flex items-center justify-center top-2 left-2 px-2 py-1 text-[9px]",
                 )}>
                 {badge ||
                   product.discount ||
@@ -213,7 +224,8 @@ const ProductCard = React.memo(
 
           <div
             className={cn(
-              "block aspect-square w-full overflow-hidden flex items-center justify-center p-3 transition-transform duration-500 group-hover:scale-105 bg-gray-50 rounded-lg",
+              "block w-full overflow-hidden rounded-lg bg-gray-50 transition-all duration-300 group-hover:scale-[1.02] group-hover:bg-[#f2faff] flex items-center justify-center",
+              storeWide ? "h-36 rounded-2xl p-2 sm:h-40" : "aspect-square p-3",
             )}>
             <img
               ref={imageRef}
@@ -228,47 +240,50 @@ const ProductCard = React.memo(
         <div
           className={cn(
             "flex flex-col flex-1",
-            compact ? "p-3 pt-1 gap-1" : "p-4 pt-2 gap-1.5",
+            storeWide ? "p-3 pt-1.5 gap-1" : compact ? "p-3 pt-1 gap-1" : "p-4 pt-2 gap-1.5",
           )}>
           <div className="flex items-center gap-1.5 mb-0.5">
             <div
               className={cn(
-                "border border-[#2822e3]/30 rounded-full flex items-center justify-center",
-                compact ? "h-2.5 w-2.5" : "h-3.5 w-3.5",
+                "border border-gray-400/30 rounded-full flex items-center justify-center",
+                storeWide ? "h-3 w-3" : compact ? "h-2.5 w-2.5" : "h-3.5 w-3.5",
               )}>
               <div
                 className={cn(
-                  "bg-[#2822e3] rounded-full",
-                  compact ? "h-1 w-1" : "h-1.5 w-1.5",
+                  "bg-gray-400 rounded-full",
+                  storeWide ? "h-1 w-1" : compact ? "h-1 w-1" : "h-1.5 w-1.5",
                 )}
               />
             </div>
             <div
               className={cn(
                 "bg-gray-100 text-gray-500 font-semibold rounded px-1.5 py-0.5",
-                compact ? "text-[8px]" : "text-[10px]",
+                storeWide ? "text-[9px]" : compact ? "text-[8px]" : "text-[10px]",
               )}>
               {product.weight || "1 unit"}
             </div>
           </div>
 
-          <div className="min-h-[2.4rem]">
+          <div className={cn(storeWide ? "min-h-[1.75rem]" : "min-h-[2.4rem]")}>
             <h4
               className={cn(
                 "font-bold text-[#1A1A1A] leading-tight line-clamp-2",
-                compact ? "text-[13px]" : "text-sm",
+                storeWide ? "text-sm" : compact ? "text-[13px]" : "text-sm",
               )}>
               {product.name}
             </h4>
           </div>
 
           {/* Delivery Time & Unit info */}
-          <div className="flex items-center gap-1.5 text-gray-400 mb-2">
-            <Clock size={compact ? 10 : 12} className="text-[#2822e3]/40" />
+          <div className="mb-1 flex items-center gap-1.5 text-gray-400">
+            <Clock
+              size={storeWide ? 11 : compact ? 10 : 12}
+              className="text-gray-400/60"
+            />
             <span
               className={cn(
                 "font-medium",
-                compact ? "text-[9px]" : "text-[11px]",
+                storeWide ? "text-[10px]" : compact ? "text-[9px]" : "text-[11px]",
               )}>
               {product.deliveryTime || "8-12 mins"}
             </span>
@@ -292,25 +307,25 @@ const ProductCard = React.memo(
               {quantity > 0 ? (
                 <div
                   className={cn(
-                    "flex items-center bg-white border border-[#2822e3] rounded-lg p-0.5 justify-between shadow-sm",
-                    compact ? "min-w-[64px]" : "min-w-[90px]",
+                    "flex items-center bg-white border border-gray-400 rounded-lg p-0.5 justify-between shadow-sm",
+                    storeWide ? "min-w-[84px]" : compact ? "min-w-[64px]" : "min-w-[90px]",
                   )}>
                   <button
                     onClick={handleDecrement}
-                    className="p-1 px-1.5 text-[#2822e3] active:scale-90 transition-transform">
-                    <Minus size={compact ? 12 : 14} strokeWidth={3} />
+                    className="p-1 px-1.5 text-gray-600 active:scale-90 transition-transform">
+                    <Minus size={storeWide ? 13 : compact ? 12 : 14} strokeWidth={3} />
                   </button>
                   <span
                     className={cn(
-                      "font-bold text-[#2822e3]",
-                      compact ? "text-xs" : "text-sm",
+                      "font-bold text-gray-700",
+                      storeWide ? "text-sm" : compact ? "text-xs" : "text-sm",
                     )}>
                     {quantity}
                   </span>
                   <button
                     onClick={handleIncrement}
-                    className="p-1 px-1.5 text-[#2822e3] active:scale-90 transition-transform">
-                    <Plus size={compact ? 12 : 14} strokeWidth={3} />
+                    className="p-1 px-1.5 text-gray-600 active:scale-90 transition-transform">
+                    <Plus size={storeWide ? 13 : compact ? 12 : 14} strokeWidth={3} />
                   </button>
                 </div>
               ) : (
@@ -318,7 +333,10 @@ const ProductCard = React.memo(
                   whileTap={{ scale: 0.95 }}
                   onClick={handleAddToCart}
                   className={cn(
-                    "bg-[#2822e3] text-white rounded-full font-bold transition-all",
+                    "bg-black text-white rounded-full font-bold transition-all",
+                    storeWide
+                      ? "px-4 py-1.5 text-[10px]"
+                      : 
                     compact
                       ? "px-4 py-1.5 text-[10px]"
                       : "px-6 py-2 text-xs",

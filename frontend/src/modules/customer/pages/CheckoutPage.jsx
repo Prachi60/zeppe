@@ -913,9 +913,10 @@ const CheckoutPage = () => {
   return (
     <div className="min-h-screen bg-[#f5f1e8] pb-32 font-sans">
       {/* Premium Header - Curved on mobile, integrated on desktop */}
-      <div className="bg-gradient-to-br from-[#0086a8] via-[#00a3cc] to-[#38bdf8] pt-6 pb-12 md:pb-24 relative z-10 shadow-lg md:rounded-b-[4rem] rounded-b-[2rem] overflow-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-[100px] -mr-32 -mt-64 pointer-events-none" />
-        <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-cyan-400/10 rounded-full blur-[80px] pointer-events-none" />
+      <div className="bg-[linear-gradient(180deg,_#ab7458_0%,_#7f4e39_34%,_#2b1811_100%)] pt-6 pb-12 md:pb-24 relative z-10 shadow-[0_24px_60px_rgba(36,18,12,0.28)] md:rounded-b-[4rem] rounded-b-[2rem] overflow-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/8 rounded-full blur-[100px] -mr-32 -mt-64 pointer-events-none" />
+        <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-amber-100/10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute -top-10 left-[-5%] w-56 h-56 rounded-full bg-amber-50/10 blur-[90px] pointer-events-none" />
 
         {/* Header Content */}
         <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
@@ -931,8 +932,8 @@ const CheckoutPage = () => {
                 Checkout
               </h1>
               <div className="flex items-center gap-2 mt-1">
-                <span className="h-1.5 w-1.5 bg-cyan-400 rounded-full animate-pulse" />
-                <p className="text-cyan-100/90 text-[10px] md:text-xs font-black tracking-[0.2em] uppercase">
+                <span className="h-1.5 w-1.5 bg-amber-200 rounded-full animate-pulse" />
+                <p className="text-[#f7ede4]/90 text-[10px] md:text-xs font-black tracking-[0.2em] uppercase">
                   {cartCount} {cartCount === 1 ? "Item" : "Items"} in cart
                 </p>
               </div>

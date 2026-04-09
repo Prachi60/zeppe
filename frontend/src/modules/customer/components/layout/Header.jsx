@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Menu, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWishlist } from '../../context/WishlistContext';
 import { useCart } from '../../context/CartContext';
 import { useLocation as useAppLocation } from "../../context/LocationContext";
 import { useSettings } from '@core/context/SettingsContext';
+import { useAuth } from '@core/context/AuthContext';
 import LocationDrawer from '../shared/LocationDrawer';
+import GuestProfilePrompt from '../shared/GuestProfilePrompt';
 
 const Header = () => {
     const { settings } = useSettings();
     const { count: wishlistCount } = useWishlist();
     const { cartCount } = useCart();
+    const { isAuthenticated } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
     const isCheckoutPage = location.pathname === '/checkout';
     const [isLocationOpen, setIsLocationOpen] = useState(false);
+    const [isGuestPromptOpen, setIsGuestPromptOpen] = useState(false);
     const { currentLocation, refreshLocation } = useAppLocation();
 
     // Search placeholder animation
@@ -69,9 +74,18 @@ const Header = () => {
         return () => clearTimeout(timeout);
     }, [typingState]);
 
+    const handleProfileClick = () => {
+        if (!isAuthenticated) {
+            setIsGuestPromptOpen(true);
+            return;
+        }
+        navigate('/profile');
+    };
+
     return (
-        <header className="absolute top-4 md:top-8 left-0 right-0 z-[200] px-4">
-            <div className="container mx-auto max-w-6xl">
+        <>
+            <header className="absolute top-4 md:top-8 left-0 right-0 z-[200] px-4">
+                <div className="container mx-auto max-w-6xl">
                 {/* Mobile Top Row: Location & Profile */}
                 <div className="md:hidden flex items-center justify-between mb-4 px-2 animate-in slide-in-from-top duration-500">
                     <button
@@ -171,19 +185,24 @@ const Header = () => {
                             )}
                         </Link>
 
-                        <Link to="/profile" className="flex items-center justify-center">
+                        <button type="button" onClick={handleProfileClick} className="flex items-center justify-center">
                             <User className="h-6 w-6 text-slate-600 hover:text-[var(--primary)] transition-colors" />
-                        </Link>
+                        </button>
                     </div>
                 </div>
-            </div>
+                </div>
 
-            {/* Location Selection Drawer */}
-            <LocationDrawer
-                isOpen={isLocationOpen}
-                onClose={() => setIsLocationOpen(false)}
+                <LocationDrawer
+                    isOpen={isLocationOpen}
+                    onClose={() => setIsLocationOpen(false)}
+                />
+            </header>
+
+            <GuestProfilePrompt
+                isOpen={isGuestPromptOpen}
+                onClose={() => setIsGuestPromptOpen(false)}
             />
-        </header>
+        </>
     );
 };
 

@@ -6,6 +6,7 @@ import LocationDrawer from "./LocationDrawer";
 import { useLocation } from "../../context/LocationContext";
 import { useProductDetail } from "../../context/ProductDetailContext";
 import { useSettings } from "@core/context/SettingsContext";
+import { useAuth } from "@core/context/AuthContext";
 import { cn } from "@/lib/utils";
 import {
   buildHeaderGradient,
@@ -14,8 +15,10 @@ import {
   shiftHex,
 } from "../../utils/headerTheme";
 import { HeaderCategoryVisual } from "@/shared/constants/headerCategoryVisuals";
+import { getCategoryImage } from "@/shared/constants/categoryImageMap";
 import LogoImage from "../../../../assets/Logo.png";
 import shoppingCartAnimation from "../../../../assets/lottie/shopping-cart.json";
+import GuestProfilePrompt from "./GuestProfilePrompt";
 
 // MUI Icons
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -27,6 +30,70 @@ import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlin
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 
+const FORTUNE_SUGAR_PACK_IMAGE =
+  "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png";
+
+/** Map category names to Lucide React SVG icons */
+function getCategoryIcon(categoryName) {
+  if (!categoryName) return LayoutGrid;
+  
+  const name = categoryName.toLowerCase();
+  
+  const iconMap = {
+    // Grocery
+    grocery: ShoppingBag,
+    vegetables: Leaf,
+    fruits: Leaf,
+    dairy: Droplet,
+    breads: ShoppingBag,
+    bakery: ShoppingBag,
+    
+    // Fashion & Home
+    fashion: Shirt,
+    clothing: Shirt,
+    home: Home,
+    "home & kitchen": Home,
+    kitchen: Utensils,
+    
+    // Electronics & Appliances
+    electronics: Smartphone,
+    devices: Smartphone,
+    appliances: Lightbulb,
+    
+    // Health & Beauty
+    health: Zap,
+    fitness: Dumbbell,
+    beauty: Heart,
+    wellness: Leaf,
+    
+    // Lifestyle
+    sports: Dumbbell,
+    toys: Gamepad2,
+    books: Book,
+    education: Book,
+    gifts: Gift,
+    
+    // Beverages
+    beverages: Coffee,
+    drinks: Coffee,
+    
+    // Default
+    all: LayoutGrid,
+  };
+  
+  // Check for exact match
+  if (iconMap[name]) return iconMap[name];
+  
+  // Check for partial match
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (name.includes(key) || key.includes(name)) {
+      return icon;
+    }
+  }
+  
+  return ShoppingBag; // Default icon
+}
+
 /** Full-width bottom stroke + tab curve; l/r are 0–100% of column where the inner bump sits. */
 function buildActiveTabPath(l, r) {
   const y = 20;
@@ -35,7 +102,7 @@ function buildActiveTabPath(l, r) {
   return `M 0 ${y} L ${l} ${y} L ${l} 12 C ${mapX(2.6)} 7 ${mapX(8.2)} 1.55 ${mapX(15)} 1.55 L ${mapX(85)} 1.55 C ${mapX(91.8)} 1.55 ${mapX(97.4)} 7 ${mapX(98.5)} 12 V ${y} L 100 ${y}`;
 }
 
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, ShoppingBag, Shirt, Home, Zap, Heart, Dumbbell, Book, Droplet, Leaf, Coffee, Gift, Gamepad2, Lightbulb, Smartphone, Utensils } from "lucide-react";
 
 function CategoryNavColumn({
   cat,
@@ -43,35 +110,34 @@ function CategoryNavColumn({
   onCategorySelect,
 }) {
   const isAll = cat.id === "all" || cat.slug === "all";
+  const IconComponent = isAll ? LayoutGrid : getCategoryIcon(cat.name);
 
   return (
     <div
       onClick={() => onCategorySelect && onCategorySelect(cat)}
       className={cn(
-        "relative flex min-w-[70px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 pb-1 transition-all active:scale-95",
-        isActive ? "border-b-2 border-[#2822e3]" : "border-b-2 border-transparent",
+        "group relative flex min-w-[58px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1 pb-1.5 transition-all duration-200 active:scale-95 md:min-w-[70px] md:gap-1.5 md:pb-1 md:hover:scale-105",
+        isActive
+          ? "border-b-2 border-white md:border-[#2822e3]"
+          : "border-b-2 border-transparent hover:border-b-2 hover:border-white/35 md:hover:border-gray-300",
       )}>
-      <div className="flex h-12 w-12 items-center justify-center">
-        {isAll ? (
-          <LayoutGrid
-            className={cn(
-              "h-6 w-6 translate-y-[2px] transition-colors",
-              isActive ? "text-white" : "text-white/60",
-            )}
-            strokeWidth={2.4}
-          />
-        ) : (
-          <img
-            src={cat.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png"}
-            alt={cat.name}
-            className="h-full w-full object-contain"
-          />
-        )}
+      <div className="flex h-8 w-8 items-center justify-center md:h-12 md:w-12">
+        <IconComponent
+          className={cn(
+            "h-[17px] w-[17px] transition-colors duration-200 md:h-6 md:w-6",
+            isActive
+              ? "text-white md:text-[#2822e3]"
+              : "text-white/70 group-hover:text-white md:text-gray-600 md:group-hover:text-gray-800",
+          )}
+          strokeWidth={2.2}
+        />
       </div>
       <span
         className={cn(
-          "whitespace-nowrap text-center text-xs tracking-tight transition-colors",
-          isActive ? "font-semibold text-white" : "font-medium text-white/80",
+          "whitespace-nowrap text-center text-[10px] leading-none tracking-tight transition-colors md:text-xs",
+          isActive
+            ? "font-semibold text-white md:text-[#1A1A1A]"
+            : "font-medium text-white/80 group-hover:text-white md:text-gray-700 md:group-hover:text-gray-900",
         )}>
         {cat.name}
       </span>
@@ -86,13 +152,15 @@ const MainLocationHeader = ({
 }) => {
   const { scrollY } = useScroll();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
-  const { currentLocation, refreshLocation, isFetchingLocation } =
+  const { currentLocation, savedAddresses, refreshLocation, isFetchingLocation } =
     useLocation();
   const { isOpen: isProductDetailOpen } = useProductDetail();
   const { settings } = useSettings();
+  const { isAuthenticated } = useAuth();
   const appName = settings?.appName || "App";
   const logoUrl = settings?.logoUrl || LogoImage;
   const navigate = useNavigate();
+  const [isGuestPromptOpen, setIsGuestPromptOpen] = useState(false);
 
   // Search Logic
   const handleSearchClick = () => {
@@ -103,6 +171,14 @@ const MainLocationHeader = ({
     if (e.key === "Enter") {
       navigate("/search", { state: { query: e.target.value } });
     }
+  };
+
+  const handleProfileClick = () => {
+    if (!isAuthenticated) {
+      setIsGuestPromptOpen(true);
+      return;
+    }
+    navigate("/profile");
   };
 
   // Search placeholder animation
@@ -181,38 +257,72 @@ const MainLocationHeader = ({
   }, [typingState]);
 
   // Smooth scroll interpolations
-  const headerTopPadding = useTransform(scrollY, [0, 160], [16, 12]);
+  const mobileHeaderTopPadding = useTransform(scrollY, [0, 160], ["26px", "10px"]);
+  const desktopHeaderTopPadding = useTransform(scrollY, [0, 160], ["16px", "12px"]);
   const headerBottomPadding = useTransform(scrollY, [0, 160], [4, 3]);
-  const headerRoundness = useTransform(scrollY, [0, 160], [0, 24]);
   const bgOpacity = useTransform(scrollY, [0, 160], [1, 0.98]);
 
   // Content animations
-  const contentHeight = useTransform(scrollY, [0, 160], ["64px", "0px"]);
-  const contentOpacity = useTransform(scrollY, [0, 160], [1, 0]);
-  const navHeight = useTransform(scrollY, [0, 200], ["60px", "0px"]);
-  const navOpacity = useTransform(scrollY, [0, 200], [1, 0]);
+  const contentHeight = useTransform(scrollY, [0, 140], ["98px", "0px"]);
+  const contentOpacity = useTransform(scrollY, [0, 120], [1, 0]);
+  const navHeight = useTransform(scrollY, [0, 120], ["60px", "54px"]);
+  const navOpacity = useTransform(scrollY, [0, 120], [1, 1]);
   const navMargin = useTransform(scrollY, [0, 200], [4, 0]);
-  const categorySpacing = useTransform(scrollY, [0, 200], [3, 0]);
+  const categorySpacing = useTransform(scrollY, [0, 200], [0, 0]);
+  const promoHeight = useTransform(scrollY, [0, 90], ["88px", "0px"]);
+  const promoOpacity = useTransform(scrollY, [0, 70], [1, 0]);
+  const promoMargin = useTransform(scrollY, [0, 180], [0, 0]);
   const cartOpacity = useTransform(scrollY, [0, 110, 150], [1, 0.7, 0]);
   const cartScale = useTransform(scrollY, [0, 110, 150], [1, 0.9, 0.75]);
 
   // Helper to hide elements completely when collapsed to prevent clicks
   const displayContent = useTransform(scrollY, (value) =>
-    value > 160 ? "none" : "block",
+    value > 140 ? "none" : "block",
   );
-  const displayNav = useTransform(scrollY, (value) =>
-    value > 200 ? "none" : "flex",
-  );
+  const displayNav = useTransform(scrollY, () => "flex");
   const displayCart = useTransform(scrollY, (value) =>
     value > 150 ? "none" : "block",
   );
 
   const baseHeaderColor = activeCategory?.headerColor || "#45B0E2";
-  const headerBackground = {
-    backgroundImage: buildHeaderGradient(baseHeaderColor),
-  };
-  const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
-  const categoryAccent = "#111111";
+  const searchBarBg = buildSearchBarBackgroundColor("#f8f1e8");
+  const matchedSavedAddress = savedAddresses?.find((address) => {
+    const savedAddress = String(address?.address || "").trim().toLowerCase();
+    const activeAddress = String(currentLocation?.name || "").trim().toLowerCase();
+
+    if (!savedAddress || !activeAddress) return false;
+    return (
+      savedAddress === activeAddress ||
+      savedAddress.includes(activeAddress) ||
+      activeAddress.includes(savedAddress)
+    );
+  });
+  const currentLocationLabel = (
+    matchedSavedAddress?.label ||
+    currentLocation?.label ||
+    "Home"
+  ).toUpperCase();
+  const deliveryTimeText = (() => {
+    const rawTime = String(currentLocation?.time || "12-15 mins").trim();
+    const normalizedTime = rawTime.toLowerCase();
+
+    if (normalizedTime.includes("hour") || normalizedTime.includes("hr")) {
+      return rawTime.replace(/hours?/i, "hr");
+    }
+
+    const timeMatches = Array.from(rawTime.matchAll(/\d+/g))
+      .map(([value]) => Number(value))
+      .filter((value) => Number.isFinite(value));
+
+    if (timeMatches.length > 0) {
+      return `${Math.max(...timeMatches)} min`;
+    }
+
+    return "15 min";
+  })();
+  const locationPromptText = isFetchingLocation
+    ? "Detecting location..."
+    : "Tap to set location";
 
   useEffect(() => {
     const c = buildMiniCartColor(baseHeaderColor);
@@ -236,37 +346,41 @@ const MainLocationHeader = ({
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
           style={{
-            paddingTop: headerTopPadding,
+            "--mobile-header-top-padding": mobileHeaderTopPadding,
+            "--desktop-header-top-padding": desktopHeaderTopPadding,
             paddingBottom: headerBottomPadding,
-            borderBottomLeftRadius: headerRoundness,
-            borderBottomRightRadius: headerRoundness,
             opacity: bgOpacity,
-            ...headerBackground,
           }}
-          className="sticky top-0 z-10 overflow-hidden px-4 pb-4 shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all duration-300 rounded-b-2xl">
+          className="sticky top-0 z-10 overflow-hidden rounded-b-none bg-[linear-gradient(180deg,_#ab7458_0%,_#7f4e39_34%,_#2b1811_100%)] px-4 pt-[calc(env(safe-area-inset-top,_0px)+var(--mobile-header-top-padding))] shadow-[0_18px_45px_rgba(36,18,12,0.35)] transition-all duration-300 md:rounded-b-2xl md:bg-none md:bg-white md:pt-[var(--desktop-header-top-padding)] md:shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
           {/* Pure Base Layer */}
-          <div className="absolute inset-0 pointer-events-none" />
+          <div className="pointer-events-none absolute inset-0 md:hidden">
+            <div className="absolute -top-16 left-[-10%] h-40 w-40 rounded-full bg-amber-100/25 blur-3xl" />
+            <div className="absolute -top-20 right-[-12%] h-48 w-48 rounded-full bg-white/12 blur-3xl" />
+            <div className="absolute bottom-0 left-1/4 h-24 w-40 rounded-full bg-black/20 blur-3xl" />
+          </div>
 
           {/* Corner Lottie */}
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
-            style={{
-              opacity: cartOpacity,
-              scale: cartScale,
-              display: displayCart,
-            }}
-            type="button"
-            aria-label="Open cart"
-            onClick={() => navigate("/checkout")}
-            className="absolute top-3 right-5 sm:top-4 sm:right-6 md:top-5 md:right-8 z-20 w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 cursor-pointer">
-            <Lottie
-              animationData={shoppingCartAnimation}
-              loop
-              className="w-full h-full pointer-events-none drop-shadow-[0_8px_18px_rgba(0,0,0,0.14)]"
-            />
-          </motion.button>
+          <div className="hidden md:block">
+            <motion.button
+              initial={{ opacity: 0, scale: 0.9, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
+              style={{
+                opacity: cartOpacity,
+                scale: cartScale,
+                display: displayCart,
+              }}
+              type="button"
+              aria-label="Open cart"
+              onClick={() => navigate("/checkout")}
+              className="absolute right-5 top-[calc(env(safe-area-inset-top,_0px)+12px)] z-20 h-12 w-12 cursor-pointer md:top-5 md:right-8 md:h-20 md:w-20">
+              <Lottie
+                animationData={shoppingCartAnimation}
+                loop
+                className="w-full h-full pointer-events-none drop-shadow-[0_8px_18px_rgba(0,0,0,0.14)]"
+              />
+            </motion.button>
+          </div>
 
           {/* Desktop/Tablet Header Layout (md and above) */}
           <div className="hidden md:flex items-center justify-between relative z-20 px-2 lg:px-6 mb-4 mt-1">
@@ -285,7 +399,7 @@ const MainLocationHeader = ({
               </div>
 
               {/* Location Block (Desktop inline row) */}
-              <div className="flex flex-col border-l border-black/10 pl-4 lg:pl-8 h-10 justify-center">
+            <div className="flex flex-col border-l border-black/10 pl-4 lg:pl-8 h-10 justify-center">
                 <div className="flex items-center gap-1.5 opacity-70">
                   <AccessTimeIcon sx={{ fontSize: 13, color: "#111827" }} />
                   <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest leading-none">
@@ -358,7 +472,7 @@ const MainLocationHeader = ({
               <motion.button
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/profile")}
+                onClick={handleProfileClick}
                 className="text-slate-900 lg:bg-white/30 p-1.5 lg:rounded-full hover:bg-white hover:text-slate-900 transition-all">
                 <AccountCircleOutlinedIcon sx={{ fontSize: 28 }} />
               </motion.button>
@@ -367,25 +481,33 @@ const MainLocationHeader = ({
 
           {/* Header Rows (MOBILE ONLY) */}
           <div className="md:hidden flex flex-col gap-1">
-            {/* Top Row: Delivery Info & Profile */}
-            <div className="flex items-center justify-between py-2">
-              <div className="flex flex-col gap-2.5">
-                <span className="text-sm font-bold text-white leading-none tracking-tight">Delivery in 12-15 mins</span>
+            {/* Top Row: Location Left & Profile Right */}
+            <motion.div
+              style={{
+                height: contentHeight,
+                opacity: contentOpacity,
+                display: displayContent,
+                overflow: "hidden",
+              }}
+              className="flex items-start justify-between py-2">
+              <div className="flex min-w-0 flex-col flex-1">
+                <span className="text-[12px] font-semibold leading-none tracking-tight text-[#f4dfce]">
+                  {appName} in
+                </span>
+                <span className="mt-0.5 text-[42px] font-black leading-[0.88] tracking-[-0.06em] text-white">
+                  {deliveryTimeText}
+                </span>
                 <button
                   type="button"
                   onClick={() => setIsLocationOpen(true)}
-                  className="flex items-center gap-0.5 text-left text-xs font-semibold text-white/80 border-0 bg-transparent p-0">
-                  <span className="max-w-[240px] truncate">{currentLocation.name}</span>
-                  <ChevronDownIcon sx={{ fontSize: 13, opacity: 0.9, color: "white" }} />
+                  className="mt-1 flex items-center gap-0.5 border-0 bg-transparent p-0 text-left">
+                  <span className="max-w-[240px] truncate text-[11px] font-bold uppercase tracking-[0.04em] text-white/90">
+                    {currentLocationLabel} - {locationPromptText}
+                  </span>
+                  <ChevronDownIcon sx={{ fontSize: 12, opacity: 0.9, color: "#FFFFFF" }} />
                 </button>
               </div>
-
-              <button
-                onClick={() => navigate("/profile")}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 shadow-sm border border-white/10 active:scale-90 transition-transform">
-                <AccountCircleOutlinedIcon sx={{ fontSize: 22, color: "#fff" }} />
-              </button>
-            </div>
+            </motion.div>
 
             {/* Bottom Row: 60/40 Split Search & Refer/Earn - Dashboard Redesign */}
             <div className="pb-3 flex items-center gap-2.5 pt-0.5">
@@ -393,7 +515,8 @@ const MainLocationHeader = ({
                 <motion.div
                   onClick={handleSearchClick}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full rounded-lg px-4 h-[40px] flex items-center bg-[#F2F2F2] border border-black/5 transition-colors duration-200 cursor-pointer">
+                  style={{ backgroundColor: searchBarBg }}
+                  className="flex h-[42px] w-full cursor-pointer items-center rounded-xl border border-[#eadfd5] px-4 shadow-[0_10px_18px_rgba(0,0,0,0.14)] transition-colors duration-200">
                   <SearchIcon sx={{ color: "#6B7280", fontSize: 18 }} />
                   <input
                     type="text"
@@ -413,7 +536,7 @@ const MainLocationHeader = ({
                   animate={{ scale: [1, 1.08, 1] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                   onClick={() => navigate("/refer-earn")}
-                  className="relative w-full h-[40px] rounded-lg bg-gradient-to-br from-[#2a2a2a] to-[#050505] border-2 border-white shadow-[0_0_15px_rgba(255,255,255,0.1)] flex flex-col items-center justify-center transition-all active:brightness-125 px-1 overflow-hidden">
+                  className="relative flex h-[42px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-[#d5b678]/40 bg-[linear-gradient(135deg,_#24140f_0%,_#0f0806_70%,_#040303_100%)] px-1 shadow-[0_12px_22px_rgba(0,0,0,0.28)] transition-all active:brightness-125">
 
                   {/* Gloss Shimmer Effect */}
                   <motion.div
@@ -426,7 +549,7 @@ const MainLocationHeader = ({
                   <span className="text-[11px] font-black leading-none text-[#D4AF37] tracking-[0.04em] uppercase whitespace-nowrap mb-1.5">
                     Refer & Earn
                   </span>
-                  <span className="text-[5px] font-semibold text-white/80 leading-none tracking-normal whitespace-nowrap">
+                  <span className="text-[5px] font-semibold text-gray-600 leading-none tracking-normal whitespace-nowrap">
                     Unlock rewards together
                   </span>
                 </motion.button>
@@ -436,47 +559,90 @@ const MainLocationHeader = ({
 
           {/* Categories Navigation - Smooth Collapse */}
           {categories.length > 0 && (
-            <motion.div
-              layout
-              transition={{
-                layout: {
-                  type: "spring",
-                  stiffness: 420,
-                  damping: 34,
-                  mass: 0.6,
-                },
-              }}
-              style={{
-                height: navHeight,
-                opacity: navOpacity,
-                marginTop: categorySpacing,
-                display: displayNav,
-                overflowY: "hidden",
-              }}
-              className="no-scrollbar relative z-10 flex min-h-[68px] items-center gap-6 overflow-x-auto px-4 py-2 scroll-smooth md:justify-center md:min-h-[76px]">
-              {categories.map((cat) => {
-                const isActive = activeCategory?.id === cat.id;
-                return (
-                  <CategoryNavColumn
-                    key={cat.id}
-                    cat={cat}
-                    isActive={isActive}
-                    categoryAccent={categoryAccent}
-                    onCategorySelect={onCategorySelect}
-                  />
-                );
-              })}
-            </motion.div>
+            <>
+              <motion.div
+                layout
+                transition={{
+                  layout: {
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 34,
+                    mass: 0.6,
+                  },
+                }}
+                style={{
+                  height: navHeight,
+                  opacity: navOpacity,
+                  marginTop: categorySpacing,
+                  display: displayNav,
+                  overflowY: "hidden",
+                }}
+                className="no-scrollbar relative z-10 -mx-4 flex min-h-[54px] items-end gap-2 overflow-x-auto border-t border-white/5 bg-[#130b08] px-2 pt-2 pb-0.5 scroll-smooth md:mx-0 md:min-h-[76px] md:items-center md:gap-6 md:border-t-0 md:bg-none md:bg-transparent md:px-4 md:py-2">
+                {categories.map((cat) => {
+                  const isActive = activeCategory?.id === cat.id;
+                  return (
+                    <CategoryNavColumn
+                      key={cat.id}
+                      cat={cat}
+                      isActive={isActive}
+                      onCategorySelect={onCategorySelect}
+                    />
+                  );
+                })}
+              </motion.div>
+
+              <motion.button
+                type="button"
+                onClick={() => navigate("/offers")}
+                style={{
+                  height: promoHeight,
+                  opacity: promoOpacity,
+                  marginTop: promoMargin,
+                  overflow: "hidden",
+                }}
+                whileTap={{ scale: 0.98 }}
+                className="relative left-1/2 z-10 flex w-screen -translate-x-1/2 items-center border-t border-white/5 bg-[#050505] px-5 md:hidden">
+                <div className="relative flex h-[80px] w-full items-center justify-between gap-4">
+                  <div className="flex-1 pl-3">
+                    <p className="font-serif text-[42px] font-black leading-none tracking-[-0.05em] text-white">
+                      Sugar
+                    </p>
+                  </div>
+
+                  <div className="relative flex h-[72px] w-[65px] shrink-0 items-center justify-center overflow-hidden">
+                    <img
+                      src={FORTUNE_SUGAR_PACK_IMAGE}
+                      alt="Fortune Sugar pack"
+                      className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.35)]"
+                    />
+                  </div>
+
+                  <div className="flex-1 text-right pr-3">
+                    <p className="text-[20px] font-black leading-none tracking-[-0.03em] text-white">
+                      Rs. 1 per Kg*
+                    </p>
+                    <p className="mt-1.5 text-[11px] font-semibold leading-none text-white/90">
+                      On Order above 399
+                    </p>
+                  </div>
+                </div>
+              </motion.button>
+            </>
           )}
 
           {/* Background Decorative patterns */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
+          <div className="pointer-events-none absolute -mr-40 -mt-40 h-80 w-80 rounded-full bg-amber-100/15 blur-[100px] md:bg-blue-100/20" />
         </motion.div>
       </div>
 
       <LocationDrawer
         isOpen={isLocationOpen}
         onClose={() => setIsLocationOpen(false)}
+      />
+
+      <GuestProfilePrompt
+        isOpen={isGuestPromptOpen}
+        onClose={() => setIsGuestPromptOpen(false)}
       />
     </>
   );

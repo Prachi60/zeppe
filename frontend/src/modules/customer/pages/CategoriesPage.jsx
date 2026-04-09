@@ -136,65 +136,76 @@ const CategoriesPage = () => {
     }, [flipRows]);
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white max-w-md mx-auto">
             <MainLocationHeader />
-            <div className="max-w-[1280px] mx-auto px-4 pt-[140px] md:pt-[150px] pb-20">
+            <div className="px-3 pt-[130px] pb-24">
                 {groups.map((group, groupIdx) => (
-                    <div key={groupIdx} className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${groupIdx * 100}ms` }}>
+                    <div key={groupIdx} className="mb-8" style={{ animationDelay: `${groupIdx * 100}ms` }}>
                         {/* Group Title */}
-                        <h2 className="text-xl md:text-2xl font-black text-[#1A1A1A] mb-6 px-1">
+                        <h2 className="text-[17px] font-black text-[#1A1A1A] mb-3 px-1">
                             {group.title}
                         </h2>
 
-                        {/* Categories Grid */}
-                        <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-3 gap-y-8">
+                        {/* Categories Grid — forced 4 cols */}
+                        <div className="grid grid-cols-4 gap-x-2 gap-y-3">
                             {group.categories.map((category) => (
-                                <div key={category.id} className="flex flex-col group cursor-pointer">
-                                    <Link
-                                        to={`/category/${category.id}`}
-                                        className="block"
+                                <Link
+                                    key={category.id}
+                                    to={`/category/${category.id}`}
+                                    className="flex flex-col items-center gap-1.5 group cursor-pointer"
+                                >
+                                    {/* Square image box */}
+                                    <div
+                                        className="w-full aspect-square rounded-2xl flex items-center justify-center overflow-hidden relative [perspective:800px]"
+                                        style={{ backgroundColor: category.color }}
                                     >
-                                        <div className="aspect-square mb-2 [perspective:1000px]">
+                                        <div
+                                            className="relative w-full h-full transition-transform duration-500"
+                                            style={{
+                                                transformStyle: 'preserve-3d',
+                                                WebkitTransformStyle: 'preserve-3d',
+                                                transform: flippedCategoryId === category.id ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                                            }}
+                                        >
+                                            {/* Front */}
                                             <div
-                                                className="relative w-full h-full transition-transform duration-500 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] will-change-transform"
-                                                style={{
-                                                    transformStyle: 'preserve-3d',
-                                                    WebkitTransformStyle: 'preserve-3d',
-                                                    transform: flippedCategoryId === category.id ? 'rotateY(180deg)' : 'rotateY(0deg)'
-                                                }}
+                                                className="absolute inset-0 flex items-center justify-center p-2"
+                                                style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                                             >
-                                                <div
-                                                    className="absolute inset-0 rounded-full p-2.5 flex items-center justify-center shadow-sm"
-                                                    style={{
-                                                        backgroundColor: category.color,
-                                                        transform: 'rotateY(0deg)',
-                                                        backfaceVisibility: 'hidden',
-                                                        WebkitBackfaceVisibility: 'hidden'
+                                                <img
+                                                    src={category.image}
+                                                    alt={category.name}
+                                                    crossOrigin="anonymous"
+                                                    className="w-full h-full object-contain"
+                                                    onError={(e) => {
+                                                        e.currentTarget.style.display = 'none';
+                                                        const parent = e.currentTarget.parentElement;
+                                                        if (parent && !parent.querySelector('.cat-fallback')) {
+                                                            const fb = document.createElement('div');
+                                                            fb.className = 'cat-fallback';
+                                                            fb.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:rgba(0,0,0,0.25);';
+                                                            fb.textContent = (category.name || '?')[0].toUpperCase();
+                                                            parent.appendChild(fb);
+                                                        }
                                                     }}
-                                                >
-                                                    <img
-                                                        src={category.image}
-                                                        alt={category.name}
-                                                        className="w-full h-full rounded-full object-cover"
-                                                    />
-                                                </div>
-
-                                                <div
-                                                    className="absolute inset-0 rounded-full bg-gradient-to-br from-[#F6EFE4] via-[#EEE7F8] to-[#E7F1FB] text-slate-700 flex items-center justify-center p-2 text-center shadow-inner border border-white/70"
-                                                    style={{
-                                                        transform: 'rotateY(180deg)',
-                                                        backfaceVisibility: 'hidden',
-                                                        WebkitBackfaceVisibility: 'hidden'
-                                                    }}
-                                                >
-                                                    <span className="text-[10px] md:text-[12px] font-bold leading-tight">
-                                                        {category.name}
-                                                    </span>
-                                                </div>
+                                                />
+                                            </div>
+                                            {/* Back (flip) */}
+                                            <div
+                                                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#F6EFE4] via-[#EEE7F8] to-[#E7F1FB] text-slate-700 flex items-center justify-center p-1.5 text-center"
+                                                style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                                            >
+                                                <span className="text-[9px] font-bold leading-tight">
+                                                    {category.name}
+                                                </span>
                                             </div>
                                         </div>
-                                    </Link>
-                                </div>
+                                    </div>
+                                    {/* Name below */}
+                                    <span className="text-[11px] font-semibold text-[#1A1A1A] text-center leading-tight line-clamp-2 px-0.5 group-hover:text-[#45B0E2] transition-colors">
+                                        {category.name}
+                                    </span>
+                                </Link>
                             ))}
                         </div>
                     </div>
