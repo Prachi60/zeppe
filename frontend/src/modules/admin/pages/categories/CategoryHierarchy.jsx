@@ -96,6 +96,69 @@ const CategoryHierarchy = () => {
     setSelectedLevel2(l2);
   };
 
+  const handleHeaderColorChange = async (categoryId, newColor) => {
+    try {
+      const res = await adminApi.updateCategory(categoryId, {
+        headerColor: newColor,
+      });
+      if (res.data.success) {
+        toast.success("Color updated successfully");
+        // Update local state
+        setCategories((prev) =>
+          prev.map((header) =>
+            header._id === categoryId || header.id === categoryId
+              ? { ...header, headerColor: newColor }
+              : header
+          )
+        );
+        // Update selected header if it's the one being changed
+        if (
+          selectedHeader &&
+          (selectedHeader._id === categoryId || selectedHeader.id === categoryId)
+        ) {
+          setSelectedHeader({ ...selectedHeader, headerColor: newColor });
+        }
+        // Notify home page to refresh categories
+        window.localStorage.setItem('categoriesRefresh', Date.now().toString());
+      }
+    } catch (error) {
+      toast.error("Failed to update color");
+    }
+  };
+
+  const handleLevel2ColorChange = async (categoryId, newColor) => {
+    try {
+      const res = await adminApi.updateCategory(categoryId, {
+        headerColor: newColor,
+      });
+      if (res.data.success) {
+        toast.success("Color updated successfully");
+        // Update local state
+        setCategories((prev) =>
+          prev.map((header) => ({
+            ...header,
+            children: header.children?.map((l2) =>
+              l2._id === categoryId || l2.id === categoryId
+                ? { ...l2, headerColor: newColor }
+                : l2
+            ),
+          }))
+        );
+        // Update selected level2 if it's the one being changed
+        if (
+          selectedLevel2 &&
+          (selectedLevel2._id === categoryId || selectedLevel2.id === categoryId)
+        ) {
+          setSelectedLevel2({ ...selectedLevel2, headerColor: newColor });
+        }
+        // Notify home page to refresh categories
+        window.localStorage.setItem('categoriesRefresh', Date.now().toString());
+      }
+    } catch (error) {
+      toast.error("Failed to update color");
+    }
+  };
+
   // Components
   const ColumnHeader = ({ title, icon: Icon, count, color }) => (
     <div
@@ -110,7 +173,7 @@ const CategoryHierarchy = () => {
     </div>
   );
 
-  const ListItem = ({ item, isSelected, onClick, hasChildren, type }) => {
+  const ListItem = ({ item, isSelected, onClick, hasChildren, type, onColorChange }) => {
     const activeClass = isSelected
       ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm z-10"
       : "hover:bg-gray-50 border-transparent text-gray-600";
@@ -122,12 +185,11 @@ const CategoryHierarchy = () => {
         layout
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
-        onClick={onClick}
         className={`
                     group flex items-center justify-between p-3 mx-2 my-1 rounded-lg border cursor-pointer transition-all duration-200
                     ${activeClass}
                 `}>
-        <div className="flex items-center gap-3 overflow-hidden">
+        <div className="flex items-center gap-3 overflow-hidden flex-1" onClick={onClick}>
           <div
             className={`
                         w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors
@@ -155,9 +217,37 @@ const CategoryHierarchy = () => {
           </div>
         </div>
 
-        {hasChildren && (
+        <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {(type === "category" || type === "header") && onColorChange && (
+            <>
+              <div
+                className="h-6 w-6 rounded-lg shadow-sm ring-1 ring-gray-200 cursor-pointer hover:ring-indigo-300 transition-all"
+                style={{
+                  background: `linear-gradient(135deg, ${item.headerColor || '#7B4419'} 0%, ${item.headerColor || '#7B4419'}dd 100%)`
+                }}
+                title="Click to change color"
+                onClick={(e) => {
+                  document.getElementById(`color-input-${item._id || item.id}`).click();
+                  e.stopPropagation();
+                }}
+              />
+              <input
+                id={`color-input-${item._id || item.id}`}
+                type="color"
+                value={item.headerColor || '#7B4419'}
+                onChange={(e) => {
+                  onColorChange(item._id || item.id, e.target.value);
+                  e.stopPropagation();
+                }}
+                className="hidden"
+              />
+            </>
+          )}
+        </div>
+
+        {hasChildren && type !== "category" && (
           <ChevronRight
-            className={`w-4 h-4 ${isSelected ? "text-indigo-400" : "text-gray-300"}`}
+            className={`w-4 h-4 shrink-0 ${isSelected ? "text-indigo-400" : "text-gray-300"}`}
           />
         )}
       </motion.div>
@@ -255,9 +345,10 @@ const CategoryHierarchy = () => {
                   }
                   onClick={() => handleHeaderSelect(header)}
                   hasChildren={header.children && header.children.length > 0}
+                  onColorChange={handleHeaderColorChange}
                 />
               ))
-            )}
+            )}}
           </div>
         </div>
 
@@ -306,6 +397,7 @@ const CategoryHierarchy = () => {
                     }
                     onClick={() => handleLevel2Select(l2)}
                     hasChildren={l2.children && l2.children.length > 0}
+                    onColorChange={handleLevel2ColorChange}
                   />
                 ))
               )}

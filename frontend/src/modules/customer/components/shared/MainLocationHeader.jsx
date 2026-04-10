@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValue } from "framer-motion";
 import Lottie from "lottie-react";
 import LocationDrawer from "./LocationDrawer";
 import { useLocation } from "../../context/LocationContext";
@@ -29,6 +29,7 @@ import ChevronDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 
 const FORTUNE_SUGAR_PACK_IMAGE =
   "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png";
@@ -108,6 +109,7 @@ function CategoryNavColumn({
   cat,
   isActive,
   onCategorySelect,
+  activeColor,
 }) {
   const isAll = cat.id === "all" || cat.slug === "all";
   const IconComponent = isAll ? LayoutGrid : getCategoryIcon(cat.name);
@@ -117,17 +119,14 @@ function CategoryNavColumn({
       onClick={() => onCategorySelect && onCategorySelect(cat)}
       className={cn(
         "group relative flex min-w-[58px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1 pb-1.5 transition-all duration-200 active:scale-95 md:min-w-[70px] md:gap-1.5 md:pb-1 md:hover:scale-105",
-        isActive
-          ? "border-b-2 border-white md:border-[#2822e3]"
-          : "border-b-2 border-transparent hover:border-b-2 hover:border-white/35 md:hover:border-gray-300",
       )}>
       <div className="flex h-8 w-8 items-center justify-center md:h-12 md:w-12">
         <IconComponent
           className={cn(
             "h-[17px] w-[17px] transition-colors duration-200 md:h-6 md:w-6",
             isActive
-              ? "text-white md:text-[#2822e3]"
-              : "text-white/70 group-hover:text-white md:text-gray-600 md:group-hover:text-gray-800",
+              ? "text-white"
+              : "text-white/70 group-hover:text-white",
           )}
           strokeWidth={2.2}
         />
@@ -136,11 +135,20 @@ function CategoryNavColumn({
         className={cn(
           "whitespace-nowrap text-center text-[10px] leading-none tracking-tight transition-colors md:text-xs",
           isActive
-            ? "font-semibold text-white md:text-[#1A1A1A]"
-            : "font-medium text-white/80 group-hover:text-white md:text-gray-700 md:group-hover:text-gray-900",
-        )}>
+            ? "font-black text-white"
+            : "font-medium text-white/80 group-hover:text-white",
+        )}
+        style={isActive ? { color: "rgb(255,255,255)" } : {}}>
         {cat.name}
       </span>
+      
+      {isActive && (
+        <motion.div
+          layoutId="categoryActiveBar"
+          className="absolute -bottom-0.5 w-6 h-1 rounded-full bg-white"
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        />
+      )}
     </div>
   );
 }
@@ -149,6 +157,12 @@ const MainLocationHeader = ({
   categories = [],
   activeCategory,
   onCategorySelect,
+  featuredOffer = {
+    title: "Sugar",
+    image: "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
+    subtitle: "Rs. 1 per Kg*",
+    description: "On Order above 399",
+  },
 }) => {
   const { scrollY } = useScroll();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -157,7 +171,7 @@ const MainLocationHeader = ({
   const { isOpen: isProductDetailOpen } = useProductDetail();
   const { settings } = useSettings();
   const { isAuthenticated } = useAuth();
-  const appName = settings?.appName || "App";
+  const appName = settings?.appName || "zeppe";
   const logoUrl = settings?.logoUrl || LogoImage;
   const navigate = useNavigate();
   const [isGuestPromptOpen, setIsGuestPromptOpen] = useState(false);
@@ -257,35 +271,56 @@ const MainLocationHeader = ({
   }, [typingState]);
 
   // Smooth scroll interpolations
-  const mobileHeaderTopPadding = useTransform(scrollY, [0, 160], ["26px", "10px"]);
+  const mobileHeaderTopPadding = useTransform(scrollY, [0, 60], ["26px", "4px"]);
   const desktopHeaderTopPadding = useTransform(scrollY, [0, 160], ["16px", "12px"]);
-  const headerBottomPadding = useTransform(scrollY, [0, 160], [4, 3]);
-  const bgOpacity = useTransform(scrollY, [0, 160], [1, 0.98]);
+  const headerBottomPadding = useTransform(scrollY, [0, 60], [4, 0]);
+  const bgOpacity = useTransform(scrollY, [0, 60], [1, 1]);
 
   // Content animations
-  const contentHeight = useTransform(scrollY, [0, 140], ["98px", "0px"]);
-  const contentOpacity = useTransform(scrollY, [0, 120], [1, 0]);
-  const navHeight = useTransform(scrollY, [0, 120], ["60px", "54px"]);
+  const contentHeight = useTransform(scrollY, [0, 55], ["98px", "0px"]);
+  const contentOpacity = useTransform(scrollY, [0, 35], [1, 0]);
+  const navHeight = useTransform(scrollY, [0, 60], ["60px", "52px"]);
   const navOpacity = useTransform(scrollY, [0, 120], [1, 1]);
   const navMargin = useTransform(scrollY, [0, 200], [4, 0]);
   const categorySpacing = useTransform(scrollY, [0, 200], [0, 0]);
-  const promoHeight = useTransform(scrollY, [0, 90], ["88px", "0px"]);
-  const promoOpacity = useTransform(scrollY, [0, 70], [1, 0]);
-  const promoMargin = useTransform(scrollY, [0, 180], [0, 0]);
+  const promoHeight = useTransform(scrollY, [0, 55], ["110px", "0px"]);
+  const promoOpacity = useTransform(scrollY, [0, 35], [1, 0]);
+  const promoMargin = useTransform(scrollY, [0, 55], [0, -110]);
   const cartOpacity = useTransform(scrollY, [0, 110, 150], [1, 0.7, 0]);
   const cartScale = useTransform(scrollY, [0, 110, 150], [1, 0.9, 0.75]);
+  const compactOverlayOpacity = useTransform(scrollY, [0, 18, 40], [0, 0.88, 1]);
+  // IMPORTANT: baseHeaderColor must be declared BEFORE the MotionValue that uses it
+  const baseHeaderColor = activeCategory?.headerColor || "#7B4419";
+
+  // At scroll=0: fully transparent (parent gradient shows through seamlessly).
+  // As user scrolls: fades to near-black so compact strip looks dark like the screenshot.
+  const computeCompactBg = (scrollVal) => {
+    const progress = Math.min(1, Math.max(0, scrollVal / 50));
+    return `rgba(8, 6, 4, ${progress})`;
+  };
+
+  const compactNavBg = useMotionValue(computeCompactBg(0));
+
+  useEffect(() => {
+    compactNavBg.set(computeCompactBg(scrollY.get()));
+    const unsub = scrollY.on('change', (val) => {
+      compactNavBg.set(computeCompactBg(val));
+    });
+    return unsub;
+  }, [baseHeaderColor]);
+
+  // Search bar always white/cream — visible on gradient background
 
   // Helper to hide elements completely when collapsed to prevent clicks
   const displayContent = useTransform(scrollY, (value) =>
-    value > 140 ? "none" : "block",
+    value > 42 ? "none" : "block",
   );
   const displayNav = useTransform(scrollY, () => "flex");
   const displayCart = useTransform(scrollY, (value) =>
-    value > 150 ? "none" : "block",
+    value > 120 ? "none" : "block",
   );
 
-  const baseHeaderColor = activeCategory?.headerColor || "#45B0E2";
-  const searchBarBg = buildSearchBarBackgroundColor("#f8f1e8");
+  const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
   const matchedSavedAddress = savedAddresses?.find((address) => {
     const savedAddress = String(address?.address || "").trim().toLowerCase();
     const activeAddress = String(currentLocation?.name || "").trim().toLowerCase();
@@ -350,14 +385,24 @@ const MainLocationHeader = ({
             "--desktop-header-top-padding": desktopHeaderTopPadding,
             paddingBottom: headerBottomPadding,
             opacity: bgOpacity,
+            backgroundImage: buildHeaderGradient(baseHeaderColor),
           }}
-          className="sticky top-0 z-10 overflow-hidden rounded-b-none bg-[linear-gradient(180deg,_#ab7458_0%,_#7f4e39_34%,_#2b1811_100%)] px-4 pt-[calc(env(safe-area-inset-top,_0px)+var(--mobile-header-top-padding))] shadow-[0_18px_45px_rgba(36,18,12,0.35)] transition-all duration-300 md:rounded-b-2xl md:bg-none md:bg-white md:pt-[var(--desktop-header-top-padding)] md:shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+          className="relative z-10 overflow-visible rounded-b-none px-4 pt-[calc(env(safe-area-inset-top,_0px)+var(--mobile-header-top-padding))] shadow-[0_18px_45px_rgba(36,18,12,0.35)] transition-all duration-500 md:rounded-b-2xl md:bg-none md:bg-white md:pt-[var(--desktop-header-top-padding)] md:shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+          <motion.div
+            aria-hidden="true"
+            style={{ opacity: compactOverlayOpacity }}
+            className="pointer-events-none absolute inset-0 bg-[#020202] md:hidden"
+          />
+
           {/* Pure Base Layer */}
-          <div className="pointer-events-none absolute inset-0 md:hidden">
+          <motion.div
+            aria-hidden="true"
+            style={{ opacity: contentOpacity }}
+            className="pointer-events-none absolute inset-0 md:hidden">
             <div className="absolute -top-16 left-[-10%] h-40 w-40 rounded-full bg-amber-100/25 blur-3xl" />
             <div className="absolute -top-20 right-[-12%] h-48 w-48 rounded-full bg-white/12 blur-3xl" />
             <div className="absolute bottom-0 left-1/4 h-24 w-40 rounded-full bg-black/20 blur-3xl" />
-          </div>
+          </motion.div>
 
           {/* Corner Lottie */}
           <div className="hidden md:block">
@@ -480,8 +525,18 @@ const MainLocationHeader = ({
           </div>
 
           {/* Header Rows (MOBILE ONLY) */}
-          <div className="md:hidden flex flex-col gap-1">
-            {/* Top Row: Location Left & Profile Right */}
+          <div className="md:hidden flex flex-col">
+            {/* Profile Button — absolute top-right corner */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleProfileClick}
+              className="absolute top-[calc(env(safe-area-inset-top,0px)+58px)] right-4 z-30 flex items-center justify-center w-12 h-12 rounded-full shadow-lg overflow-hidden"
+              style={{ opacity: contentOpacity, display: displayContent, backgroundColor: "rgba(30, 16, 8, 0.85)", border: "1.5px solid rgba(255,255,255,0.15)" }}>
+              <PersonRoundedIcon sx={{ fontSize: 28, color: "rgba(255,255,255,0.9)" }} />
+            </motion.button>
+
+            {/* Top Row: Location only (full width) */}
             <motion.div
               style={{
                 height: contentHeight,
@@ -489,72 +544,58 @@ const MainLocationHeader = ({
                 display: displayContent,
                 overflow: "hidden",
               }}
-              className="flex items-start justify-between py-2">
-              <div className="flex min-w-0 flex-col flex-1">
-                <span className="text-[12px] font-semibold leading-none tracking-tight text-[#f4dfce]">
-                  {appName} in
-                </span>
-                <span className="mt-0.5 text-[42px] font-black leading-[0.88] tracking-[-0.06em] text-white">
-                  {deliveryTimeText}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsLocationOpen(true)}
-                  className="mt-1 flex items-center gap-0.5 border-0 bg-transparent p-0 text-left">
-                  <span className="max-w-[240px] truncate text-[11px] font-bold uppercase tracking-[0.04em] text-white/90">
-                    {currentLocationLabel} - {locationPromptText}
-                  </span>
-                  <ChevronDownIcon sx={{ fontSize: 12, opacity: 0.9, color: "#FFFFFF" }} />
-                </button>
+              className="flex flex-col py-2 pr-14">
+              <div className="text-[20px] font-black leading-none tracking-tight text-white">
+                zeppe
               </div>
+              <div className="mt-0.5 text-[32px] font-bold leading-[0.88] tracking-[-0.06em] text-white -ml-1">
+                {deliveryTimeText}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLocationOpen(true)}
+                className="mt-1 flex items-center gap-0.5 border-0 bg-transparent p-0 text-left">
+                <span className="text-[14px] font-bold uppercase tracking-[0.04em] text-white/90">
+                  {currentLocationLabel}
+                </span>
+                <span className="text-[12px] font-bold tracking-[0.04em] text-white/90">
+                  - {locationPromptText}
+                </span>
+                <ChevronDownIcon sx={{ fontSize: 12, opacity: 0.9, color: "#FFFFFF" }} />
+              </button>
             </motion.div>
 
-            {/* Bottom Row: 60/40 Split Search & Refer/Earn - Dashboard Redesign */}
-            <div className="pb-3 flex items-center gap-2.5 pt-0.5">
-              <div className="flex-[0.6]">
-                <motion.div
+            {/* Bottom Row: 60/40 Split Search & Refer/Earn — sticky compact on scroll */}
+            <motion.div
+              style={{ backgroundColor: compactNavBg }}
+              className="relative z-30 -mx-4 flex items-center gap-2.5 px-4 pt-2 pb-3">
+              <div className="flex-[0.55]">
+                <div
                   onClick={handleSearchClick}
-                  whileTap={{ scale: 0.98 }}
-                  style={{ backgroundColor: searchBarBg }}
-                  className="flex h-[42px] w-full cursor-pointer items-center rounded-xl border border-[#eadfd5] px-4 shadow-[0_10px_18px_rgba(0,0,0,0.14)] transition-colors duration-200">
-                  <SearchIcon sx={{ color: "#6B7280", fontSize: 18 }} />
+                  className="flex h-[40px] w-full cursor-pointer items-center rounded-xl px-4 shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-colors duration-200"
+                  style={{ backgroundColor: "rgba(255,252,248,0.95)" }}>
+                  <SearchIcon sx={{ color: "#6B7280", fontSize: 16 }} />
                   <input
                     type="text"
                     placeholder={searchPlaceholder || "Search products..."}
                     readOnly
-                    className="flex-1 bg-transparent border-none outline-none pl-2 text-[#1A1A1A] font-medium placeholder:text-[#6B7280] text-[13px] cursor-pointer"
+                    className="flex-1 bg-transparent border-none outline-none pl-2 text-[#1A1A1A] font-medium placeholder:text-[#9CA3AF] text-[12px] cursor-pointer"
                   />
-                  <div className="flex items-center gap-2 border-l border-gray-300/40 pl-2">
-                    <MicIcon sx={{ color: "#6B7280", fontSize: 18 }} />
-                  </div>
-                </motion.div>
+                </div>
               </div>
 
-              <div className="flex-[0.4]">
+              <div className="flex-[0.45]">
                 <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  animate={{ scale: [1, 1.08, 1] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => navigate("/refer-earn")}
-                  className="relative flex h-[42px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-[#d5b678]/40 bg-[linear-gradient(135deg,_#24140f_0%,_#0f0806_70%,_#040303_100%)] px-1 shadow-[0_12px_22px_rgba(0,0,0,0.28)] transition-all active:brightness-125">
+                  className="flex h-[40px] w-full items-center justify-center rounded-[8px] border-2 border-[#FFD700] bg-black px-2 shadow-lg transition-all active:brightness-150">
 
-                  {/* Gloss Shimmer Effect */}
-                  <motion.div
-                    initial={{ x: "-150%" }}
-                    animate={{ x: "150%" }}
-                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 0, ease: "linear" }}
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-25deg] pointer-events-none"
-                  />
-
-                  <span className="text-[11px] font-black leading-none text-[#D4AF37] tracking-[0.04em] uppercase whitespace-nowrap mb-1.5">
-                    Refer & Earn
-                  </span>
-                  <span className="text-[5px] font-semibold text-gray-600 leading-none tracking-normal whitespace-nowrap">
-                    Unlock rewards together
+                  <span className="text-[9px] font-black text-[#FFD700] tracking-widest uppercase whitespace-nowrap">
+                    Refer &amp; Earn
                   </span>
                 </motion.button>
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Categories Navigation - Smooth Collapse */}
@@ -576,8 +617,9 @@ const MainLocationHeader = ({
                   marginTop: categorySpacing,
                   display: displayNav,
                   overflowY: "hidden",
+                  backgroundColor: compactNavBg,
                 }}
-                className="no-scrollbar relative z-10 -mx-4 flex min-h-[54px] items-end gap-2 overflow-x-auto border-t border-white/5 bg-[#130b08] px-2 pt-2 pb-0.5 scroll-smooth md:mx-0 md:min-h-[76px] md:items-center md:gap-6 md:border-t-0 md:bg-none md:bg-transparent md:px-4 md:py-2">
+                className="no-scrollbar relative z-20 -mx-4 flex min-h-[52px] items-center gap-2 overflow-x-auto px-2 pt-0.5 pb-1 scroll-smooth md:mx-0 md:min-h-[76px] md:items-center md:gap-6 md:px-4 md:py-2 mt-4">>
                 {categories.map((cat) => {
                   const isActive = activeCategory?.id === cat.id;
                   return (
@@ -586,6 +628,7 @@ const MainLocationHeader = ({
                       cat={cat}
                       isActive={isActive}
                       onCategorySelect={onCategorySelect}
+                      activeColor={baseHeaderColor}
                     />
                   );
                 })}
@@ -601,30 +644,45 @@ const MainLocationHeader = ({
                   overflow: "hidden",
                 }}
                 whileTap={{ scale: 0.98 }}
-                className="relative left-1/2 z-10 flex w-screen -translate-x-1/2 items-center border-t border-white/5 bg-[#050505] px-5 md:hidden">
-                <div className="relative flex h-[80px] w-full items-center justify-between gap-4">
-                  <div className="flex-1 pl-3">
-                    <p className="font-serif text-[42px] font-black leading-none tracking-[-0.05em] text-white">
-                      Sugar
-                    </p>
+                className="relative w-screen left-[calc(-50vw+50%)] z-10 flex items-stretch md:hidden group border-t border-white/10">
+
+                <div className="relative z-10 flex h-[110px] w-full items-center px-4 gap-4">
+
+                  {/* Left: Text Content */}
+                  <div className="flex-1 flex flex-col justify-center min-w-0">
+                    {/* Labels row */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">✨ NEW</span>
+                      <span className="text-white/70 text-[10px]">·</span>
+                      <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">🔥 Exclusive Deals</span>
+                    </div>
+
+                    {/* Main Title */}
+                    <h2 className="font-serif text-[28px] font-black leading-none tracking-[-0.04em] text-white drop-shadow-lg truncate">
+                      {featuredOffer?.title || "All Offers"}
+                    </h2>
+
+                    {/* Subtitle + SALE Badge */}
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <p className="text-[11px] text-white/80 font-semibold leading-tight truncate">
+                        {featuredOffer?.subtitle || "Shop now"}
+                      </p>
+                      <span className="shrink-0 bg-white/25 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide">
+                        SALE
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="relative flex h-[72px] w-[65px] shrink-0 items-center justify-center overflow-hidden">
+                  {/* Right: Product Image */}
+                  <div className="relative shrink-0 h-[100px] w-[100px] flex items-center justify-center mt-8">
+                    <div className="absolute inset-0 bg-white/10 blur-lg rounded-full" />
                     <img
-                      src={FORTUNE_SUGAR_PACK_IMAGE}
-                      alt="Fortune Sugar pack"
-                      className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.35)]"
+                      src={featuredOffer?.image || FORTUNE_SUGAR_PACK_IMAGE}
+                      alt={featuredOffer?.title || "Featured product"}
+                      className="relative z-10 h-full w-full object-contain drop-shadow-2xl brightness-110 group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
 
-                  <div className="flex-1 text-right pr-3">
-                    <p className="text-[20px] font-black leading-none tracking-[-0.03em] text-white">
-                      Rs. 1 per Kg*
-                    </p>
-                    <p className="mt-1.5 text-[11px] font-semibold leading-none text-white/90">
-                      On Order above 399
-                    </p>
-                  </div>
                 </div>
               </motion.button>
             </>
@@ -649,4 +707,9 @@ const MainLocationHeader = ({
 };
 
 export default MainLocationHeader;
+
+
+
+
+
 

@@ -42,7 +42,8 @@ const CategoryManagement = () => {
         description: '',
         status: 'active',
         type: 'header',
-        parentId: ''
+        parentId: '',
+        headerColor: '#ab7458'
     });
 
     const [imageFile, setImageFile] = useState(null);
@@ -231,7 +232,8 @@ const CategoryManagement = () => {
                 description: item.description || '',
                 status: item.status || 'active',
                 type: item.type,
-                parentId: item.parentId || ''
+                parentId: item.parentId || '',
+                headerColor: item.headerColor || '#ab7458'
             });
             setEditingItem(item);
             setPreviewUrl(item.image || null);
@@ -243,7 +245,8 @@ const CategoryManagement = () => {
                 description: '',
                 status: 'active',
                 type: type,
-                parentId: parentId || ''
+                parentId: parentId || '',
+                headerColor: '#ab7458'
             });
             setEditingItem(null);
             setPreviewUrl(null);
@@ -736,6 +739,25 @@ const CategoryManagement = () => {
                                             className="w-full px-4 py-2.5 bg-slate-100/50 border-none rounded-xl text-xs font-bold min-h-[80px] outline-none placeholder:text-slate-300"
                                             placeholder="Briefly describe this group..."
                                         />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Header Gradient Color</label>
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="color"
+                                                value={formData.headerColor || '#ab7458'}
+                                                onChange={(e) => setFormData({ ...formData, headerColor: e.target.value })}
+                                                className="h-10 w-16 px-3 rounded-xl cursor-pointer border-none"
+                                            />
+                                            <div
+                                                className="h-10 flex-1 rounded-xl shadow-sm ring-1 ring-slate-200"
+                                                style={{
+                                                    background: `linear-gradient(135deg, ${formData.headerColor} 0%, ${formData.headerColor}dd 50%, ${formData.headerColor}99 100%)`
+                                                }}
+                                            />
+                                        </div>
+                                        <p className="text-[8px] text-slate-400 font-bold mt-1">This color will appear as gradient when users select this category</p>
                                     </div>
 
                                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">

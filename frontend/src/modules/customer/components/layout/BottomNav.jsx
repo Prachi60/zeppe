@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, LayoutGrid, Store, User } from 'lucide-react';
+import { Home, LayoutGrid, Store, User, ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@core/context/AuthContext';
@@ -8,6 +8,7 @@ import GuestProfilePrompt from '../shared/GuestProfilePrompt';
 
 const navItems = [
     { label: 'Home', icon: Home, path: '/' },
+    { label: 'Order Again', icon: ShoppingBag, path: '/orders' },
     { label: 'Category', icon: LayoutGrid, path: '/categories' },
     { label: 'Stores', icon: Store, path: '/stores' },
     { label: 'Profile', icon: User, path: '/profile' },
@@ -20,7 +21,7 @@ const BottomNav = () => {
     const [isGuestPromptOpen, setIsGuestPromptOpen] = useState(false);
 
     const handleNavClick = (item) => {
-        if (item.path === '/profile' && !isAuthenticated) {
+        if ((item.path === '/profile' || item.path === '/orders') && !isAuthenticated) {
             setIsGuestPromptOpen(true);
             return;
         }

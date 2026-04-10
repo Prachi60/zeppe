@@ -76,8 +76,8 @@ import { mixHexColors, shiftHex } from "../utils/headerTheme";
 import { getCategoryImage } from "@/shared/constants/categoryImageMap";
 
 const DEFAULT_CATEGORY_THEME = {
-  gradient: "linear-gradient(to bottom, #45B0E2, #38bdf8)",
-  shadow: "shadow-cyan-500/20",
+  gradient: "linear-gradient(to bottom, #7B4419, #9D5C3A)",
+  shadow: "shadow-amber-700/20",
   accent: "text-[#1A1A1A]",
 };
 
@@ -1003,6 +1003,12 @@ const Home = () => {
   const [nearbyStores, setNearbyStores] = useState([]);
   const [categoriesBannerIndex, setCategoriesBannerIndex] = useState(0);
   const [isHoveringCategoryBanner, setIsHoveringCategoryBanner] = useState(false);
+  const [featuredOffer, setFeaturedOffer] = useState({
+    title: "Sugar",
+    image: "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
+    subtitle: "Rs. 1 per Kg*",
+    description: "On Order above 399",
+  });
 
   const scrollQuickCats = (direction) => {
     if (quickCatsRef.current) {
@@ -1042,9 +1048,9 @@ const Home = () => {
     return banners.length > 0 ? banners.slice(0, 7) : [];
   }, [quickCategories]);
 
-  // Auto-slide carousel
+  // Auto-slide carousel (only for All category)
   useEffect(() => {
-    if (!isHoveringCategoryBanner && groupedCategoryBanners.length > 0) {
+    if (!isHoveringCategoryBanner && groupedCategoryBanners.length > 0 && (!activeCategory || activeCategory._id === "all" || activeCategory.slug === "all" || activeCategory.id === "all")) {
       const interval = setInterval(() => {
         setCategoriesBannerIndex((prev) =>
           (prev + 1) % groupedCategoryBanners.length
@@ -1052,7 +1058,7 @@ const Home = () => {
       }, 4000);
       return () => clearInterval(interval);
     }
-  }, [isHoveringCategoryBanner, groupedCategoryBanners.length]);
+  }, [isHoveringCategoryBanner, groupedCategoryBanners.length, activeCategory]);
 
   const quickCategoryPalettes = [
     {
@@ -1063,11 +1069,11 @@ const Home = () => {
       frameColor: "#f0d98a",
     },
     {
-      bgFrom: "#45B0E2",
-      bgVia: "#cffafe",
-      bgTo: "#ecfeff",
-      glowColor: "rgba(97,218,251,0.18)",
-      frameColor: "#a5f3fc",
+      bgFrom: "#7B4419",
+      bgVia: "#a0643a",
+      bgTo: "#c08555",
+      glowColor: "rgba(123,68,25,0.18)",
+      frameColor: "#9d5c3a",
     },
     {
       bgFrom: "#f3a25d",
@@ -1299,6 +1305,19 @@ const Home = () => {
     fetchData();
   }, [currentLocation?.latitude, currentLocation?.longitude]); // Refetch when location changes
 
+  // Listen for category color updates from admin panel
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'categoriesRefresh') {
+        // Categories were updated, re-fetch them
+        fetchData();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Fetch header-specific experience sections when active header category changes
   useEffect(() => {
     const fetchHeaderSections = async () => {
@@ -1324,6 +1343,57 @@ const Home = () => {
     };
 
     fetchHeaderSections();
+  }, [activeCategory]);
+
+  // Fetch featured offer for active category
+  useEffect(() => {
+    const fetchFeaturedOffer = async () => {
+      if (!activeCategory) {
+        setFeaturedOffer({
+          title: "Sugar",
+          image: "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
+          subtitle: "Rs. 1 per Kg*",
+          description: "On Order above 399",
+        });
+        return;
+      }
+
+      try {
+        // Fetch top product from active category
+        const res = await customerApi.getProducts({
+          limit: 1,
+          headerId: activeCategory._id !== "all" ? activeCategory._id : undefined,
+        });
+
+        if (res.data?.success && res.data?.result?.items?.length > 0) {
+          const product = res.data.result.items[0];
+          setFeaturedOffer({
+            title: product.name || activeCategory.name,
+            image: product.image || product.thumbImage || activeCategory.image || "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
+            subtitle: product.price ? `Rs. ${Math.floor(product.price)} per unit` : "Special Offer",
+            description: product.description?.substring(0, 50) || "Limited time offer",
+          });
+        } else {
+          // Fallback to category-based offer
+          setFeaturedOffer({
+            title: activeCategory.name,
+            image: activeCategory.image || "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
+            subtitle: "Exclusive Deals",
+            description: "Shop now for best prices",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching featured offer:", error);
+        setFeaturedOffer({
+          title: activeCategory.name || "All Offers",
+          image: activeCategory.image || "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
+          subtitle: "Exclusive Deals",
+          description: "Shop now for best prices",
+        });
+      }
+    };
+
+    fetchFeaturedOffer();
   }, [activeCategory]);
 
   // Fetch hero config (separate from experience sections): header first, then fallback to home
@@ -1666,6 +1736,10 @@ const Home = () => {
   const y = useTransform(scrollY, [0, 300], [0, 80]); // Positive Y moves down as we scroll up = Parallax
   const scale = useTransform(scrollY, [0, 300], [1, 0.95]);
   const pointerEvents = useTransform(scrollY, [0, 100], ["auto", "none"]);
+
+  // Promotional banner scroll animations (smooth upward scroll)
+  const promoBannerY = useTransform(scrollY, [0, 150], [0, -250]);
+  const promoBannerOpacity = useTransform(scrollY, [0, 120], [1, 0]);
   // When returning from a category page, scroll back to the section that was clicked
   useEffect(() => {
     if (!pendingReturn?.sectionId) return;
@@ -1770,11 +1844,12 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pt-[calc(env(safe-area-inset-top,_0px)+304px)] md:pt-[250px] pb-10">
+    <div className="min-h-screen bg-white pt-[calc(env(safe-area-inset-top,_0px)+304px)] md:pt-[250px] pb-10 overflow-hidden">
       <MainLocationHeader
         categories={categories}
         activeCategory={activeCategory}
         onCategorySelect={setActiveCategory}
+        featuredOffer={featuredOffer}
       />
 
       {/* Main Page Content - Conditionally Hidden if No Service */}
@@ -1962,8 +2037,8 @@ const Home = () => {
 
                   {section.products?.length > 0 &&
                   section.productsLayout === "showcaseGrid" ? (
-                    <div className="mt-2 grid grid-cols-3 gap-x-2.5 gap-y-4">
-                      {section.products.filter(p => !p.badgeText).slice(0, 6).map((product) => (
+                    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-5">
+                      {section.products.filter(p => !p.badgeText).slice(0, 2).map((product) => (
                         <motion.div
                           key={product.id}
                           whileTap={{ scale: 0.97 }}
@@ -1987,7 +2062,7 @@ const Home = () => {
                                 <Heart size={10} className="text-[#b7bfcb]" />
                               </button>
 
-                              <div className="relative flex aspect-[0.88] items-center justify-center bg-white p-2">
+                              <div className="relative flex aspect-[0.88] items-center justify-center bg-white p-5">
                                 <img
                                   src={product.image}
                                   alt={product.name}
@@ -2048,8 +2123,8 @@ const Home = () => {
                       ))}
                     </div>
                   ) : section.products?.length > 0 && section.productsLayout === "grid3" ? (
-                    <div className="mt-4 grid grid-cols-3 gap-2.5">
-                      {section.products.slice(0, 3).map((product) => (
+                    <div className="mt-4 grid grid-cols-2 gap-3.5">
+                      {section.products.slice(0, 2).map((product) => (
                         <div key={product.id || product._id}>
                           <ProductCard
                             product={product}
@@ -2061,11 +2136,11 @@ const Home = () => {
                       ))}
                     </div>
                   ) : section.products?.length > 0 && (
-                    <div className="mt-5 flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+                    <div className="mt-5 flex gap-6 overflow-x-auto pb-1 no-scrollbar">
                       {section.products.map((product) => (
                         <div
                           key={product.id || product._id}
-                          className="w-[146px] flex-shrink-0">
+                          className="w-[220px] flex-shrink-0">
                           <ProductCard
                             product={product}
                             compact
@@ -2093,7 +2168,13 @@ const Home = () => {
 
                 {/* Promotional Banner between Special and Dry Fruits */}
                 {section.id === "special" && (
-                  <div className="relative z-10 px-4 py-5">
+                  <motion.div 
+                    className="relative z-10 px-4 py-5 will-change-transform"
+                    style={{
+                      y: promoBannerY,
+                      opacity: promoBannerOpacity,
+                    }}
+                  >
                     <motion.button
                       whileTap={{ scale: 0.98 }}
                       onClick={() => navigate("/search", { state: { query: "health wellness" } })}
@@ -2144,7 +2225,7 @@ const Home = () => {
                         </div>
                       </div>
                     </motion.button>
-                  </div>
+                  </motion.div>
                 )}
                 </div>
               );
@@ -2152,7 +2233,7 @@ const Home = () => {
           </div>
         )}
 
-          {groupedCategoryBanners && groupedCategoryBanners.length > 0 && (
+          {groupedCategoryBanners && groupedCategoryBanners.length > 0 && (!activeCategory || activeCategory._id === "all" || activeCategory.slug === "all" || activeCategory.id === "all") && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -2163,10 +2244,10 @@ const Home = () => {
                 onMouseLeave={() => setIsHoveringCategoryBanner(false)}
                 className="relative -mx-4">
                 {/* Main Carousel Container - FULL BANNER WITH BIG IMAGES */}
-                <div className="relative w-screen overflow-hidden rounded-[32px] shadow-2xl bg-white border border-gray-100 h-[290px] sm:h-[340px] md:h-[380px]">
+                <div className="relative w-screen overflow-x-auto scroll-smooth rounded-[32px] shadow-2xl bg-white border border-gray-100 h-[290px] sm:h-[340px] md:h-[380px] no-scrollbar">
                   {/* Sliding Container */}
                   <div
-                    className="absolute inset-0 flex transition-transform duration-700 ease-in-out"
+                    className="flex transition-transform duration-700 ease-in-out"
                     style={{
                       transform: `translateX(-${categoriesBannerIndex * 100}%)`,
                     }}>
@@ -2646,7 +2727,7 @@ const Home = () => {
                 productsById={productsById}
                 categoriesById={categoryMap}
                 subcategoriesById={subcategoryMap}
-                themeColor={activeCategory?.headerColor || "#45B0E2"}
+                themeColor={activeCategory?.headerColor || "#7B4419"}
               />
             </div>
           )}

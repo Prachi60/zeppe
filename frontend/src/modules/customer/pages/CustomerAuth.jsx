@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
 import { customerApi } from "../services/customerApi";
-import ZeppeAuthLogo from "@/assets/ZeppeAuthLogo.svg";
 
 // Real product image URLs for the animated ribbons (verified working Unsplash IDs)
 const PRODUCT_ROWS = [
@@ -54,12 +53,12 @@ function ProductRibbon({ items, reverse = false, duration = 18 }) {
       <motion.div
         animate={{ x: reverse ? ["-50%", "0%"] : ["0%", "-50%"] }}
         transition={{ duration, repeat: Infinity, ease: "linear" }}
-        className="flex w-max gap-3"
+        className="flex w-max gap-4"
       >
         {repeatedItems.map((imgUrl, index) => (
           <div
             key={`${imgUrl}-${index}`}
-            className="flex h-[56px] w-[56px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-[#eef1f5] bg-[#f7f7f8] shadow-[0_10px_18px_rgba(15,23,42,0.05)] sm:h-[62px] sm:w-[62px]"
+            className="flex h-[85px] w-[85px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-[#eef1f5] bg-[#f7f7f8] shadow-[0_10px_18px_rgba(15,23,42,0.05)] sm:h-[100px] sm:w-[100px]"
           >
             <img
               src={imgUrl}
@@ -87,7 +86,6 @@ const CustomerAuth = () => {
   const { login } = useAuth();
   const { settings } = useSettings();
   const appName = settings?.appName || "Zeppe";
-  const logoUrl = ZeppeAuthLogo;
 
   const isSignupRoute = routeLocation.pathname === "/signup";
   const [isSignupMode, setIsSignupMode] = useState(isSignupRoute);
@@ -214,7 +212,7 @@ const CustomerAuth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] px-0 py-0 md:flex md:items-center md:justify-center md:p-6">
+    <div className="min-h-screen bg-[#f3f4f6] px-0 py-0 overflow-hidden md:flex md:items-center md:justify-center md:p-6">
       <div className="relative min-h-screen w-full overflow-hidden bg-white md:min-h-[820px] md:max-w-[430px] md:rounded-[34px] md:shadow-[0_28px_80px_rgba(15,23,42,0.18)]">
         <button
           type="button"
@@ -224,25 +222,23 @@ const CustomerAuth = () => {
           Skip
         </button>
 
-        <div className="relative overflow-hidden px-4 pb-4 pt-4">
+        <div className="relative overflow-hidden px-4 pb-4 pt-2">
           <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f9fbff] to-transparent" />
-          <div className="relative space-y-3 pt-8">
+          <div className="relative space-y-3 pt-2">
             <ProductRibbon items={PRODUCT_ROWS[0]} duration={18} />
             <ProductRibbon items={PRODUCT_ROWS[1]} reverse duration={20} />
             <ProductRibbon items={PRODUCT_ROWS[2]} duration={22} />
           </div>
         </div>
 
-        <div className="relative z-10 flex flex-1 flex-col px-5 pb-8 pt-2">
-          <div className="mt-2 flex flex-col items-center text-center">
-            <div className="flex min-h-[130px] items-center justify-center">
-              <img
-                src={logoUrl}
-                alt={`${appName} logo`}
-                className="h-[120px] w-[120px] rounded-[28px] object-cover shadow-[0_20px_40px_rgba(15,23,42,0.12)]"
-              />
+        <div className="relative z-10 flex flex-1 flex-col px-5 pb-8 pt-2 overflow-hidden">
+          <div className="mt-0 flex flex-col items-center text-center">
+            <div className="flex min-h-[0px] items-center justify-center">
+              <h2 className="text-6xl font-semibold italic tracking-tight text-gray-800" style={{ letterSpacing: "-0.02em" }}>
+                zeppe
+              </h2>
             </div>
-            <h1 className="mt-3 text-[1.9rem] font-black tracking-tight text-[#111827]">
+            <h1 className="mt-2 text-[1.9rem] font-semibold tracking-tight text-gray-900">
               India&apos;s Quickest App
             </h1>
             <p className="mt-1 text-sm font-medium text-slate-500">
@@ -262,7 +258,7 @@ const CustomerAuth = () => {
                   event.preventDefault();
                   void sendOtpRequest();
                 }}
-                className="mt-7"
+                className="mt-2"
               >
                 {isSignupMode && (
                   <div className="mb-3 rounded-xl border border-[#d9dde5] bg-white px-4 py-3">
