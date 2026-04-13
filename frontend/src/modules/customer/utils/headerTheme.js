@@ -77,9 +77,7 @@ export function buildSearchBarBackgroundColor(baseHeaderColor) {
  */
 export function buildHeaderGradient(baseHeaderColor) {
   const base = baseHeaderColor || DEFAULT_BASE;
-  // Blend with white for a soft, premium top-tint
-  const topTint = mixHexWithWhite(base, 0.4);
-  return `linear-gradient(to bottom, ${topTint} 0%, ${base} 70%, ${shiftHex(base, -10)} 100%)`;
+  return `linear-gradient(180deg, ${base} 0%, ${base} 100%)`;
 }
 
 /** Solid fill for floating cart pill: header mid tone, slightly darker. */

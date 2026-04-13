@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import MainLocationHeader from '../components/shared/MainLocationHeader';
+
 import { customerApi } from '../services/customerApi';
 
 const COLORS = [
@@ -137,8 +137,10 @@ const CategoriesPage = () => {
 
     return (
         <div className="min-h-screen bg-white max-w-md mx-auto">
-            <MainLocationHeader />
-            <div className="px-3 pt-[130px] pb-24">
+            <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-center p-4 h-16">
+                <h1 className="text-xl font-black text-[#1A1A1A] tracking-tight">Categories</h1>
+            </div>
+            <div className="px-3 pt-6 pb-24">
                 {groups.map((group, groupIdx) => (
                     <div key={groupIdx} className="mb-8" style={{ animationDelay: `${groupIdx * 100}ms` }}>
                         {/* Group Title */}

@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { Lock, LogIn, X } from "lucide-react";
@@ -12,11 +13,15 @@ const GuestProfilePrompt = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (!isOpen) return undefined;
 
-    const previousOverflow = document.body.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
     };
   }, [isOpen]);
 
@@ -25,14 +30,14 @@ const GuestProfilePrompt = ({ isOpen, onClose }) => {
     navigate("/login");
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[800] flex items-center justify-center bg-black/45 px-5 backdrop-blur-[3px]"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 px-5 backdrop-blur-[6px]"
           onClick={onClose}
         >
           <motion.div
@@ -102,6 +107,9 @@ const GuestProfilePrompt = ({ isOpen, onClose }) => {
       )}
     </AnimatePresence>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
 };
 
 export default GuestProfilePrompt;

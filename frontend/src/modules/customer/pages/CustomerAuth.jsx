@@ -111,6 +111,67 @@ const CustomerAuth = () => {
     return () => clearInterval(interval);
   }, [timer]);
 
+  // Disable scroll when login page is open - comprehensive approach
+  useEffect(() => {
+    // Store original scroll position
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+
+    // Prevent all scroll mechanisms
+    const preventScroll = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // Apply styles to disable scrolling
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.height = "100%";
+    document.documentElement.style.position = "fixed";
+    document.documentElement.style.width = "100%";
+    document.documentElement.style.top = `-${scrollTop}px`;
+    document.documentElement.style.left = `-${scrollLeft}px`;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.height = "100vh";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.top = "0";
+    document.body.style.left = "0";
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+
+    // Disable scroll events
+    document.addEventListener("wheel", preventScroll, { passive: false });
+    document.addEventListener("touchmove", preventScroll, { passive: false });
+    document.addEventListener("scroll", preventScroll, { passive: false });
+
+    return () => {
+      // Remove event listeners
+      document.removeEventListener("wheel", preventScroll);
+      document.removeEventListener("touchmove", preventScroll);
+      document.removeEventListener("scroll", preventScroll);
+
+      // Restore styles
+      document.documentElement.style.overflow = "";
+      document.documentElement.style.height = "";
+      document.documentElement.style.position = "";
+      document.documentElement.style.width = "";
+      document.documentElement.style.top = "";
+      document.documentElement.style.left = "";
+
+      document.body.style.overflow = "";
+      document.body.style.height = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.paddingRight = "";
+
+      // Restore scroll position
+      window.scrollTo(scrollLeft, scrollTop);
+    };
+  }, []);
+
   const updateFormField = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };

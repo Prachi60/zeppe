@@ -37,9 +37,9 @@ const FORTUNE_SUGAR_PACK_IMAGE =
 /** Map category names to Lucide React SVG icons */
 function getCategoryIcon(categoryName) {
   if (!categoryName) return LayoutGrid;
-  
+
   const name = categoryName.toLowerCase();
-  
+
   const iconMap = {
     // Grocery
     grocery: ShoppingBag,
@@ -48,50 +48,57 @@ function getCategoryIcon(categoryName) {
     dairy: Droplet,
     breads: ShoppingBag,
     bakery: ShoppingBag,
-    
+
     // Fashion & Home
     fashion: Shirt,
     clothing: Shirt,
     home: Home,
     "home & kitchen": Home,
     kitchen: Utensils,
-    
+
     // Electronics & Appliances
     electronics: Smartphone,
     devices: Smartphone,
     appliances: Lightbulb,
-    
+
     // Health & Beauty
     health: Zap,
     fitness: Dumbbell,
     beauty: Heart,
     wellness: Leaf,
-    
+    pharmacy: Pill,
+
     // Lifestyle
     sports: Dumbbell,
     toys: Gamepad2,
     books: Book,
     education: Book,
     gifts: Gift,
-    
+    kids: Baby,
+    "pet supplies": PawPrint,
+    pet: PawPrint,
+    stationery: Pencil,
+    flower: Flower2,
+    flowers: Flower2,
+
     // Beverages
     beverages: Coffee,
     drinks: Coffee,
-    
+
     // Default
     all: LayoutGrid,
   };
-  
+
   // Check for exact match
   if (iconMap[name]) return iconMap[name];
-  
+
   // Check for partial match
   for (const [key, icon] of Object.entries(iconMap)) {
     if (name.includes(key) || key.includes(name)) {
       return icon;
     }
   }
-  
+
   return ShoppingBag; // Default icon
 }
 
@@ -103,7 +110,7 @@ function buildActiveTabPath(l, r) {
   return `M 0 ${y} L ${l} ${y} L ${l} 12 C ${mapX(2.6)} 7 ${mapX(8.2)} 1.55 ${mapX(15)} 1.55 L ${mapX(85)} 1.55 C ${mapX(91.8)} 1.55 ${mapX(97.4)} 7 ${mapX(98.5)} 12 V ${y} L 100 ${y}`;
 }
 
-import { LayoutGrid, ShoppingBag, Shirt, Home, Zap, Heart, Dumbbell, Book, Droplet, Leaf, Coffee, Gift, Gamepad2, Lightbulb, Smartphone, Utensils } from "lucide-react";
+import { LayoutGrid, ShoppingBag, Shirt, Home, Zap, Heart, Dumbbell, Book, Droplet, Leaf, Coffee, Gift, Gamepad2, Lightbulb, Smartphone, Utensils, Baby, Pill, PawPrint, Pencil, Flower2 } from "lucide-react";
 
 function CategoryNavColumn({
   cat,
@@ -141,7 +148,7 @@ function CategoryNavColumn({
         style={isActive ? { color: "rgb(255,255,255)" } : {}}>
         {cat.name}
       </span>
-      
+
       {isActive && (
         <motion.div
           layoutId="categoryActiveBar"
@@ -213,6 +220,19 @@ const MainLocationHeader = ({
     '"chips"',
   ];
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const topInfoEl = document.getElementById("mobile-top-info");
+      const threshold = topInfoEl ? topInfoEl.offsetHeight : 100;
+      // Triggers transition exactly as the top section disappears
+      setIsScrolled(window.scrollY > (threshold - 1));
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   useEffect(() => {
     const { textIndex, charIndex, isDeleting, isPaused } = typingState;
     const currentPhrase = typingPhrases[textIndex];
@@ -270,56 +290,8 @@ const MainLocationHeader = ({
     return () => clearTimeout(timeout);
   }, [typingState]);
 
-  // Smooth scroll interpolations
-  const mobileHeaderTopPadding = useTransform(scrollY, [0, 60], ["26px", "4px"]);
-  const desktopHeaderTopPadding = useTransform(scrollY, [0, 160], ["16px", "12px"]);
-  const headerBottomPadding = useTransform(scrollY, [0, 60], [4, 0]);
-  const bgOpacity = useTransform(scrollY, [0, 60], [1, 1]);
-
-  // Content animations
-  const contentHeight = useTransform(scrollY, [0, 55], ["98px", "0px"]);
-  const contentOpacity = useTransform(scrollY, [0, 35], [1, 0]);
-  const navHeight = useTransform(scrollY, [0, 60], ["60px", "52px"]);
-  const navOpacity = useTransform(scrollY, [0, 120], [1, 1]);
-  const navMargin = useTransform(scrollY, [0, 200], [4, 0]);
-  const categorySpacing = useTransform(scrollY, [0, 200], [0, 0]);
-  const promoHeight = useTransform(scrollY, [0, 55], ["110px", "0px"]);
-  const promoOpacity = useTransform(scrollY, [0, 35], [1, 0]);
-  const promoMargin = useTransform(scrollY, [0, 55], [0, -110]);
-  const cartOpacity = useTransform(scrollY, [0, 110, 150], [1, 0.7, 0]);
-  const cartScale = useTransform(scrollY, [0, 110, 150], [1, 0.9, 0.75]);
-  const compactOverlayOpacity = useTransform(scrollY, [0, 18, 40], [0, 0.88, 1]);
-  // IMPORTANT: baseHeaderColor must be declared BEFORE the MotionValue that uses it
-  const baseHeaderColor = activeCategory?.headerColor || "#7B4419";
-
-  // At scroll=0: fully transparent (parent gradient shows through seamlessly).
-  // As user scrolls: fades to near-black so compact strip looks dark like the screenshot.
-  const computeCompactBg = (scrollVal) => {
-    const progress = Math.min(1, Math.max(0, scrollVal / 50));
-    return `rgba(8, 6, 4, ${progress})`;
-  };
-
-  const compactNavBg = useMotionValue(computeCompactBg(0));
-
-  useEffect(() => {
-    compactNavBg.set(computeCompactBg(scrollY.get()));
-    const unsub = scrollY.on('change', (val) => {
-      compactNavBg.set(computeCompactBg(val));
-    });
-    return unsub;
-  }, [baseHeaderColor]);
-
   // Search bar always white/cream — visible on gradient background
-
-  // Helper to hide elements completely when collapsed to prevent clicks
-  const displayContent = useTransform(scrollY, (value) =>
-    value > 42 ? "none" : "block",
-  );
-  const displayNav = useTransform(scrollY, () => "flex");
-  const displayCart = useTransform(scrollY, (value) =>
-    value > 120 ? "none" : "block",
-  );
-
+  const baseHeaderColor = activeCategory?.headerColor || "#7B4419";
   const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
   const matchedSavedAddress = savedAddresses?.find((address) => {
     const savedAddress = String(address?.address || "").trim().toLowerCase();
@@ -371,50 +343,129 @@ const MainLocationHeader = ({
 
   return (
     <>
-      <div
+      {/* 1. TOP INFO (Scrolls away normally) */}
+      <div 
+        id="mobile-top-info"
         className={cn(
-          "fixed top-0 left-0 right-0 z-200",
-          isProductDetailOpen && "hidden md:block",
+          "relative w-full z-[900] h-auto",
+          isProductDetailOpen && "hidden",
+          isLocationOpen && "hidden"
         )}>
-        <motion.div
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+        <div
           style={{
-            "--mobile-header-top-padding": mobileHeaderTopPadding,
-            "--desktop-header-top-padding": desktopHeaderTopPadding,
-            paddingBottom: headerBottomPadding,
-            opacity: bgOpacity,
             backgroundImage: buildHeaderGradient(baseHeaderColor),
           }}
-          className="relative z-10 overflow-visible rounded-b-none px-4 pt-[calc(env(safe-area-inset-top,_0px)+var(--mobile-header-top-padding))] shadow-[0_18px_45px_rgba(36,18,12,0.35)] transition-all duration-500 md:rounded-b-2xl md:bg-none md:bg-white md:pt-[var(--desktop-header-top-padding)] md:shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
-          <motion.div
-            aria-hidden="true"
-            style={{ opacity: compactOverlayOpacity }}
-            className="pointer-events-none absolute inset-0 bg-[#020202] md:hidden"
-          />
+          className="w-full z-10 rounded-none px-4 pt-[calc(env(safe-area-inset-top,_0px)+8px)] md:hidden">
+          
+          <div className="flex flex-col pt-1">
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              onClick={() => setIsLocationOpen(true)}
+              className="absolute top-[calc(env(safe-area-inset-top,0px)+30px)] right-[4.55rem] z-30 flex h-7 items-center gap-1 rounded-full px-2.5 shadow-[0_8px_18px_rgba(0,0,0,0.16)]"
+              style={{
+                background: "linear-gradient(180deg, #a6e4cc 0%, #84cfb0 100%)",
+                border: "1px solid rgba(255,255,255,0.38)",
+              }}>
+              <LocationOnIcon sx={{ fontSize: 12, color: "#1F6B53" }} />
+              <span className="text-[10px] font-black tracking-tight text-[#1F6B53]">
+                2.7 kms
+              </span>
+            </motion.button>
+            {/* Profile Button — absolute top-right corner */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleProfileClick}
+              className="absolute top-[calc(env(safe-area-inset-top,0px)+30px)] right-4 z-30 flex items-center justify-center w-12 h-12 rounded-full shadow-lg overflow-hidden"
+              style={{ backgroundColor: "rgba(30, 16, 8, 0.85)", border: "1.5px solid rgba(255,255,255,0.15)" }}>
+              <PersonRoundedIcon sx={{ fontSize: 28, color: "rgba(255,255,255,0.9)" }} />
+            </motion.button>
 
-          {/* Pure Base Layer */}
-          <motion.div
-            aria-hidden="true"
-            style={{ opacity: contentOpacity }}
-            className="pointer-events-none absolute inset-0 md:hidden">
-            <div className="absolute -top-16 left-[-10%] h-40 w-40 rounded-full bg-amber-100/25 blur-3xl" />
-            <div className="absolute -top-20 right-[-12%] h-48 w-48 rounded-full bg-white/12 blur-3xl" />
-            <div className="absolute bottom-0 left-1/4 h-24 w-40 rounded-full bg-black/20 blur-3xl" />
-          </motion.div>
+            {/* Top Row: Location only (full width) */}
+            <div className="flex flex-col py-2 pr-14 relative">
+              <div className="text-[20px] font-black leading-none tracking-tight text-white">
+                zeppe
+              </div>
+              <div className="mt-0.5 text-[32px] font-bold leading-[0.88] tracking-[-0.06em] text-white -ml-1">
+                {deliveryTimeText}
+              </div>
+              <div className="mt-1.5 mb-1 overflow-hidden relative w-full flex items-center h-[26px]">
+                <style>{`
+                  @keyframes scrollingTextShine {
+                    0% { background-position: 200% center; }
+                    100% { background-position: -200% center; }
+                  }
+                  .text-glass-flare {
+                    background: linear-gradient(
+                      110deg,
+                      rgba(255,255,255,0.85) 0%,
+                      rgba(255,255,255,0.85) 40%,
+                      #ffffff 48%,
+                      #ffffff 52%,
+                      rgba(255,255,255,0.85) 60%,
+                      rgba(255,255,255,0.85) 100%
+                    );
+                    background-size: 200% auto;
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    color: transparent;
+                    animation: scrollingTextShine 3s linear infinite;
+                    text-shadow: 0px 1px 2px rgba(0,0,0,0.1);
+                  }
+                `}</style>
+                <motion.div
+                  animate={{ x: ["105%", "-105%"] }}
+                  transition={{
+                    duration: 12,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  className="inline-flex items-center whitespace-nowrap h-full">
+                  <span className="text-[16px] font-bold tracking-[0.02em] text-glass-flare">
+                    Our favourite offer is back "{featuredOffer?.title || "Sugar"} @ {featuredOffer?.subtitle || "Rs. 1 per Kg*"}"
+                  </span>
+                </motion.div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLocationOpen(true)}
+                className="mt-1 mb-1 flex items-center gap-0.5 border-0 bg-transparent p-0 text-left relative z-10 hover:opacity-80">
+                <span className="text-[14px] font-bold uppercase tracking-[0.04em] text-white/90">
+                  {currentLocationLabel}
+                </span>
+                <span className="text-[12px] font-bold tracking-[0.04em] text-white/90">
+                  - {locationPromptText}
+                </span>
+                <ChevronDownIcon sx={{ fontSize: 12, opacity: 0.9, color: "#FFFFFF" }} />
+              </button>
+            </div>
+
+            </div>
+        </div>
+      </div>
+
+      {/* 2. STICKY HEADER (Search + Categories + Desktop Layout) */}
+      <div
+        className={cn(
+          "sticky top-0 w-full z-[1000] h-auto",
+          isProductDetailOpen && "hidden md:block" // Keeps logic for hiding
+        )}>
+        <div
+          style={{
+            backgroundImage: isScrolled ? "none" : buildHeaderGradient(baseHeaderColor),
+            backgroundColor: isScrolled ? "#0f0f0f" : "transparent",
+            transition: "all 0.3s ease"
+          }}
+          className={cn(
+            "w-full z-10 rounded-b-none px-4 pb-0 md:rounded-b-2xl md:bg-none md:bg-white md:pt-3 transition-all duration-300 border-b-0",
+            isScrolled ? "shadow-[0_4px_20px_rgba(0,0,0,0.3)]" : "shadow-none"
+          )}>
 
           {/* Corner Lottie */}
           <div className="hidden md:block">
-            <motion.button
-              initial={{ opacity: 0, scale: 0.9, y: -8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
-              style={{
-                opacity: cartOpacity,
-                scale: cartScale,
-                display: displayCart,
-              }}
+            <button
               type="button"
               aria-label="Open cart"
               onClick={() => navigate("/checkout")}
@@ -424,12 +475,11 @@ const MainLocationHeader = ({
                 loop
                 className="w-full h-full pointer-events-none drop-shadow-[0_8px_18px_rgba(0,0,0,0.14)]"
               />
-            </motion.button>
+            </button>
           </div>
 
           {/* Desktop/Tablet Header Layout (md and above) */}
           <div className="hidden md:flex items-center justify-between relative z-20 px-2 lg:px-6 mb-4 mt-1">
-            {/* Left Section: Logo + Location row */}
             <div className="flex items-center gap-4 lg:gap-8">
               <div
                 onClick={() => navigate("/")}
@@ -442,9 +492,7 @@ const MainLocationHeader = ({
                   />
                 </div>
               </div>
-
-              {/* Location Block (Desktop inline row) */}
-            <div className="flex flex-col border-l border-black/10 pl-4 lg:pl-8 h-10 justify-center">
+              <div className="flex flex-col border-l border-black/10 pl-4 lg:pl-8 h-10 justify-center">
                 <div className="flex items-center gap-1.5 opacity-70">
                   <AccessTimeIcon sx={{ fontSize: 13, color: "#111827" }} />
                   <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest leading-none">
@@ -455,24 +503,17 @@ const MainLocationHeader = ({
                   type="button"
                   data-lenis-prevent
                   data-lenis-prevent-touch
-                  onClick={() => {
-                    setIsLocationOpen(true);
-                  }}
+                  onClick={() => setIsLocationOpen(true)}
                   className="flex items-center gap-1 text-slate-900 hover:text-slate-700 cursor-pointer group active:scale-95 transition-all border-0 bg-transparent p-0 text-left">
                   <LocationOnIcon sx={{ fontSize: 14, color: "inherit" }} />
                   <div className="text-[13px] font-bold leading-tight max-w-[250px] lg:max-w-[320px] truncate">
-                    {isFetchingLocation
-                      ? "Detecting location..."
-                      : currentLocation.name}
+                    {isFetchingLocation ? "Detecting location..." : currentLocation.name}
                   </div>
-                  <ChevronDownIcon
-                    sx={{ fontSize: 12, opacity: 0.5, color: "#111827" }}
-                  />
+                  <ChevronDownIcon sx={{ fontSize: 12, opacity: 0.5, color: "#111827" }} />
                 </button>
               </div>
             </div>
 
-            {/* Center Section: Search Bar */}
             <div className="flex-1 max-w-[450px] lg:max-w-2xl px-6">
               <motion.div
                 onClick={handleSearchClick}
@@ -493,7 +534,6 @@ const MainLocationHeader = ({
               </motion.div>
             </div>
 
-            {/* Right Section: Action Icons */}
             <div className="flex items-center gap-5 lg:gap-8 shrink-0">
               <motion.button
                 whileHover={{ scale: 1.15, rotate: 5 }}
@@ -502,18 +542,14 @@ const MainLocationHeader = ({
                 className="text-slate-900 hover:text-red-500 transition-all">
                 <FavoriteBorderOutlinedIcon sx={{ fontSize: 24 }} />
               </motion.button>
-
               <motion.button
                 whileHover={{ scale: 1.15, rotate: -5 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("/checkout")}
                 className="text-slate-900 hover:text-slate-700 transition-all relative group">
                 <ShoppingCartOutlinedIcon sx={{ fontSize: 24 }} />
-                <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-cyan-900 text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-cyan-800 shadow-sm transition-transform group-hover:-translate-y-0.5">
-                  0
-                </span>
+                <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-cyan-900 text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-cyan-800 shadow-sm transition-transform group-hover:-translate-y-0.5">0</span>
               </motion.button>
-
               <motion.button
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
@@ -524,51 +560,8 @@ const MainLocationHeader = ({
             </div>
           </div>
 
-          {/* Header Rows (MOBILE ONLY) */}
-          <div className="md:hidden flex flex-col">
-            {/* Profile Button — absolute top-right corner */}
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleProfileClick}
-              className="absolute top-[calc(env(safe-area-inset-top,0px)+58px)] right-4 z-30 flex items-center justify-center w-12 h-12 rounded-full shadow-lg overflow-hidden"
-              style={{ opacity: contentOpacity, display: displayContent, backgroundColor: "rgba(30, 16, 8, 0.85)", border: "1.5px solid rgba(255,255,255,0.15)" }}>
-              <PersonRoundedIcon sx={{ fontSize: 28, color: "rgba(255,255,255,0.9)" }} />
-            </motion.button>
-
-            {/* Top Row: Location only (full width) */}
-            <motion.div
-              style={{
-                height: contentHeight,
-                opacity: contentOpacity,
-                display: displayContent,
-                overflow: "hidden",
-              }}
-              className="flex flex-col py-2 pr-14">
-              <div className="text-[20px] font-black leading-none tracking-tight text-white">
-                zeppe
-              </div>
-              <div className="mt-0.5 text-[32px] font-bold leading-[0.88] tracking-[-0.06em] text-white -ml-1">
-                {deliveryTimeText}
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsLocationOpen(true)}
-                className="mt-1 flex items-center gap-0.5 border-0 bg-transparent p-0 text-left">
-                <span className="text-[14px] font-bold uppercase tracking-[0.04em] text-white/90">
-                  {currentLocationLabel}
-                </span>
-                <span className="text-[12px] font-bold tracking-[0.04em] text-white/90">
-                  - {locationPromptText}
-                </span>
-                <ChevronDownIcon sx={{ fontSize: 12, opacity: 0.9, color: "#FFFFFF" }} />
-              </button>
-            </motion.div>
-
-            {/* Bottom Row: 60/40 Split Search & Refer/Earn — sticky compact on scroll */}
-            <motion.div
-              style={{ backgroundColor: compactNavBg }}
-              className="relative z-30 -mx-4 flex items-center gap-2.5 px-4 pt-2 pb-3">
+          {/* Bottom Row: 60/40 Split Search & Refer/Earn — sticky compact on scroll */}
+          <div className="md:hidden flex items-center gap-2.5 pt-0 pb-0 w-full">
               <div className="flex-[0.55]">
                 <div
                   onClick={handleSearchClick}
@@ -585,41 +578,53 @@ const MainLocationHeader = ({
               </div>
 
               <div className="flex-[0.45]">
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
+                <button
+                  type="button"
                   onClick={() => navigate("/refer-earn")}
-                  className="flex h-[40px] w-full items-center justify-center rounded-[8px] border-2 border-[#FFD700] bg-black px-2 shadow-lg transition-all active:brightness-150">
-
-                  <span className="text-[9px] font-black text-[#FFD700] tracking-widest uppercase whitespace-nowrap">
+                  className="relative overflow-hidden w-full h-[38px] flex flex-col items-center justify-center transition-all duration-300 active:scale-[0.98] rounded-[6px]"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(35,35,35,1) 0%, rgba(0,0,0,1) 100%)",
+                    border: "1px solid rgba(255, 255, 255, 0.5)",
+                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.4)",
+                  }}>
+                  {/* Glass Flare Animation (Left to Right Shine) */}
+                  <motion.div 
+                    className="absolute top-0 bottom-0 w-[40%] pointer-events-none"
+                    style={{
+                      background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)",
+                      transform: "skewX(-20deg)",
+                      zIndex: 20
+                    }}
+                    initial={{ left: "-100%" }}
+                    animate={{ left: "200%" }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 1.5,
+                      ease: "linear",
+                      repeatDelay: 2.5
+                    }}
+                  />
+                  
+                  <span 
+                    className="text-[13px] font-black uppercase tracking-wider z-10 leading-none"
+                    style={{
+                      color: "#FCD34D", // pure sharp gold/amber
+                      textShadow: "0px 1px 3px rgba(0,0,0,0.9)",
+                    }}>
                     Refer &amp; Earn
                   </span>
-                </motion.button>
+                  <span className="text-[5px] font-bold text-white/80 tracking-widest uppercase z-10 mt-[2px]">
+                    Unlock rewards together
+                  </span>
+                </button>
               </div>
-            </motion.div>
-          </div>
+            </div>
 
           {/* Categories Navigation - Smooth Collapse */}
           {categories.length > 0 && (
             <>
-              <motion.div
-                layout
-                transition={{
-                  layout: {
-                    type: "spring",
-                    stiffness: 420,
-                    damping: 34,
-                    mass: 0.6,
-                  },
-                }}
-                style={{
-                  height: navHeight,
-                  opacity: navOpacity,
-                  marginTop: categorySpacing,
-                  display: displayNav,
-                  overflowY: "hidden",
-                  backgroundColor: compactNavBg,
-                }}
-                className="no-scrollbar relative z-20 -mx-4 flex min-h-[52px] items-center gap-2 overflow-x-auto px-2 pt-0.5 pb-1 scroll-smooth md:mx-0 md:min-h-[76px] md:items-center md:gap-6 md:px-4 md:py-2 mt-4">>
+              <div
+                className="no-scrollbar relative z-20 mt-0 flex min-h-[52px] items-center gap-2 overflow-x-auto pt-0 pb-0 scroll-smooth md:mx-0 md:min-h-[76px] md:gap-6 md:py-2 border-t-0 border-b-0 shadow-none">
                 {categories.map((cat) => {
                   const isActive = activeCategory?.id === cat.id;
                   return (
@@ -632,66 +637,58 @@ const MainLocationHeader = ({
                     />
                   );
                 })}
-              </motion.div>
-
-              <motion.button
-                type="button"
-                onClick={() => navigate("/offers")}
-                style={{
-                  height: promoHeight,
-                  opacity: promoOpacity,
-                  marginTop: promoMargin,
-                  overflow: "hidden",
-                }}
-                whileTap={{ scale: 0.98 }}
-                className="relative w-screen left-[calc(-50vw+50%)] z-10 flex items-stretch md:hidden group border-t border-white/10">
-
-                <div className="relative z-10 flex h-[110px] w-full items-center px-4 gap-4">
-
-                  {/* Left: Text Content */}
-                  <div className="flex-1 flex flex-col justify-center min-w-0">
-                    {/* Labels row */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">✨ NEW</span>
-                      <span className="text-white/70 text-[10px]">·</span>
-                      <span className="text-white/70 text-[10px] font-bold tracking-widest uppercase">🔥 Exclusive Deals</span>
-                    </div>
-
-                    {/* Main Title */}
-                    <h2 className="font-serif text-[28px] font-black leading-none tracking-[-0.04em] text-white drop-shadow-lg truncate">
-                      {featuredOffer?.title || "All Offers"}
-                    </h2>
-
-                    {/* Subtitle + SALE Badge */}
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <p className="text-[11px] text-white/80 font-semibold leading-tight truncate">
-                        {featuredOffer?.subtitle || "Shop now"}
-                      </p>
-                      <span className="shrink-0 bg-white/25 backdrop-blur-sm text-white text-[9px] font-black px-2 py-0.5 rounded-full tracking-wide">
-                        SALE
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right: Product Image */}
-                  <div className="relative shrink-0 h-[100px] w-[100px] flex items-center justify-center mt-8">
-                    <div className="absolute inset-0 bg-white/10 blur-lg rounded-full" />
-                    <img
-                      src={featuredOffer?.image || FORTUNE_SUGAR_PACK_IMAGE}
-                      alt={featuredOffer?.title || "Featured product"}
-                      className="relative z-10 h-full w-full object-contain drop-shadow-2xl brightness-110 group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-
-                </div>
-              </motion.button>
+              </div>
             </>
           )}
 
           {/* Background Decorative patterns */}
           <div className="pointer-events-none absolute -mr-40 -mt-40 h-80 w-80 rounded-full bg-amber-100/15 blur-[100px] md:bg-blue-100/20" />
-        </motion.div>
+        </div>
       </div>
+
+      {categories.length > 0 && (
+        <div className="relative z-[1] w-full mt-0 mb-4 md:hidden">
+          <motion.button
+            type="button"
+            onClick={() => navigate("/offers")}
+            whileTap={{ scale: 0.98 }}
+            className="relative w-full z-10 flex items-stretch group rounded-none overflow-hidden shadow-none">
+
+            <div
+              className="relative z-10 flex h-[110px] w-full items-center justify-between px-4"
+              style={{ backgroundColor: (!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "#0A0A0A" : baseHeaderColor }}
+            >
+
+              {/* Left: Product Name */}
+              <div className="flex-[0.8] z-20 overflow-hidden pr-2">
+                <h2 className="font-serif text-[clamp(20px,6vw,38px)] font-black text-white leading-[1.05] tracking-tight line-clamp-2">
+                  {(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "Sugar" : (featuredOffer?.title || "Exclusive Deals")}
+                </h2>
+              </div>
+
+              {/* Center: Image */}
+              <div className="absolute left-1/2 -translate-x-[60%] top-1/2 -translate-y-1/2 h-[130px] w-[90px] flex items-center justify-center z-10">
+                <img
+                  src={(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? FORTUNE_SUGAR_PACK_IMAGE : (featuredOffer?.image || FORTUNE_SUGAR_PACK_IMAGE)}
+                  alt={(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "Fortune Sugar" : (featuredOffer?.title || "Offer")}
+                  className="h-full w-full object-contain drop-shadow-2xl"
+                />
+              </div>
+
+              {/* Right: Price details */}
+              <div className="flex-1 flex flex-col items-end justify-center text-right z-20 pl-[80px]">
+                <div className="font-serif text-[clamp(16px,4vw,24px)] font-bold text-white leading-[1.1] tracking-tight line-clamp-2 min-w-0 break-words">
+                  {(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "Rs. 1 per Kg*" : (featuredOffer?.subtitle || "Shop now")}
+                </div>
+                <div className="text-[11px] font-bold text-white mt-2 tracking-wide opacity-90 line-clamp-2">
+                  {(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "On Order above 399" : (featuredOffer?.description || "For best prices")}
+                </div>
+              </div>
+
+            </div>
+          </motion.button>
+        </div>
+      )}
 
       <LocationDrawer
         isOpen={isLocationOpen}
@@ -707,9 +704,3 @@ const MainLocationHeader = ({
 };
 
 export default MainLocationHeader;
-
-
-
-
-
-

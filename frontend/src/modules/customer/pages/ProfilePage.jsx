@@ -123,13 +123,19 @@ const ProfilePage = () => {
                         <div>
                             <h2 className="text-base leading-tight font-semibold text-slate-900">{user?.name || 'Customer'}</h2>
                             <p className="text-slate-500 text-xs font-medium flex items-center gap-1 mt-0.5">
+                                <MapPin size={14} className="text-slate-400" />
                                 <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] uppercase">India</span> +91 {formatIndiaPhone(user?.phone)}
                             </p>
                         </div>
                     </div>
-                    <Link to="/profile/edit" className="p-2.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors">
-                        <Edit2 size={16} />
-                    </Link>
+                    <div className="flex items-center gap-2">
+                        <Link to="/addresses" className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Manage locations">
+                            <MapPin size={16} />
+                        </Link>
+                        <Link to="/profile/edit" className="p-2.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors">
+                            <Edit2 size={16} />
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Menu Sections */}

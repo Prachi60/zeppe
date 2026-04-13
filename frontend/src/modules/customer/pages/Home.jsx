@@ -974,6 +974,22 @@ const isDiscoveryPlaceholderProduct = (product) => {
   return normalizedName.startsWith("test");
 };
 
+const getHeaderScopedMobileSectionAliases = (sectionId) => {
+  switch (sectionId) {
+    case "primary-category-discovery":
+    case "special":
+    case "dry-fruits":
+    case "cereals-nuts-showcase":
+      return ["grocery"];
+    case "electronics":
+      return ["electronics"];
+    case "kitchen-tools-appliances":
+      return ["home kitchen"];
+    default:
+      return [];
+  }
+};
+
 const Home = () => {
   const { scrollY } = useScroll();
   const { isOpen: isProductDetailOpen } = useProductDetail();
@@ -1009,6 +1025,19 @@ const Home = () => {
     subtitle: "Rs. 1 per Kg*",
     description: "On Order above 399",
   });
+
+  const normalizedActiveHeaderCategory = useMemo(
+    () =>
+      normalizeHomeDiscoveryText(
+        activeCategory?.name || activeCategory?.slug || activeCategory?.id || "",
+      ),
+    [activeCategory],
+  );
+
+  const isAllCategoryActive = useMemo(
+    () => !normalizedActiveHeaderCategory || normalizedActiveHeaderCategory === "all",
+    [normalizedActiveHeaderCategory],
+  );
 
   const scrollQuickCats = (direction) => {
     if (quickCatsRef.current) {
@@ -1725,10 +1754,26 @@ const Home = () => {
     return [...derivedSections, ...showcaseSections];
   }, [browseEntries, mobileHomeTiles, products]);
 
+  const filteredMobileDiscoverySections = useMemo(() => {
+    if (isAllCategoryActive) return mobileDiscoverySections;
+
+    return mobileDiscoverySections.filter((section) =>
+      getHeaderScopedMobileSectionAliases(section.id).includes(
+        normalizedActiveHeaderCategory,
+      ),
+    );
+  }, [
+    isAllCategoryActive,
+    mobileDiscoverySections,
+    normalizedActiveHeaderCategory,
+  ]);
+
   // Experience sections for main content (all sections; hero is separate)
-  const sectionsForRenderer = headerSections.length
-    ? headerSections
-    : experienceSections;
+  const sectionsForRenderer = useMemo(() => {
+    if (headerSections.length) return headerSections;
+    if (isAllCategoryActive) return experienceSections;
+    return [];
+  }, [experienceSections, headerSections, isAllCategoryActive]);
 
   // Fade out banner as user scrolls (0 to 100px)
   // Parallax effect for banner - moves slower than scroll
@@ -1844,7 +1889,7 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pt-[calc(env(safe-area-inset-top,_0px)+304px)] md:pt-[250px] pb-10 overflow-hidden">
+    <div className="min-h-screen bg-white pb-10">
       <MainLocationHeader
         categories={categories}
         activeCategory={activeCategory}
@@ -1876,8 +1921,8 @@ const Home = () => {
       ) : (
         <>
           {/* Full-Width Category Banner Carousel - Mobile Only */}
-          {categories && categories.filter(c => c.id !== "all").length > 0 && (
-            <div className="relative z-20 w-full overflow-visible bg-white md:hidden px-4 pt-16 pb-4">
+          {isAllCategoryActive && categories && categories.filter(c => c.id !== "all").length > 0 && (
+            <div className="relative z-20 w-full overflow-visible bg-white md:hidden px-4 pt-2 pb-4">
               <div className="relative h-[160px] overflow-hidden rounded-lg shadow-lg">
                 {/* Sliding Container */}
                 <div
@@ -1942,9 +1987,13 @@ const Home = () => {
             </div>
           )}
 
-          {mobileDiscoverySections.length > 0 && (
-            <div className="relative z-20 bg-white md:hidden mt-2">
-              {mobileDiscoverySections.map((section, sectionIndex) => {
+          {filteredMobileDiscoverySections.length > 0 && (
+            <div
+              className={cn(
+                "relative z-20 bg-white md:hidden",
+                isAllCategoryActive ? "mt-2" : "mt-10",
+              )}>
+              {filteredMobileDiscoverySections.map((section, sectionIndex) => {
                 const isPrimaryCategoryDiscovery =
                   section.id === "primary-category-discovery";
                 const isSoftHeadingSection =
@@ -2166,66 +2215,90 @@ const Home = () => {
                   )}
                 </section>
 
-                {/* Promotional Banner between Special and Dry Fruits */}
+                {/* Top Brands between Special and Dry Fruits */}
                 {section.id === "special" && (
-                  <motion.div 
-                    className="relative z-10 px-4 py-5 will-change-transform"
-                    style={{
-                      y: promoBannerY,
-                      opacity: promoBannerOpacity,
-                    }}
-                  >
+                  <>
+                  <div className="py-2 mt-0">
+                    <div className="flex items-center justify-between mb-4 px-4">
+                      <h2 className="text-[17px] font-black tracking-tight text-[#111111]">
+                        Top Brands
+                      </h2>
+                      <span
+                        onClick={() => navigate("/offers")}
+                        className="text-[12px] font-bold text-[#111111] cursor-pointer hover:underline"
+                      >
+                        See All
+                      </span>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 px-4 mb-2">
+                      {[
+                        { name: "Amul", image: "https://th.bing.com/th/id/OIP.AUCLmZuvxchn31YKeHMUowHaHa?w=183&h=183&c=7&r=0&o=5&pid=1.7" },
+                        { name: "Nestle", image: "https://th.bing.com/th/id/OIP.dOFDjSfy2R8-pGHpY0oRAAHaHa?w=155&h=180&c=7&r=0&o=5&pid=1.7" },
+                        { name: "Lays", image: "https://th.bing.com/th/id/OIP.asWIMrXnhPj5wTVqEonUtQHaHa?w=176&h=180&c=7&r=0&o=5&pid=1.7" },
+                        { name: "Pepsi", image: "data:image/jpeg;base64,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" },
+                        { name: "Dove", image: "https://th.bing.com/th/id/OIP.CVn7c9g-abfYCrbbTnsE-AHaHa?w=199&h=199&c=7&r=0&o=5&pid=1.7" }
+                      ].map((brand, i) => (
+                        <div
+                          key={i}
+                          onClick={() => navigate("/search", { state: { query: brand.name } })}
+                          className="flex-shrink-0 w-[85px] h-[85px] sm:w-[110px] sm:h-[110px] rounded-[14px] border border-[#e8e8e8] bg-white flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                        >
+                          <img src={brand.image} alt={brand.name} className="w-full h-full object-contain mix-blend-multiply" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pharmacy Banner Below Top Brands */}
+                  <div className="px-4 pb-6 mt-1">
                     <motion.button
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate("/search", { state: { query: "health wellness" } })}
-                      className="relative w-full overflow-hidden rounded-[20px] bg-gradient-to-r from-[#15B8A6] to-[#1DCDBE] px-6 py-5 shadow-lg transition-all active:shadow-md"
+                      onClick={() => navigate("/search", { state: { query: "pharmacy" } })}
+                      className="relative w-full overflow-hidden rounded-[12px] bg-[#00b5ad] flex items-stretch shadow-sm"
                     >
-                      <div className="absolute inset-0 opacity-30">
-                        <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-white/10 to-transparent"></div>
-                      </div>
-                      
-                      <div className="relative flex items-stretch justify-between gap-4">
-                        {/* Left Content */}
-                        <div className="flex flex-1 flex-col justify-center py-1">
-                          <h3 className="text-lg font-black leading-tight text-white mb-1">
-                            Health & Wellness
-                          </h3>
-                          <p className="text-xs font-semibold text-white/95 line-clamp-2 mb-3">
-                            Wellness products & more
-                          </p>
-                          <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            className="w-fit"
-                          >
-                            <span className="inline-block rounded-full bg-white px-5 py-1.5 text-xs font-black text-[#15B8A6] shadow-md">
-                              Shop Now
-                            </span>
-                          </motion.div>
+                      {/* Left Content */}
+                      <div className="flex-1 flex flex-col justify-center items-start text-left pl-4 py-4 pr-0 z-10">
+                        <h3 className="text-[20px] font-black text-white leading-[1.1] mb-2 tracking-tight">
+                          Pharmacy at<br/>your doorstep!
+                        </h3>
+                        <p className="text-[12px] font-semibold text-white/95 leading-[1.2] mb-3">
+                          Cough syrups, pain<br/>relief sprays & more
+                        </p>
+                        <div className="bg-white rounded-[6px] px-3.5 py-1.5 shadow-sm">
+                          <span className="text-[12px] font-bold text-[#333] tracking-wide">
+                            Order Now
+                          </span>
                         </div>
+                      </div>
 
-                        {/* Right Image Area */}
-                        <div className="flex items-center justify-center h-[100px] w-[100px] flex-shrink-0">
-                          <div className="relative h-full w-full">
-                            <svg
-                              className="h-full w-full"
-                              viewBox="0 0 100 100"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              {/* Pill bottle */}
-                              <rect x="35" y="20" width="30" height="60" rx="4" fill="rgba(255,255,255,0.9)" stroke="rgba(255,255,255,0.5)" strokeWidth="1"/>
-                              <rect x="40" y="15" width="20" height="8" rx="2" fill="rgba(255,255,255,0.8)"/>
-                              <circle cx="50" cy="50" r="8" fill="#FF6B6B" opacity="0.8"/>
-                              
-                              {/* Heartbeat graph */}
-                              <path d="M 15 40 L 20 40 L 22 35 L 25 50 L 28 40 L 60 40" 
-                                    stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-                            </svg>
+                      {/* Right Content Overlay / Graphic */}
+                      <div className="relative w-[130px] flex-shrink-0 origin-right">
+                        {/* Background heartbeat pulse graphic */}
+                        <svg className="absolute top-1/2 -translate-y-1/2 w-[150%] h-[40px] text-white/30 -left-10 z-0" viewBox="0 0 100 50" preserveAspectRatio="none">
+                          <path d="M0,25 L50,25 L55,5 L65,45 L70,25 L100,25" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+                        </svg>
+                        
+                        {/* Images collection */}
+                        <div className="relative z-10 w-full h-full">
+                          {/* Prega News Back */}
+                          <div className="absolute top-1/2 -translate-y-1/2 right-[45px] w-14 h-16 -rotate-6 shadow-[-4px_4px_10px_rgba(0,0,0,0.15)] bg-white rounded-md overflow-hidden border border-gray-100 flex items-center justify-center p-1.5 z-10">
+                             <img src="https://cdn-icons-png.flaticon.com/512/3209/3209088.png" className="w-full h-full object-contain opacity-80"/>
+                          </div>
+
+                          {/* Eno Front Left */}
+                          <div className="absolute top-1/2 -translate-y-[40%] right-[65px] w-12 h-[60px] -rotate-12 shadow-[0_6px_12px_rgba(0,0,0,0.2)] bg-white rounded-md overflow-hidden border border-gray-100 p-1.5 flex items-center justify-center z-20">
+                             <img src="https://cdn-icons-png.flaticon.com/512/4320/4320337.png" className="w-full h-full object-contain opacity-80"/>
+                          </div>
+                          
+                          {/* Moov Front Right */}
+                          <div className="absolute top-1/2 -translate-y-1/2 right-2 w-[42px] h-[90%] shadow-[4px_6px_12px_rgba(0,0,0,0.2)] bg-white rounded-[8px] overflow-hidden flex items-center justify-center p-1 z-30">
+                             <img src="https://cdn-icons-png.flaticon.com/512/2966/2966334.png" className="w-full h-full object-contain opacity-80"/>
                           </div>
                         </div>
                       </div>
                     </motion.button>
-                  </motion.div>
+                  </div>
+                  </>
                 )}
                 </div>
               );

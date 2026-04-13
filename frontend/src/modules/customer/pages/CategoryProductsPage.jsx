@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Minus, Plus } from 'lucide-react';
+import { ChevronLeft, Minus, Plus, Search, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -64,74 +64,92 @@ const KuikloCard = React.memo(({ product }) => {
 
     return (
         <motion.div
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleCardClick}
-            className="flex flex-col cursor-pointer bg-white rounded-xl overflow-hidden border border-gray-100"
-            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+            className="flex flex-col cursor-pointer bg-white overflow-hidden relative pb-4 border-b border-r border-[#f1f3f6]"
         >
-            {/* Image Box */}
-            <div className="relative">
-                {hasDiscount && (
-                    <span className="absolute top-1.5 left-1.5 z-10 bg-[#c0392b] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
-                        {discountPct}% OFF
-                    </span>
-                )}
-                <div
-                    className="w-full aspect-square flex items-center justify-center p-2"
-                    style={{ backgroundColor: '#F8F4EC' }}
+            {/* Image Box Container */}
+            <div className="relative w-full pt-[100%] bg-white group">
+                {/* Heart Icon top right */}
+                <button 
+                    onClick={(e) => { e.stopPropagation(); /* handle wishlist */ }}
+                    className="absolute top-2 right-2 z-10 text-gray-300 hover:text-red-500 transition-colors"
                 >
+                    <Heart size={16} />
+                </button>
+                
+                {/* Discount / Bestseller Tag top left */}
+                {product.bestseller && (
+                    <div className="absolute top-0 left-0 bg-black text-white text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-br-md z-10 tracking-widest shadow-sm">
+                        Bestseller
+                    </div>
+                )}
+
+                <div className="absolute inset-0 flex items-center justify-center p-3">
                     <img
                         ref={imageRef}
                         src={product.image}
                         alt={product.name}
-                        className="w-full h-full object-contain mix-blend-multiply"
-                        style={{ maxHeight: '90px' }}
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     />
                 </div>
-            </div>
 
-            {/* Info */}
-            <div className="px-1.5 pt-1 pb-2 flex flex-col gap-0.5">
-                <p className="text-[11px] font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[28px]">
-                    {product.name}
-                </p>
-                <p className="text-[9px] text-gray-400 font-medium">{product.weight || '1 unit'}</p>
-
-                {/* Price + ADD */}
-                <div className="flex items-center justify-between mt-1">
-                    <div className="flex flex-col">
-                        <span className="text-[12px] font-bold text-gray-900 leading-none">₹{product.price}</span>
-                        {hasDiscount && (
-                            <span className="text-[9px] text-gray-400 line-through">₹{product.originalPrice}</span>
-                        )}
-                    </div>
-
+                {/* ADD Button slightly overlapping image bottom right */}
+                <div className="absolute -bottom-3 right-2 shadow-[0_2px_8px_rgba(0,0,0,0.08)] rounded-[6px] bg-white border border-[#e0e0e0] z-20">
                     {quantity > 0 ? (
-                        <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden"
-                            style={{ minWidth: '64px' }}>
+                        <div className="flex items-center h-[28px]" style={{ minWidth: '64px' }}>
                             <button
                                 onClick={handleDec}
-                                className="px-1.5 py-1 text-gray-600 active:bg-gray-100 transition-colors"
+                                className="px-2 h-full text-[#333] active:bg-gray-100 transition-colors rounded-l-[6px] border-r border-gray-100"
                             >
-                                <Minus size={10} strokeWidth={3} />
+                                <Minus size={12} strokeWidth={2.5} />
                             </button>
-                            <span className="text-[11px] font-bold text-gray-700 px-1">{quantity}</span>
+                            <span className="text-[12px] font-black text-[#1A1A1A] px-2 flex-1 text-center bg-[#F8F9FA]">{quantity}</span>
                             <button
                                 onClick={handleInc}
-                                className="px-1.5 py-1 text-gray-600 active:bg-gray-100 transition-colors"
+                                className="px-2 h-full text-[#333] active:bg-gray-100 transition-colors rounded-r-[6px] border-l border-gray-100"
                             >
-                                <Plus size={10} strokeWidth={3} />
+                                <Plus size={12} strokeWidth={2.5} />
                             </button>
                         </div>
                     ) : (
                         <motion.button
                             whileTap={{ scale: 0.92 }}
                             onClick={handleAdd}
-                            className="text-[10px] font-bold bg-white border border-gray-800 text-gray-800 rounded-lg px-2.5 py-1 hover:bg-gray-50 transition-all"
+                            className="text-[11px] font-black tracking-wide text-[#1A1A1A] h-[28px] px-4 hover:bg-gray-50 transition-all uppercase rounded-[6px]"
                         >
                             ADD
                         </motion.button>
                     )}
+                </div>
+            </div>
+
+            {/* Info */}
+            <div className="px-2.5 pt-5 flex flex-col gap-0.5 bg-white h-full relative z-10">
+                <div className="flex">
+                    <span className="text-[9px] font-bold text-[#444] bg-[#F1F3F6] px-1.5 py-0.5 rounded mb-1 border border-[#EBEBEB]">
+                        {product.weight || '1 unit'}
+                    </span>
+                </div>
+                <p className="text-[13px] font-bold text-[#1a1a1a] leading-[1.25] line-clamp-2">
+                    {product.name}
+                </p>
+
+                {/* Price Section */}
+                <div className="flex flex-col mt-0.5 pb-1">
+                    {hasDiscount && (
+                        <span className="text-[10px] font-black text-[#0066FF] tracking-tight uppercase">
+                            {discountPct}% OFF
+                        </span>
+                    )}
+                    <div className="flex items-baseline gap-1.5 mt-0.5">
+                        <span className="text-[14px] font-[900] tracking-tight text-[#111]">₹{product.price}</span>
+                        {hasDiscount && (
+                            <span className="text-[10px] font-semibold text-[#878787] line-through decoration-[#878787]/50">
+                                MRP ₹{product.originalPrice}
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
         </motion.div>
@@ -152,7 +170,6 @@ const CategoryProductsPage = () => {
     const [subCategories, setSubCategories] = useState([{ id: 'all', name: 'All' }]);
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const tabsRef = useRef(null);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -205,8 +222,15 @@ const CategoryProductsPage = () => {
                     const subs = (currentCat.children || []).map(s => ({
                         id: s._id,
                         name: s.name,
+                        image: s.image || s.mainImage || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png"
                     }));
-                    setSubCategories([{ id: 'all', name: 'All' }, ...subs]);
+                    
+                    // Assign generic category image for 'All'
+                    setSubCategories([{ 
+                        id: 'all', 
+                        name: 'All', 
+                        image: currentCat.image || currentCat.mainImage || "https://cdn-icons-png.flaticon.com/128/1040/1040230.png"
+                    }, ...subs]);
                 }
             }
         } catch (error) {
@@ -230,96 +254,108 @@ const CategoryProductsPage = () => {
     );
 
     return (
-        <div className="flex flex-col min-h-screen bg-white max-w-md mx-auto relative" style={{ fontFamily: "'Outfit', sans-serif" }}>
-            {/* Header */}
+        <div className="flex flex-col min-h-[100dvh] bg-white w-full mx-auto relative overflow-hidden" style={{ fontFamily: "'Inter', 'Outfit', sans-serif" }}>
+            {/* Top Toolbar App Bar */}
             <header className={cn(
-                "sticky top-0 z-50 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3",
+                "sticky top-0 z-50 bg-white border-b border-[#EAEAEA] px-3 py-3 flex items-center justify-between",
                 isProductDetailOpen && "hidden md:flex"
             )}>
-                <button
-                    onClick={() => navigate(-1)}
-                    className="p-1.5 hover:bg-gray-50 rounded-full transition-colors flex-shrink-0"
-                >
-                    <ChevronLeft size={22} className="text-gray-900" />
-                </button>
-                <h1 className="text-[17px] font-bold text-gray-900 tracking-tight truncate">
-                    {category?.name || catId}
-                </h1>
+                <div className="flex items-center gap-3 w-full">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="p-1.5 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
+                    >
+                        <ChevronLeft size={24} className="text-[#1A1A1A] stroke-[2.5px]" />
+                    </button>
+                    <h1 className="text-[16px] font-[900] text-[#1A1A1A] tracking-[-0.02em] truncate flex-1">
+                        {category?.name || "Products"}
+                    </h1>
+                    <button onClick={() => navigate('/search')} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0 text-[#1A1A1A]">
+                        <Search size={22} className="stroke-[2px]" />
+                    </button>
+                </div>
             </header>
 
-            {/* Subcategory Tabs — horizontal scroll */}
-            {subCategories.length > 1 && (
-                <div
-                    ref={tabsRef}
-                    className="sticky z-40 bg-white border-b border-gray-100 flex gap-2 px-4 py-2.5 overflow-x-auto hide-scrollbar"
-                    style={{ top: '52px' }}
-                >
-                    {subCategories.map((cat) => (
-                        <button
-                            key={cat.id}
-                            onClick={() => setSelectedSubCategory(cat.id)}
-                            className={cn(
-                                "flex-shrink-0 px-3.5 py-1.5 rounded-full text-[12px] font-semibold border transition-all whitespace-nowrap",
-                                selectedSubCategory === cat.id
-                                    ? "bg-gray-900 text-white border-gray-900"
-                                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
-                            )}
-                        >
-                            {cat.name}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {/* Content */}
-            <div className="flex-1">
-                {isLoading ? (
-                    /* skeleton */
-                    <div className="grid grid-cols-4 gap-2 p-3 pb-28">
-                        {Array.from({ length: 12 }).map((_, i) => (
-                            <div key={i} className="flex flex-col rounded-xl overflow-hidden bg-gray-100 animate-pulse">
-                                <div className="aspect-square bg-gray-200" />
-                                <div className="p-1.5 space-y-1">
-                                    <div className="h-2.5 bg-gray-200 rounded w-3/4" />
-                                    <div className="h-2 bg-gray-200 rounded w-1/2" />
-                                    <div className="h-5 bg-gray-200 rounded w-full mt-1" />
-                                </div>
-                            </div>
-                        ))}
+            {/* Split Content Area */}
+            <div className="flex flex-1 overflow-hidden relative">
+                {/* Left Sidebar (Subcategories) */}
+                {subCategories.length > 0 && (
+                    <div className="w-[84px] bg-[#FFFFFF] border-r border-[#EAEAEA] overflow-y-auto hide-scrollbar pb-24 flex flex-col pt-1">
+                        {subCategories.map((cat) => {
+                            const isActive = selectedSubCategory === cat.id;
+                            return (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setSelectedSubCategory(cat.id)}
+                                    className={cn(
+                                        "relative flex flex-col items-center justify-center py-[14px] px-1 transition-colors border-b border-[#F5F5F5] overflow-visible",
+                                        isActive ? "bg-[#F3F7FA]" : "bg-white"
+                                    )}
+                                >
+                                    {/* Active Black Border Left */}
+                                    {isActive && (
+                                        <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#1A1A1A] rounded-r-[4px]" />
+                                    )}
+                                    
+                                    {/* Subcategory Icon/Image */}
+                                    <div className="w-[46px] h-[46px] mb-2 flex items-center justify-center overflow-hidden">
+                                        <img 
+                                            src={cat.image} 
+                                            alt={cat.name} 
+                                            className={cn(
+                                                "w-full h-full object-contain mix-blend-multiply transition-transform duration-300",
+                                                isActive ? "scale-110 drop-shadow-sm" : "opacity-80"
+                                            )} 
+                                        />
+                                    </div>
+                                    
+                                    {/* Subcategory Label */}
+                                    <span className={cn(
+                                        "text-[10px] text-center leading-[1.1] max-w-[70px] uppercase tracking-wide",
+                                        isActive ? "font-[900] text-[#111]" : "font-bold text-[#777]"
+                                    )}>
+                                        {cat.name}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
-                ) : safeProducts.length === 0 ? (
-                    <div className="w-full py-20 px-8 flex flex-col items-center justify-center text-center">
-                        <div className="w-64 h-64 mb-6">
-                            <Lottie animationData={noServiceAnimation} loop={true} />
-                        </div>
-                        <h3 className="text-2xl font-black text-slate-800 tracking-tighter mb-3 uppercase">
-                            Service <span className="text-[#45B0E2]">Unavailable</span>
-                        </h3>
-                        <p className="text-slate-500 font-bold text-sm max-w-[280px] mb-8 leading-relaxed">
-                            {settings?.appName || 'Our service'} is not available in your area yet.
-                        </p>
-                        <button
-                            onClick={fetchData}
-                            className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all"
-                        >
-                            Try Refreshing
-                        </button>
-                    </div>
-                ) : (
-                    <>
-                        {filteredProducts.length === 0 ? (
-                            <div className="py-16 text-center text-gray-400 text-sm font-semibold">
-                                No products in this subcategory
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-4 gap-2 p-3 pb-28">
-                                {filteredProducts.map((product) => (
-                                    <KuikloCard key={product.id || product._id} product={product} />
-                                ))}
-                            </div>
-                        )}
-                    </>
                 )}
+
+                {/* Right Content Area (Products Grid) */}
+                <div className="flex-1 bg-[#F9F9F9] overflow-y-auto hide-scrollbar relative">
+                    {isLoading ? (
+                        /* Skeleton loader */
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-0">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <div key={i} className="flex flex-col bg-white border-b border-r border-[#EAEAEA] p-3 pt-6 animate-pulse">
+                                    <div className="w-full aspect-square bg-[#F5F5F5] rounded-xl mb-3" />
+                                    <div className="h-2.5 bg-[#EAEAEA] rounded w-2/3 mb-2" />
+                                    <div className="h-3 bg-[#EAEAEA] rounded w-full mb-3" />
+                                    <div className="flex items-center justify-between">
+                                        <div className="h-4 bg-[#EAEAEA] rounded w-1/3" />
+                                        <div className="h-6 bg-[#EAEAEA] rounded w-12" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : filteredProducts.length === 0 ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center mt-10">
+                            <h3 className="text-lg font-black text-[#1A1A1A] tracking-tighter mb-2">
+                                No Products Found
+                            </h3>
+                            <p className="text-[#888] font-bold text-xs mt-2 leading-relaxed">
+                                No items available in "{subCategories.find(c => c.id === selectedSubCategory)?.name || 'this category'}" right now.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pb-[120px] bg-white">
+                            {filteredProducts.map((product) => (
+                                <KuikloCard key={product.id || product._id} product={product} />
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <MiniCart />
@@ -327,7 +363,7 @@ const CategoryProductsPage = () => {
 
             <style dangerouslySetInnerHTML={{
                 __html: `
-                    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
                     .hide-scrollbar::-webkit-scrollbar { display: none; }
                     .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
                 `}} />
@@ -336,4 +372,5 @@ const CategoryProductsPage = () => {
 };
 
 export default CategoryProductsPage;
+
 

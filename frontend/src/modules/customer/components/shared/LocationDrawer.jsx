@@ -100,19 +100,66 @@ const LocationDrawer = ({ isOpen, onClose }) => {
     resetAutocompleteSession();
   }, [isOpen, resetAutocompleteSession]);
 
-  // Lock body scroll when drawer is open
+  // Lock body scroll when drawer is open - comprehensive approach like login page
   React.useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      document.body.style.paddingRight =
-        "var(--removed-body-scroll-bar-size, 0px)"; // Prevent layout shift if possible
-    } else {
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
-    }
+    if (!isOpen) return;
+
+    // Store original scroll position
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+
+    // Prevent all scroll mechanisms
+    const preventScroll = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // Apply styles to disable scrolling
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.height = "100%";
+    document.documentElement.style.position = "fixed";
+    document.documentElement.style.width = "100%";
+    document.documentElement.style.top = `-${scrollTop}px`;
+    document.documentElement.style.left = `-${scrollLeft}px`;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.height = "100vh";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.top = "0";
+    document.body.style.left = "0";
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+
+    // Disable scroll events
+    document.addEventListener("wheel", preventScroll, { passive: false });
+    document.addEventListener("touchmove", preventScroll, { passive: false });
+    document.addEventListener("scroll", preventScroll, { passive: false });
+
     return () => {
+      // Remove event listeners
+      document.removeEventListener("wheel", preventScroll);
+      document.removeEventListener("touchmove", preventScroll);
+      document.removeEventListener("scroll", preventScroll);
+
+      // Restore styles
+      document.documentElement.style.overflow = "";
+      document.documentElement.style.height = "";
+      document.documentElement.style.position = "";
+      document.documentElement.style.width = "";
+      document.documentElement.style.top = "";
+      document.documentElement.style.left = "";
+
       document.body.style.overflow = "";
+      document.body.style.height = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
       document.body.style.paddingRight = "";
+
+      // Restore scroll position
+      window.scrollTo(scrollLeft, scrollTop);
     };
   }, [isOpen]);
 
@@ -335,22 +382,32 @@ const LocationDrawer = ({ isOpen, onClose }) => {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop with strong blur */}
           <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[600]"
+            className="fixed inset-0 z-[600]"
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.85)",
+              backdropFilter: "blur(12px) saturate(180%)",
+              WebkitBackdropFilter: "blur(12px) saturate(180%)",
+              willChange: "backdrop-filter",
+              animation: "fadeIn 0.3s ease-in-out",
+            }}
           />
 
           <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             data-lenis-prevent
             style={{ overscrollBehavior: "contain" }}
-            className="fixed bottom-0 left-0 right-0 bg-[#F3F4F6] rounded-t-[32px] z-[610] max-h-[90vh] overflow-y-auto outline-none shadow-2xl pb-8">
+            className="fixed left-1/2 top-[60%] -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[430px] max-h-[85vh] bg-[#F3F4F6] z-[610] overflow-y-auto outline-none shadow-2xl pb-8 rounded-[32px]">
             {/* Header */}
-            <div className="sticky top-0 bg-[#F3F4F6] px-6 pt-6 pb-4 flex flex-col gap-4 z-20">
+            <div className="sticky top-0 bg-[#F3F4F6] px-6 pt-6 pb-4 flex flex-col gap-4 z-20 rounded-t-[32px]">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-extrabold text-[#1A1A1A]">
                   Select delivery location
