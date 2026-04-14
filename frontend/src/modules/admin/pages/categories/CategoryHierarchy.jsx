@@ -348,7 +348,7 @@ const CategoryHierarchy = () => {
                   onColorChange={handleHeaderColorChange}
                 />
               ))
-            )}}
+            )}
           </div>
         </div>
 

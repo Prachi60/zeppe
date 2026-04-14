@@ -60,6 +60,7 @@ import {
 import { useProductDetail } from "../context/ProductDetailContext";
 import { cn } from "@/lib/utils";
 import QuickCategoriesBg from "@/assets/Catagorysection_bg.png";
+import HealthBanner from "@/assets/HealthBanner.png";
 import SectionRenderer from "../components/experience/SectionRenderer";
 import ExperienceBannerCarousel from "../components/experience/ExperienceBannerCarousel";
 import { useLocation } from "../context/LocationContext";
@@ -942,15 +943,7 @@ const EXTRA_HOME_DISCOVERY_PRESETS = [
     maxTiles: 8,
     tileImageFromProducts: false,
   },
-  {
-    id: "dry-fruits",
-    title: "Dry Fruits",
-    keywords: DRY_FRUITS_DISCOVERY_KEYWORDS,
-    excludedKeywords: ["oil", "bran oil", "ghee", "fortune"],
-    fallbackTiles: [],
-    hideTiles: true,
-    productsLayout: "grid3",
-  },
+
 ];
 
 const normalizeHomeDiscoveryText = (value = "") =>
@@ -1025,6 +1018,13 @@ const Home = () => {
     subtitle: "Rs. 1 per Kg*",
     description: "On Order above 399",
   });
+  const desktopHeroOffer = {
+    title: "Sugar",
+    image: "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
+    subtitle: "Rs. 1 per Kg*",
+    description: "On Order above 399",
+  };
+  const categoryBannerTouchStartXRef = useRef(null);
 
   const normalizedActiveHeaderCategory = useMemo(
     () =>
@@ -1077,17 +1077,76 @@ const Home = () => {
     return banners.length > 0 ? banners.slice(0, 7) : [];
   }, [quickCategories]);
 
+  const scrollableBannerCategories = useMemo(
+    () => categories.filter((category) => category.id !== "all"),
+    [categories],
+  );
+
   // Auto-slide carousel (only for All category)
   useEffect(() => {
-    if (!isHoveringCategoryBanner && groupedCategoryBanners.length > 0 && (!activeCategory || activeCategory._id === "all" || activeCategory.slug === "all" || activeCategory.id === "all")) {
-      const interval = setInterval(() => {
-        setCategoriesBannerIndex((prev) =>
-          (prev + 1) % groupedCategoryBanners.length
-        );
-      }, 4000);
-      return () => clearInterval(interval);
+    if (
+      isHoveringCategoryBanner ||
+      scrollableBannerCategories.length === 0 ||
+      !isAllCategoryActive
+    ) {
+      return undefined;
     }
-  }, [isHoveringCategoryBanner, groupedCategoryBanners.length, activeCategory]);
+
+    const interval = setInterval(() => {
+      setCategoriesBannerIndex(
+        (prev) => (prev + 1) % scrollableBannerCategories.length,
+      );
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [
+    isAllCategoryActive,
+    isHoveringCategoryBanner,
+    scrollableBannerCategories.length,
+  ]);
+
+  useEffect(() => {
+    if (scrollableBannerCategories.length === 0) {
+      setCategoriesBannerIndex(0);
+      return;
+    }
+
+    setCategoriesBannerIndex((prev) => prev % scrollableBannerCategories.length);
+  }, [scrollableBannerCategories.length]);
+
+  const handleCategoryBannerTouchStart = (event) => {
+    categoryBannerTouchStartXRef.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const handleCategoryBannerTouchEnd = (event) => {
+    const startX = categoryBannerTouchStartXRef.current;
+    const endX = event.changedTouches[0]?.clientX ?? null;
+
+    categoryBannerTouchStartXRef.current = null;
+
+    if (
+      startX == null ||
+      endX == null ||
+      scrollableBannerCategories.length <= 1
+    ) {
+      return;
+    }
+
+    const swipeDistance = startX - endX;
+    if (Math.abs(swipeDistance) < 35) return;
+
+    if (swipeDistance > 0) {
+      setCategoriesBannerIndex(
+        (prev) => (prev + 1) % scrollableBannerCategories.length,
+      );
+    } else {
+      setCategoriesBannerIndex(
+        (prev) =>
+          (prev - 1 + scrollableBannerCategories.length) %
+          scrollableBannerCategories.length,
+      );
+    }
+  };
 
   const quickCategoryPalettes = [
     {
@@ -1920,17 +1979,23 @@ const Home = () => {
         </div>
       ) : (
         <>
+
           {/* Full-Width Category Banner Carousel - Mobile Only */}
-          {isAllCategoryActive && categories && categories.filter(c => c.id !== "all").length > 0 && (
+          {isAllCategoryActive && scrollableBannerCategories.length > 0 && (
             <div className="relative z-20 w-full overflow-visible bg-white md:hidden px-4 pt-2 pb-4">
-              <div className="relative h-[160px] overflow-hidden rounded-lg shadow-lg">
+              <div
+                className="relative h-[160px] overflow-hidden rounded-lg shadow-lg"
+                onMouseEnter={() => setIsHoveringCategoryBanner(true)}
+                onMouseLeave={() => setIsHoveringCategoryBanner(false)}
+                onTouchStart={handleCategoryBannerTouchStart}
+                onTouchEnd={handleCategoryBannerTouchEnd}>
                 {/* Sliding Container */}
                 <div
                   className="absolute inset-0 flex transition-all duration-700 ease-in-out"
                   style={{
-                    transform: `translateX(-${(categories.filter(c => c.id !== "all").findIndex(c => c.id === activeCategory?.id) || 0) * 100}%)`,
+                    transform: `translateX(-${categoriesBannerIndex * 100}%)`,
                   }}>
-                  {categories.filter(c => c.id !== "all").map((category, idx) => (
+                  {scrollableBannerCategories.map((category) => (
                     <div
                       key={category.id}
                       className="min-w-full h-full flex-shrink-0 relative overflow-hidden rounded-lg">
@@ -1967,15 +2032,13 @@ const Home = () => {
 
                 {/* Navigation Dots */}
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                  {categories.filter(c => c.id !== "all").map((category, idx) => (
+                  {scrollableBannerCategories.map((category, idx) => (
                     <motion.button
                       key={category.id}
                       whileHover={{ scale: 1.2 }}
-                      onClick={() => {
-                        setActiveCategory(category);
-                      }}
+                      onClick={() => setCategoriesBannerIndex(idx)}
                       className={`h-2 rounded-full transition-all cursor-pointer ${
-                        category.id === activeCategory?.id
+                        idx === categoriesBannerIndex
                           ? "w-6 bg-white"
                           : "w-2 bg-white/50 hover:bg-white/70"
                       }`}
@@ -2086,8 +2149,8 @@ const Home = () => {
 
                   {section.products?.length > 0 &&
                   section.productsLayout === "showcaseGrid" ? (
-                    <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-5">
-                      {section.products.filter(p => !p.badgeText).slice(0, 2).map((product) => (
+                    <div className="mt-3 grid grid-cols-3 gap-x-2.5 gap-y-4">
+                      {section.products.filter(p => !p.badgeText).slice(0, 3).map((product) => (
                         <motion.div
                           key={product.id}
                           whileTap={{ scale: 0.97 }}
@@ -2096,7 +2159,7 @@ const Home = () => {
                               state: { query: product.query || product.name },
                             })
                           }
-                          className="cursor-pointer text-left">
+                          className="min-w-0 cursor-pointer text-left">
                           <div className="relative overflow-hidden rounded-[16px] bg-white">
                             <div className="relative overflow-hidden rounded-[14px] border border-[#eef1f5] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.06)]">
                               {product.badgeText && (
@@ -2107,11 +2170,11 @@ const Home = () => {
                               <button
                                 type="button"
                                 onClick={(event) => event.stopPropagation()}
-                                className="absolute right-1.5 top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-sm">
+                                className="absolute right-1 top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-sm">
                                 <Heart size={10} className="text-[#b7bfcb]" />
                               </button>
 
-                              <div className="relative flex aspect-[0.88] items-center justify-center bg-white p-5">
+                              <div className="relative flex aspect-[0.84] items-center justify-center bg-white p-2.5">
                                 <img
                                   src={product.image}
                                   alt={product.name}
@@ -2142,27 +2205,27 @@ const Home = () => {
                                       state: { query: product.query || product.name },
                                     });
                                   }}
-                                  className="absolute bottom-1.5 right-1.5 rounded-[8px] border border-[#1f2937] bg-white px-3 py-1 text-[10px] font-black text-[#1f2937] shadow-[0_3px_8px_rgba(15,23,42,0.08)]">
+                                  className="absolute bottom-1 right-1 rounded-[7px] border border-[#1f2937] bg-white px-2 py-0.5 text-[8px] font-black text-[#1f2937] shadow-[0_3px_8px_rgba(15,23,42,0.08)]">
                                   ADD
                                 </motion.button>
                               </div>
                             </div>
 
-                            <div className="px-0.5 pt-1.5">
-                              <span className="inline-flex rounded-[4px] bg-[#f3f5f8] px-1.5 py-0.5 text-[8px] font-semibold text-[#4b5563]">
+                            <div className="px-0.5 pt-1">
+                              <span className="inline-flex rounded-[4px] bg-[#f3f5f8] px-1 py-0.5 text-[7px] font-semibold text-[#4b5563]">
                                 {product.weight}
                               </span>
-                              <h3 className="mt-1.5 line-clamp-2 min-h-[32px] text-[11px] font-bold leading-[1.22] text-[#111827]">
+                              <h3 className="mt-1 line-clamp-2 min-h-[28px] text-[9px] font-bold leading-[1.2] text-[#111827]">
                                 {product.name}
                               </h3>
-                              <p className="mt-1 text-[9px] font-extrabold uppercase tracking-[0.01em] text-[#2563eb]">
+                              <p className="mt-0.5 text-[7px] font-extrabold uppercase tracking-[0.01em] text-[#2563eb]">
                                 {product.discountText}
                               </p>
                               <div className="mt-0.5 flex items-baseline gap-1">
-                                <span className="text-[11px] font-black text-[#111827]">
+                                <span className="text-[9px] font-black text-[#111827]">
                                   Rs{product.price}
                                 </span>
-                                <span className="text-[9px] font-semibold text-[#9ca3af] line-through">
+                                <span className="text-[7px] font-semibold text-[#9ca3af] line-through">
                                   MRP {product.originalPrice}
                                 </span>
                               </div>
@@ -2172,14 +2235,14 @@ const Home = () => {
                       ))}
                     </div>
                   ) : section.products?.length > 0 && section.productsLayout === "grid3" ? (
-                    <div className="mt-4 grid grid-cols-2 gap-3.5">
-                      {section.products.slice(0, 2).map((product) => (
-                        <div key={product.id || product._id}>
+                    <div className="mt-4 grid grid-cols-3 gap-2.5">
+                      {section.products.slice(0, 3).map((product) => (
+                        <div key={product.id || product._id} className="min-w-0">
                           <ProductCard
                             product={product}
                             compact
                             neutralBg
-                            className="h-full border border-[#efe8df] shadow-[0_8px_22px_rgba(92,58,28,0.08)]"
+                            className="h-full min-w-0 border border-[#efe8df] shadow-[0_8px_22px_rgba(92,58,28,0.08)]"
                           />
                         </div>
                       ))}
@@ -2249,55 +2312,25 @@ const Home = () => {
                     </div>
                   </div>
 
-                  {/* Pharmacy Banner Below Top Brands */}
-                  <div className="px-4 pb-6 mt-1">
+                  <div className="pt-2 pb-3 w-full relative">
                     <motion.button
+                      type="button"
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate("/search", { state: { query: "pharmacy" } })}
-                      className="relative w-full overflow-hidden rounded-[12px] bg-[#00b5ad] flex items-stretch shadow-sm"
-                    >
-                      {/* Left Content */}
-                      <div className="flex-1 flex flex-col justify-center items-start text-left pl-4 py-4 pr-0 z-10">
-                        <h3 className="text-[20px] font-black text-white leading-[1.1] mb-2 tracking-tight">
-                          Pharmacy at<br/>your doorstep!
-                        </h3>
-                        <p className="text-[12px] font-semibold text-white/95 leading-[1.2] mb-3">
-                          Cough syrups, pain<br/>relief sprays & more
-                        </p>
-                        <div className="bg-white rounded-[6px] px-3.5 py-1.5 shadow-sm">
-                          <span className="text-[12px] font-bold text-[#333] tracking-wide">
-                            Order Now
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Right Content Overlay / Graphic */}
-                      <div className="relative w-[130px] flex-shrink-0 origin-right">
-                        {/* Background heartbeat pulse graphic */}
-                        <svg className="absolute top-1/2 -translate-y-1/2 w-[150%] h-[40px] text-white/30 -left-10 z-0" viewBox="0 0 100 50" preserveAspectRatio="none">
-                          <path d="M0,25 L50,25 L55,5 L65,45 L70,25 L100,25" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
-                        </svg>
-                        
-                        {/* Images collection */}
-                        <div className="relative z-10 w-full h-full">
-                          {/* Prega News Back */}
-                          <div className="absolute top-1/2 -translate-y-1/2 right-[45px] w-14 h-16 -rotate-6 shadow-[-4px_4px_10px_rgba(0,0,0,0.15)] bg-white rounded-md overflow-hidden border border-gray-100 flex items-center justify-center p-1.5 z-10">
-                             <img src="https://cdn-icons-png.flaticon.com/512/3209/3209088.png" className="w-full h-full object-contain opacity-80"/>
-                          </div>
-
-                          {/* Eno Front Left */}
-                          <div className="absolute top-1/2 -translate-y-[40%] right-[65px] w-12 h-[60px] -rotate-12 shadow-[0_6px_12px_rgba(0,0,0,0.2)] bg-white rounded-md overflow-hidden border border-gray-100 p-1.5 flex items-center justify-center z-20">
-                             <img src="https://cdn-icons-png.flaticon.com/512/4320/4320337.png" className="w-full h-full object-contain opacity-80"/>
-                          </div>
-                          
-                          {/* Moov Front Right */}
-                          <div className="absolute top-1/2 -translate-y-1/2 right-2 w-[42px] h-[90%] shadow-[4px_6px_12px_rgba(0,0,0,0.2)] bg-white rounded-[8px] overflow-hidden flex items-center justify-center p-1 z-30">
-                             <img src="https://cdn-icons-png.flaticon.com/512/2966/2966334.png" className="w-full h-full object-contain opacity-80"/>
-                          </div>
-                        </div>
-                      </div>
+                      onClick={() =>
+                        navigate("/search", {
+                          state: { query: "health" },
+                        })
+                      }
+                      className="block w-full overflow-hidden relative"
+                      style={{ aspectRatio: "21/9" }}>
+                      <img
+                        src={HealthBanner}
+                        alt="Healthcare banner"
+                        className="absolute inset-0 w-full h-full object-cover object-center scale-[1.25] -translate-y-1"
+                      />
                     </motion.button>
                   </div>
+
                   </>
                 )}
                 </div>
@@ -2306,114 +2339,11 @@ const Home = () => {
           </div>
         )}
 
-          {groupedCategoryBanners && groupedCategoryBanners.length > 0 && (!activeCategory || activeCategory._id === "all" || activeCategory.slug === "all" || activeCategory.id === "all") && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="relative z-20 hidden w-full px-4 md:block md:mt-6 md:mb-12">
-              <div
-                onMouseEnter={() => setIsHoveringCategoryBanner(true)}
-                onMouseLeave={() => setIsHoveringCategoryBanner(false)}
-                className="relative -mx-4">
-                {/* Main Carousel Container - FULL BANNER WITH BIG IMAGES */}
-                <div className="relative w-screen overflow-x-auto scroll-smooth rounded-[32px] shadow-2xl bg-white border border-gray-100 h-[290px] sm:h-[340px] md:h-[380px] no-scrollbar">
-                  {/* Sliding Container */}
-                  <div
-                    className="flex transition-transform duration-700 ease-in-out"
-                    style={{
-                      transform: `translateX(-${categoriesBannerIndex * 100}%)`,
-                    }}>
-                    {groupedCategoryBanners.map((banner, bannerIdx) => (
-                      <div
-                        key={banner.id || bannerIdx}
-                        className="min-w-full h-full flex items-center justify-center p-0 flex-shrink-0 relative">
-                        {/* Categories - Fill entire banner */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-0 w-full h-full">
-                          {banner.categories.slice(0, 4).map((cat, idx) => (
-                            <motion.button
-                              key={cat._id || idx}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => {
-                                setActiveCategory(cat);
-                                navigate(`/category/${cat._id}`);
-                              }}
-                              className="relative flex flex-col items-center justify-center group cursor-pointer overflow-hidden h-full">
-                              {/* Full Height Image */}
-                              <div className="absolute inset-0 w-full h-full">
-                                <img
-                                  src={
-                                    cat.image ||
-                                    getCategoryImage(cat.name) ||
-                                    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=600&h=600"
-                                  }
-                                  alt={cat.name}
-                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                />
-                              </div>
-                            </motion.button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
 
-                  {/* Left Arrow Button */}
-                  {groupedCategoryBanners.length > 1 && (
-                    <motion.button
-                      whileHover={{ scale: 1.15, x: -3 }}
-                      whileTap={{ scale: 0.85 }}
-                      onClick={() =>
-                        setCategoriesBannerIndex((prev) =>
-                          prev === 0 ? groupedCategoryBanners.length - 1 : prev - 1
-                        )
-                      }
-                      className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 md:w-14 md:h-14 rounded-full bg-white shadow-xl flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all border-2 border-gray-200">
-                      <ChevronLeft size={24} className="text-gray-800 md:h-7 md:w-7" />
-                    </motion.button>
-                  )}
-
-                  {/* Right Arrow Button */}
-                  {groupedCategoryBanners.length > 1 && (
-                    <motion.button
-                      whileHover={{ scale: 1.15, x: 3 }}
-                      whileTap={{ scale: 0.85 }}
-                      onClick={() =>
-                        setCategoriesBannerIndex((prev) =>
-                          (prev + 1) % groupedCategoryBanners.length
-                        )
-                      }
-                      className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 md:w-14 md:h-14 rounded-full bg-white shadow-xl flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all border-2 border-gray-200">
-                      <ChevronRight size={24} className="text-gray-800 md:h-7 md:w-7" />
-                    </motion.button>
-                  )}
-                </div>
-
-                {/* Dots Indicator */}
-                {groupedCategoryBanners.length > 1 && (
-                  <div className="flex gap-3 justify-center mt-4 md:mt-6">
-                    {groupedCategoryBanners.map((_, idx) => (
-                      <motion.button
-                        key={idx}
-                        whileHover={{ scale: 1.25 }}
-                        onClick={() => setCategoriesBannerIndex(idx)}
-                        className={`h-3 rounded-full transition-all cursor-pointer ${
-                          idx === categoriesBannerIndex
-                            ? "w-10 bg-[#2822e3]"
-                            : "w-3 bg-gray-300 hover:bg-gray-400"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
 
           {/* Dynamic Hierarchical Category Sections (Level 2 & 3) */}
           {filteredCategorizedSections.length > 0 && (
-            <div className="relative z-20 mb-10 mt-8 hidden w-full space-y-8 px-4 md:block">
+            <div className="relative z-20 mx-auto mb-12 mt-10 hidden w-full max-w-[1360px] space-y-10 px-4 md:block lg:px-6">
               {filteredCategorizedSections.map((section) => (
                 <motion.div 
                   key={section._id} 
@@ -2421,7 +2351,7 @@ const Home = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.2 }}
                   transition={{ duration: 0.5 }}
-                  className="animate-in fade-in slide-in-from-bottom-2 duration-500 px-2 sm:px-4">
+                  className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-bold text-[#1A1A1A] tracking-tight">
                       {section.name}
@@ -2480,119 +2410,9 @@ const Home = () => {
             </div>
           )}
 
-          {/* Hero Banners: hidden on mobile to keep the curated home flow clean */}
-          <div className="relative z-20 hidden w-full mt-1 md:mt-0 md:block">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="w-full overflow-hidden">
-              {heroConfig.banners?.items?.length ? (
-                <ExperienceBannerCarousel
-                  section={{ title: "" }}
-                  items={heroConfig.banners.items}
-                  fullWidth
-                  edgeToEdge
-                />
-              ) : (
-                <div className="w-full px-3 sm:px-4">
-                  <div 
-                    className="relative mx-auto h-[184px] w-full max-w-[286px] overflow-hidden rounded-[18px] bg-black shadow-[0_12px_28px_rgba(15,23,42,0.16)] sm:h-[220px] sm:max-w-[520px] sm:rounded-[22px] md:h-[250px] md:max-w-none"
-                    onMouseEnter={() => setIsHoveringCategoryBanner(true)}
-                    onMouseLeave={() => setIsHoveringCategoryBanner(false)}>
-                  
-                  {/* Slides - Simple Absolute Positioning */}
-                  {[
-                    { title: "Fresh Veggies", subtitle: "Delivered daily", color: "#10b981", image: "https://images.unsplash.com/photo-1488459716781-6f3ee007e730?auto=format&fit=crop&q=80&w=2000&h=600" },
-                    { title: "Organic Goods", subtitle: "100% Pure", color: "#8b5e34", image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=2000&h=600" },
-                    { title: "Healthy Choices", subtitle: "Wellness First", color: "#f59e0b", image: "https://images.unsplash.com/photo-1585518419759-e8e0ecae0620?auto=format&fit=crop&q=80&w=2000&h=600" },
-                    { title: "Premium Quality", subtitle: "Best Price", color: "#06b6d4", image: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?auto=format&fit=crop&q=80&w=2000&h=600" },
-                    { title: "Daily Fresh", subtitle: "Farm Direct", color: "#8b5cf6", image: "https://images.unsplash.com/photo-1488459716781-6f3ee007e730?auto=format&fit=crop&q=80&w=2000&h=600" },
-                    { title: "Pure Organic", subtitle: "Natural Best", color: "#d97706", image: "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&q=80&w=2000&h=600" },
-                    { title: "Special Offers", subtitle: "Limited Time", color: "#dc2626", image: "https://images.unsplash.com/photo-1576014328437-1e90c7d1e0ec?auto=format&fit=crop&q=80&w=2000&h=600" }
-                  ].map((banner, idx) => (
-                    <div
-                      key={idx}
-                      className="absolute inset-0 w-full h-full overflow-hidden transition-opacity duration-700"
-                      style={{ 
-                        opacity: idx === mobileBannerIndex ? 1 : 0,
-                        pointerEvents: idx === mobileBannerIndex ? 'auto' : 'none'
-                      }}
-                      onClick={() => navigate("/category/all")}>
-                      
-                      {/* Banner Image - Full Coverage */}
-                      <img
-                        src={banner.image}
-                        alt={banner.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        loading="eager"
-                      />
-                      
-                      {/* Dark Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-5" />
-                      
-                      {/* Text Content */}
-                      <div className="absolute inset-0 z-10 flex cursor-pointer flex-col justify-center pl-5 pr-5 sm:pl-8 sm:pr-6 md:pl-16">
-                        <h2 className="mb-1 text-2xl font-[1000] tracking-tight text-white drop-shadow-xl sm:mb-2 sm:text-4xl md:text-5xl">
-                          {banner.title}
-                        </h2>
-                        <p className="mb-3 text-xs font-semibold text-white/90 drop-shadow-lg sm:mb-4 sm:text-base md:text-lg">
-                          {banner.subtitle}
-                        </p>
-                        <button className="w-fit rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-white drop-shadow-lg transition-all hover:scale-105 sm:px-6 sm:py-3 sm:text-sm"
-                          style={{ backgroundColor: `${banner.color}` }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate("/category/all");
-                          }}>
-                          Shop Now →
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Left Arrow */}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setMobileBannerIndex((prev) => (prev === 0 ? 6 : prev - 1))}
-                    className="absolute left-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-xl transition-all hover:bg-gray-100 sm:left-4 sm:h-12 sm:w-12">
-                    <ChevronLeft size={20} className="text-gray-900 sm:h-6 sm:w-6" />
-                  </motion.button>
-
-                  {/* Right Arrow */}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setMobileBannerIndex((prev) => (prev === 6 ? 0 : prev + 1))}
-                    className="absolute right-3 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-xl transition-all hover:bg-gray-100 sm:right-4 sm:h-12 sm:w-12">
-                    <ChevronRight size={20} className="text-gray-900 sm:h-6 sm:w-6" />
-                  </motion.button>
-
-                  {/* Dots Indicator */}
-                  <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-6">
-                    {[0, 1, 2, 3, 4, 5, 6].map((idx) => (
-                      <motion.button
-                        key={idx}
-                        whileHover={{ scale: 1.2 }}
-                        onClick={() => setMobileBannerIndex(idx)}
-                        className={`rounded-full transition-all ${
-                          idx === mobileBannerIndex 
-                            ? 'w-8 h-2 bg-white' 
-                            : 'w-2 h-2 bg-white/40 hover:bg-white/70'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </div>
-
-
           {/* Best Sellers: hidden on mobile to keep the curated home flow clean */}
-          <div className="hidden py-6 mb-6 px-0 md:block">
-            <div className="px-4">
+          <div className="mx-auto hidden w-full max-w-[1360px] px-4 py-8 md:block lg:px-6">
+            <div className="px-0">
               <div className="flex justify-between items-end mb-5">
                 <div className="flex flex-col">
                   <h2 className="text-2xl font-bold text-[#1A1A1A] tracking-tight">
@@ -2607,7 +2427,7 @@ const Home = () => {
               </div>
             </div>
 
-            <div className="px-4">
+            <div className="px-0">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {products.slice(0, 5).map((product) => {
                   const originalPrice = product.price;
@@ -2790,11 +2610,9 @@ const Home = () => {
                 </div>
               )}
             </div>
-          )}
-
           {/* Main Content Area */}
           {sectionsForRenderer.length > 0 && (
-            <div className="container mx-auto px-4 md:px-8 lg:px-[50px] py-10 md:py-16">
+            <div className="mx-auto w-full max-w-[1360px] px-4 py-8 md:px-6 md:py-12 lg:px-6">
               <SectionRenderer
                 sections={sectionsForRenderer}
                 productsById={productsById}
@@ -2811,5 +2629,3 @@ const Home = () => {
 };
 
 export default Home;
-
-

@@ -19,6 +19,7 @@ const ProductCard = React.memo(
     badge,
     className,
     compact = false,
+    microCompact = false,
     neutralBg = false,
     storeWide = false,
   }) => {
@@ -173,7 +174,7 @@ const ProductCard = React.memo(
         <div
           className={cn(
             "relative pb-0",
-            storeWide ? "p-2" : compact ? "p-2" : "p-3",
+            storeWide ? "p-3" : microCompact ? "p-1.5" : compact ? "p-2" : "p-3",
           )}>
           {/* Badge (Custom or Discount) */}
           {(badge ||
@@ -193,13 +194,17 @@ const ProductCard = React.memo(
             onClick={toggleWishlist}
             className={cn(
               "absolute z-10 bg-white/90 backdrop-blur-sm rounded-full shadow-md flex items-center justify-center cursor-pointer hover:bg-white transition-all active:scale-90",
-              compact ? "top-2 right-2 h-7 w-7" : "top-3 right-3 h-8 w-8",
+              microCompact
+                ? "top-1.5 right-1.5 h-5 w-5"
+                : compact
+                  ? "top-2 right-2 h-7 w-7"
+                  : "top-3 right-3 h-8 w-8",
             )}>
             <motion.div
               whileTap={{ scale: 0.8 }}
               animate={isWishlisted ? { scale: [1, 1.2, 1] } : {}}>
               <Heart
-                size={compact ? 13 : 16}
+                size={microCompact ? 10 : compact ? 13 : 16}
                 className={cn(
                   isWishlisted
                     ? "text-red-500 fill-current"
@@ -225,7 +230,11 @@ const ProductCard = React.memo(
           <div
             className={cn(
               "block w-full overflow-hidden rounded-lg bg-gray-50 transition-all duration-300 group-hover:scale-[1.02] group-hover:bg-[#f2faff] flex items-center justify-center",
-              storeWide ? "h-36 rounded-2xl p-2 sm:h-40" : "aspect-square p-3",
+              storeWide
+                ? "h-36 rounded-2xl p-2 sm:h-40"
+                : microCompact
+                  ? "aspect-square p-1.5"
+                  : "aspect-square p-3",
             )}>
             <img
               ref={imageRef}
@@ -240,50 +249,89 @@ const ProductCard = React.memo(
         <div
           className={cn(
             "flex flex-col flex-1",
-            storeWide ? "p-3 pt-1.5 gap-1" : compact ? "p-3 pt-1 gap-1" : "p-4 pt-2 gap-1.5",
+            storeWide
+              ? "p-3 pt-2 gap-1.5"
+              : microCompact
+                ? "p-2 pt-0.5 gap-0.5"
+                : compact
+                  ? "p-3 pt-1 gap-1"
+                  : "p-4 pt-2 gap-1.5",
           )}>
           <div className="flex items-center gap-1.5 mb-0.5">
             <div
               className={cn(
                 "border border-gray-400/30 rounded-full flex items-center justify-center",
-                storeWide ? "h-3 w-3" : compact ? "h-2.5 w-2.5" : "h-3.5 w-3.5",
+                storeWide
+                  ? "h-3 w-3"
+                  : microCompact
+                    ? "h-2 w-2"
+                    : compact
+                      ? "h-2.5 w-2.5"
+                      : "h-3.5 w-3.5",
               )}>
               <div
                 className={cn(
                   "bg-gray-400 rounded-full",
-                  storeWide ? "h-1 w-1" : compact ? "h-1 w-1" : "h-1.5 w-1.5",
+                  storeWide
+                    ? "h-1 w-1"
+                    : microCompact
+                      ? "h-0.5 w-0.5"
+                      : compact
+                        ? "h-1 w-1"
+                        : "h-1.5 w-1.5",
                 )}
               />
             </div>
             <div
               className={cn(
                 "bg-gray-100 text-gray-500 font-semibold rounded px-1.5 py-0.5",
-                storeWide ? "text-[9px]" : compact ? "text-[8px]" : "text-[10px]",
+                storeWide
+                  ? "text-[9px]"
+                  : microCompact
+                    ? "text-[7px]"
+                    : compact
+                      ? "text-[8px]"
+                      : "text-[10px]",
               )}>
               {product.weight || "1 unit"}
             </div>
           </div>
 
-          <div className={cn(storeWide ? "min-h-[1.75rem]" : "min-h-[2.4rem]")}>
+          <div
+            className={cn(
+              storeWide ? "min-h-[2rem]" : microCompact ? "min-h-[1.9rem]" : "min-h-[2.4rem]",
+            )}>
             <h4
               className={cn(
                 "font-bold text-[#1A1A1A] leading-tight line-clamp-2",
-                storeWide ? "text-sm" : compact ? "text-[13px]" : "text-sm",
+                storeWide
+                  ? "text-sm"
+                  : microCompact
+                    ? "text-[10px]"
+                    : compact
+                      ? "text-[13px]"
+                      : "text-sm",
               )}>
               {product.name}
             </h4>
           </div>
 
           {/* Delivery Time & Unit info */}
-          <div className="mb-1 flex items-center gap-1.5 text-gray-400">
+          <div className="mb-2 flex items-center gap-1.5 text-gray-400">
             <Clock
-              size={storeWide ? 11 : compact ? 10 : 12}
+              size={storeWide ? 11 : microCompact ? 8 : compact ? 10 : 12}
               className="text-gray-400/60"
             />
             <span
               className={cn(
                 "font-medium",
-                storeWide ? "text-[10px]" : compact ? "text-[9px]" : "text-[11px]",
+                storeWide
+                  ? "text-[10px]"
+                  : microCompact
+                    ? "text-[8px]"
+                    : compact
+                      ? "text-[9px]"
+                      : "text-[11px]",
               )}>
               {product.deliveryTime || "8-12 mins"}
             </span>

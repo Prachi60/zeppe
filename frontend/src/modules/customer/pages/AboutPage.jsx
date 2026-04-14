@@ -27,7 +27,7 @@ const AboutPage = () => {
                         <div className="bg-slate-100 p-3 rounded-lg mb-3">
                             <ShoppingBag size={24} className="text-slate-700" />
                         </div>
-                        <h2 className="text-xl font-semibold mb-1 tracking-tight text-slate-900">{appName}</h2>
+                        <h2 className="text-3xl font-bold mb-1 tracking-tight text-slate-900">{appName}</h2>
                         <p className="text-slate-600 text-sm max-w-sm mx-auto">Delivering happiness to your doorstep in minutes.</p>
                     </div>
                 </div>

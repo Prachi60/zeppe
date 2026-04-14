@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Minus, Plus, Search, Heart } from 'lucide-react';
+import { ChevronLeft, Minus, Plus, Search, Heart, Bell, Sparkles, ShoppingBag, LayoutGrid, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -155,6 +155,109 @@ const KuikloCard = React.memo(({ product }) => {
         </motion.div>
     );
 });
+
+/* ─── Empty State Component ─────────────────────────────────────────────── */
+const EmptyCategoryView = ({ categoryName }) => {
+    const navigate = useNavigate();
+    return (
+        <div className="w-full h-full flex flex-col items-center justify-center py-12 px-6 text-center bg-[#F9F9F9]">
+            {/* Main Graphic Container */}
+            <div className="relative mb-8 mt-4">
+                {/* Outer soft glow */}
+                <div className="absolute inset-0 bg-[#5E17EB] opacity-10 blur-3xl rounded-full scale-150" />
+                
+                {/* Purple Box */}
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                    className="relative w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-[#6b48ff] to-[#501dee] rounded-[32px] md:rounded-[40px] shadow-[0_20px_40px_rgba(94,23,235,0.25)] flex items-center justify-center z-10"
+                >
+                    <ShoppingBag size={56} className="text-white" strokeWidth={2.5} />
+                    
+                    {/* Top Right Yellow Sparkle */}
+                    <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20">
+                        <Sparkles size={36} className="text-[#FFC107] fill-[#FFC107] rotate-12" />
+                    </div>
+                    {/* Bottom Left Blue Sparkle */}
+                    <div className="absolute -bottom-2 -left-2 md:-bottom-3 md:-left-3 z-20">
+                        <Sparkles size={28} className="text-[#E0E7FF] fill-[#E0E7FF] -rotate-12" />
+                    </div>
+                </motion.div>
+            </div>
+
+            {/* Pill */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-[#F0EDFF] rounded-full px-4 py-1.5 flex items-center gap-2 mb-5 border border-[#EBE5FF]"
+            >
+                <Bell size={12} className="text-[#5E17EB]" strokeWidth={3} />
+                <span className="text-[10px] font-black text-[#5E17EB] tracking-[0.1em] uppercase">STAY TUNED</span>
+            </motion.div>
+
+            {/* Headings */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="mb-4"
+            >
+                <h2 className="text-[32px] md:text-[36px] font-black tracking-tighter leading-none flex gap-[6px] justify-center">
+                    <span className="text-[#1A1A1A]">COMING</span>
+                    <span className="text-[#5E17EB]">SOON</span>
+                </h2>
+            </motion.div>
+
+            {/* Description */}
+            <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-[#64748B] font-bold text-[13px] md:text-[14px] leading-relaxed max-w-[280px] md:max-w-[320px] mx-auto mb-8"
+            >
+                Our awesome products for "{categoryName}" are almost ready. Prepare to discover the best items very soon!
+            </motion.p>
+
+            {/* Action Cards */}
+            <motion.div 
+                 initial={{ opacity: 0, y: 10 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ delay: 0.4 }}
+                 className="w-full max-w-[300px] flex flex-col gap-3 mx-auto"
+            >
+                {/* Card 1 */}
+                <button onClick={() => navigate('/category/all')} className="bg-white border border-[#F1F3F5] rounded-2xl p-4 flex items-center gap-4 hover:border-[#E2E8F0] active:scale-[0.98] transition-all text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                    <div className="w-11 h-11 bg-[#F9FAFB] rounded-[14px] flex items-center justify-center flex-shrink-0 border border-[#F1F5F9]">
+                         <LayoutGrid size={20} className="text-[#5E17EB]" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex-1">
+                        <h4 className="text-[#1A1A1A] font-black text-[13px] tracking-tight">Keep Exploring</h4>
+                        <p className="text-[#888] font-bold text-[11px] mt-0.5 select-none">Browse other categories.</p>
+                    </div>
+                    <div className="text-[#CBD5E1]">
+                        <ChevronRight size={18} strokeWidth={3} />
+                    </div>
+                </button>
+
+                {/* Card 2 */}
+                <button onClick={() => navigate('/search')} className="bg-white border border-[#F1F3F5] rounded-2xl p-4 flex items-center gap-4 hover:border-[#E2E8F0] active:scale-[0.98] transition-all text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                    <div className="w-11 h-11 bg-[#F9FAFB] rounded-[14px] flex items-center justify-center flex-shrink-0 border border-[#F1F5F9]">
+                         <Search size={20} className="text-[#10B981]" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex-1">
+                        <h4 className="text-[#1A1A1A] font-black text-[13px] tracking-tight">Search Items</h4>
+                        <p className="text-[#888] font-bold text-[11px] mt-0.5 select-none">Find exactly what you need.</p>
+                    </div>
+                    <div className="text-[#CBD5E1]">
+                        <ChevronRight size={18} strokeWidth={3} />
+                    </div>
+                </button>
+            </motion.div>
+        </div>
+    );
+};
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 const CategoryProductsPage = () => {
@@ -340,14 +443,7 @@ const CategoryProductsPage = () => {
                             ))}
                         </div>
                     ) : filteredProducts.length === 0 ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center mt-10">
-                            <h3 className="text-lg font-black text-[#1A1A1A] tracking-tighter mb-2">
-                                No Products Found
-                            </h3>
-                            <p className="text-[#888] font-bold text-xs mt-2 leading-relaxed">
-                                No items available in "{subCategories.find(c => c.id === selectedSubCategory)?.name || 'this category'}" right now.
-                            </p>
-                        </div>
+                        <EmptyCategoryView categoryName={subCategories.find(c => c.id === selectedSubCategory)?.name || 'this category'} />
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pb-[120px] bg-white">
                             {filteredProducts.map((product) => (

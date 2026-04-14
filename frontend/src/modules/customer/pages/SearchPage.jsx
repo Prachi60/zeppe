@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
-import { Search, Mic, ArrowLeft, X, TrendingUp, ChevronRight, History } from 'lucide-react';
+import { Search, Mic, ArrowLeft, X, TrendingUp, ChevronRight, History, Bell, Sparkles, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { customerApi } from '../services/customerApi';
 import ProductCard from '../components/shared/ProductCard';
@@ -10,6 +10,95 @@ import { cn } from '@/lib/utils';
 import { useLocation as useAppLocation } from '../context/LocationContext';
 import Lottie from 'lottie-react';
 import noServiceAnimation from '@/assets/lottie/animation.json';
+
+/* ─── Empty State Component ─────────────────────────────────────────────── */
+const EmptySearchView = ({ query }) => {
+    const navigate = useNavigate();
+    return (
+        <div className="w-full flex-1 flex flex-col items-center justify-center py-10 px-4 text-center">
+            {/* Main Graphic Container */}
+            <div className="relative mb-8 mt-2">
+                {/* Outer soft glow */}
+                <div className="absolute inset-0 bg-[#5E17EB] opacity-10 blur-3xl rounded-full scale-150" />
+                
+                {/* Purple Box */}
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                    className="relative w-28 h-28 md:w-36 md:h-36 bg-gradient-to-br from-[#6b48ff] to-[#501dee] rounded-[28px] md:rounded-[36px] shadow-[0_20px_40px_rgba(94,23,235,0.25)] flex items-center justify-center z-10"
+                >
+                    <Search size={52} className="text-white" strokeWidth={3} />
+                    
+                    {/* Top Right Yellow Sparkle */}
+                    <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20">
+                        <Sparkles size={32} className="text-[#FFC107] fill-[#FFC107] rotate-12" />
+                    </div>
+                    {/* Bottom Left Blue Sparkle */}
+                    <div className="absolute -bottom-2 -left-2 md:-bottom-3 md:-left-3 z-20">
+                        <Sparkles size={24} className="text-[#E0E7FF] fill-[#E0E7FF] -rotate-12" />
+                    </div>
+                </motion.div>
+            </div>
+
+            {/* Pill */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-[#F0EDFF] rounded-full px-4 py-1.5 flex items-center gap-2 mb-4 border border-[#EBE5FF]"
+            >
+                <Bell size={12} className="text-[#5E17EB]" strokeWidth={3} />
+                <span className="text-[10px] font-black text-[#5E17EB] tracking-[0.1em] uppercase">STAY TUNED</span>
+            </motion.div>
+
+            {/* Headings */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="mb-4"
+            >
+                <h2 className="text-[28px] md:text-[32px] font-black tracking-tighter leading-none flex gap-[6px] justify-center">
+                    <span className="text-[#1A1A1A]">NO ITEMS</span>
+                    <span className="text-[#5E17EB]">FOUND</span>
+                </h2>
+            </motion.div>
+
+            {/* Description */}
+            <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-[#64748B] font-bold text-[13px] md:text-[14px] leading-relaxed max-w-[260px] md:max-w-[300px] mx-auto mb-8"
+            >
+                We couldn't find anything for "{query}". Try different keywords or browse our categories.
+            </motion.p>
+
+            {/* Action Cards */}
+            <motion.div 
+                 initial={{ opacity: 0, y: 10 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ delay: 0.4 }}
+                 className="w-full max-w-[280px] flex flex-col gap-3 mx-auto"
+            >
+                {/* Card 1 */}
+                <button onClick={() => navigate('/category/all')} className="bg-white border border-[#F1F3F5] rounded-2xl p-4 flex items-center gap-4 hover:border-[#E2E8F0] active:scale-[0.98] transition-all text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                    <div className="w-10 h-10 bg-[#F9FAFB] rounded-[12px] flex items-center justify-center flex-shrink-0 border border-[#F1F5F9]">
+                         <LayoutGrid size={18} className="text-[#5E17EB]" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex-1">
+                        <h4 className="text-[#1A1A1A] font-black text-[12px] tracking-tight">Browse Categories</h4>
+                        <p className="text-[#888] font-bold text-[10px] mt-0.5 select-none">Explore all our products.</p>
+                    </div>
+                    <div className="text-[#CBD5E1]">
+                        <ChevronRight size={16} strokeWidth={3} />
+                    </div>
+                </button>
+            </motion.div>
+        </div>
+    );
+};
 
 const SearchPage = () => {
     const navigate = useNavigate();
@@ -280,13 +369,7 @@ const SearchPage = () => {
                                 ))}
                             </div>
                         ) : (
-                            <div className="py-16 flex flex-col items-center text-center">
-                                <div className="w-48 h-48 md:w-64 md:h-64 mb-6">
-                                    <Lottie animationData={noServiceAnimation} loop={true} />
-                                </div>
-                                <h3 className="text-xl font-black text-slate-800 tracking-tight mb-2">No items found</h3>
-                                <p className="text-slate-500 font-medium max-w-xs">We couldn't find anything for "{query}". Try different keywords!</p>
-                            </div>
+                            <EmptySearchView query={query} />
                         )}
                     </section>
                 ) : (

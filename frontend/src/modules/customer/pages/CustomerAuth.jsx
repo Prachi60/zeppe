@@ -80,14 +80,27 @@ function ProductRibbon({ items, reverse = false, duration = 18 }) {
 
 
 
-const CustomerAuth = () => {
+const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => {
   const navigate = useNavigate();
   const routeLocation = useLocation();
   const { login } = useAuth();
   const { settings } = useSettings();
   const appName = settings?.appName || "Zeppe";
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
 
-  const isSignupRoute = routeLocation.pathname === "/signup";
+  // Detect desktop viewport
+  useEffect(() => {
+    const handleResize = () => setIsDesktopViewport(window.innerWidth >= 768);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // When accessed directly on route (not via header prop), show as modal on desktop
+  const shouldShowAsModal = isModal || (isDesktopViewport && (routeLocation.pathname === "/login" || routeLocation.pathname === "/signup"));
+  const actualIsSignup = isModal ? isSignup : routeLocation.pathname === "/signup";
+
+  const isSignupRoute = actualIsSignup;
   const [isSignupMode, setIsSignupMode] = useState(isSignupRoute);
   const [isLoading, setIsLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
@@ -273,17 +286,27 @@ const CustomerAuth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] px-0 py-0 overflow-hidden md:flex md:items-center md:justify-center md:p-6">
-      <div className="relative min-h-screen w-full overflow-hidden bg-white md:min-h-[820px] md:max-w-[430px] md:rounded-[34px] md:shadow-[0_28px_80px_rgba(15,23,42,0.18)]">
+    <div className={`${shouldShowAsModal ? 'fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center p-4 z-[9999]' : 'min-h-screen'} bg-[#f3f4f6] px-0 py-0 overflow-hidden ${!shouldShowAsModal ? 'md:fixed md:inset-0 md:bg-black/50 md:backdrop-blur-md md:flex md:items-center md:justify-center md:p-4 md:z-[9999]' : ''}`}>
+      <div className={`relative bg-white ${shouldShowAsModal ? 'h-auto w-[400px] rounded-2xl shadow-2xl overflow-y-auto' : 'min-h-screen w-full overflow-hidden md:min-h-fit md:w-fit md:max-w-[400px] md:rounded-2xl md:shadow-2xl md:overflow-y-auto'}`}>
         <button
           type="button"
-          onClick={() => navigate("/")}
-          className="absolute right-4 top-4 z-20 rounded-full bg-black px-3 py-1.5 text-[11px] font-bold text-white shadow-sm"
+          onClick={() => {
+            if (shouldShowAsModal) {
+              if (onClose) {
+                onClose();
+              } else {
+                navigate("/");
+              }
+            } else {
+              navigate("/");
+            }
+          }}
+          className={`absolute z-20 ${shouldShowAsModal ? 'right-2 top-2 h-8 w-8 flex items-center justify-center rounded-full bg-black px-0 py-0 text-[16px] font-bold text-white shadow-sm hover:bg-gray-800' : 'right-4 top-4 rounded-full bg-black px-3 py-1.5 text-[11px] font-bold text-white shadow-sm md:hidden'}`}
         >
-          Skip
+          {shouldShowAsModal ? '✕' : 'Skip'}
         </button>
 
-        <div className="relative overflow-hidden px-4 pb-4 pt-2">
+        <div className="relative overflow-hidden px-4 pb-4 pt-2 md:hidden">
           <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f9fbff] to-transparent" />
           <div className="relative space-y-3 pt-2">
             <ProductRibbon items={PRODUCT_ROWS[0]} duration={18} />
@@ -292,14 +315,14 @@ const CustomerAuth = () => {
           </div>
         </div>
 
-        <div className="relative z-10 flex flex-1 flex-col px-5 pb-8 pt-2 overflow-hidden">
+        <div className="relative z-10 flex flex-1 flex-col px-5 pb-8 pt-2 overflow-hidden md:flex-none md:px-6 md:py-6 md:justify-center">
           <div className="mt-0 flex flex-col items-center text-center">
             <div className="flex min-h-[0px] items-center justify-center">
-              <h2 className="text-6xl font-semibold italic tracking-tight text-gray-800" style={{ letterSpacing: "-0.02em" }}>
+              <h2 className="text-6xl font-semibold italic tracking-tight text-gray-800 md:text-4xl" style={{ letterSpacing: "-0.02em" }}>
                 zeppe
               </h2>
             </div>
-            <h1 className="mt-2 text-[1.9rem] font-semibold tracking-tight text-gray-900">
+            <h1 className="mt-2 text-[1.9rem] font-semibold tracking-tight text-gray-900 md:text-xl">
               India&apos;s Quickest App
             </h1>
             <p className="mt-1 text-sm font-medium text-slate-500">
@@ -319,7 +342,7 @@ const CustomerAuth = () => {
                   event.preventDefault();
                   void sendOtpRequest();
                 }}
-                className="mt-2"
+                className="mt-2 md:mt-3"
               >
                 {isSignupMode && (
                   <div className="mb-3 rounded-xl border border-[#d9dde5] bg-white px-4 py-3">
@@ -355,7 +378,7 @@ const CustomerAuth = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-black text-sm font-black text-white transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-black text-sm font-black text-white transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 md:mt-2 md:h-11 md:text-xs"
                 >
                   {isLoading ? (
                     <LoaderCircle size={18} className="animate-spin" />
@@ -364,7 +387,7 @@ const CustomerAuth = () => {
                   )}
                 </button>
 
-                <div className="mt-4 text-center">
+                <div className="mt-4 text-center md:mt-2">
                   {isSignupMode ? (
                     <button
                       type="button"
@@ -406,16 +429,16 @@ const CustomerAuth = () => {
                   Change number
                 </button>
 
-                <div className="mb-5 text-center">
-                  <h2 className="text-xl font-black tracking-tight text-[#111827]">
+                <div className="mb-5 text-center md:mb-3">
+                  <h2 className="text-xl font-black tracking-tight text-[#111827] md:text-lg">
                     Verify your mobile number
                   </h2>
-                  <p className="mt-1 text-sm font-medium text-slate-500">
+                  <p className="mt-1 text-sm font-medium text-slate-500 md:text-xs">
                     OTP sent to +91 {formData.phone}
                   </p>
                 </div>
 
-                <div className="flex justify-center gap-3">
+                <div className="flex justify-center gap-3 md:gap-2">
                   {Array.from({ length: 4 }).map((_, index) => (
                     <input
                       key={index}
@@ -428,7 +451,7 @@ const CustomerAuth = () => {
                       value={formData.otp[index] || ""}
                       onChange={(event) => handleOtpInput(index, event.target.value)}
                       onKeyDown={(event) => handleOtpKeyDown(index, event)}
-                      className="h-14 w-14 rounded-2xl border border-[#d9dde5] bg-white text-center text-xl font-black text-slate-900 outline-none focus:border-black"
+                      className="h-14 w-14 rounded-2xl border border-[#d9dde5] bg-white text-center text-xl font-black text-slate-900 outline-none focus:border-black md:h-12 md:w-12 md:text-lg md:rounded-xl"
                     />
                   ))}
                 </div>
@@ -436,7 +459,7 @@ const CustomerAuth = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-black text-sm font-black text-white transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="mt-6 flex h-12 w-full items-center justify-center rounded-xl bg-black text-sm font-black text-white transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 md:mt-3 md:h-11 md:text-xs"
                 >
                   {isLoading ? (
                     <LoaderCircle size={18} className="animate-spin" />
@@ -448,7 +471,7 @@ const CustomerAuth = () => {
                   )}
                 </button>
 
-                <div className="mt-4 flex items-center justify-center gap-2 text-xs font-semibold text-slate-500">
+                <div className="mt-4 flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 md:mt-2 md:text-[11px]">
                   <span>Didn&apos;t receive OTP?</span>
                   <button
                     type="button"
@@ -465,7 +488,7 @@ const CustomerAuth = () => {
             )}
           </AnimatePresence>
 
-          <p className="mt-6 text-center text-[10px] font-medium leading-4 text-slate-400">
+          <p className="mt-6 text-center text-[10px] font-medium leading-4 text-slate-400 md:mt-3">
             By continuing, you agree to our{" "}
             <Link
               to="/terms"

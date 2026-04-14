@@ -21,13 +21,7 @@ const SectionRenderer = ({
         const heading = section.title;
 
         if (section.displayType === "banners") {
-          const items = section.config?.banners?.items || [];
-          if (!items.length) return null;
-          return (
-            <div key={section._id} className="hidden -mt-8 md:-mt-8 md:block">
-              <ExperienceBannerCarousel section={section} items={items} slideGap={12} />
-            </div>
-          );
+          return null;
         }
 
         if (section.displayType === "categories") {

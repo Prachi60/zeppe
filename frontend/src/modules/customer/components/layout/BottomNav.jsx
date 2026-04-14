@@ -64,7 +64,7 @@ const BottomNav = () => {
                                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                 >
                                     <item.icon
-                                        size={22}
+                                        size={26}
                                         strokeWidth={isActive ? 2.5 : 2}
                                         className={cn(
                                             "transition-colors duration-300",

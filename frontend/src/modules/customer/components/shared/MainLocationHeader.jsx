@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation as useRouteLocation } from "react-router-dom";
 import { motion, useScroll, useTransform, useMotionValue } from "framer-motion";
 import Lottie from "lottie-react";
 import LocationDrawer from "./LocationDrawer";
@@ -19,6 +19,7 @@ import { getCategoryImage } from "@/shared/constants/categoryImageMap";
 import LogoImage from "../../../../assets/Logo.png";
 import shoppingCartAnimation from "../../../../assets/lottie/shopping-cart.json";
 import GuestProfilePrompt from "./GuestProfilePrompt";
+import CustomerAuth from "../../pages/CustomerAuth";
 
 // MUI Icons
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -181,7 +182,25 @@ const MainLocationHeader = ({
   const appName = settings?.appName || "zeppe";
   const logoUrl = settings?.logoUrl || LogoImage;
   const navigate = useNavigate();
+  const routeLocation = useRouteLocation();
   const [isGuestPromptOpen, setIsGuestPromptOpen] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+  const [isDesktopLoginOpen, setIsDesktopLoginOpen] = useState(false);
+  const [isDesktopSignupOpen, setIsDesktopSignupOpen] = useState(false);
+
+  // Close guest prompt and open modals when navigating to auth pages on desktop
+  useEffect(() => {
+    if (isDesktopViewport) {
+      if (routeLocation.pathname === "/login") {
+        setIsDesktopLoginOpen(true);
+        navigate("/", { replace: true });
+      } else if (routeLocation.pathname === "/signup") {
+        setIsDesktopSignupOpen(true);
+        navigate("/", { replace: true });
+      }
+    }
+    setIsGuestPromptOpen(false);
+  }, [routeLocation.pathname, isDesktopViewport]);
 
   // Search Logic
   const handleSearchClick = () => {
@@ -196,7 +215,11 @@ const MainLocationHeader = ({
 
   const handleProfileClick = () => {
     if (!isAuthenticated) {
-      setIsGuestPromptOpen(true);
+      if (isDesktopViewport) {
+        setIsDesktopLoginOpen(true);
+      } else {
+        setIsGuestPromptOpen(true);
+      }
       return;
     }
     navigate("/profile");
@@ -221,6 +244,13 @@ const MainLocationHeader = ({
   ];
 
   const [isScrolled, setIsScrolled] = useState(false);
+
+  useLayoutEffect(() => {
+    const syncViewport = () => setIsDesktopViewport(window.innerWidth >= 768);
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    return () => window.removeEventListener("resize", syncViewport);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -327,9 +357,9 @@ const MainLocationHeader = ({
 
     return "15 min";
   })();
-  const locationPromptText = isFetchingLocation
-    ? "Detecting location..."
-    : "Tap to set location";
+  const addressString = currentLocation?.address || currentLocation?.name;
+  const showDetailedAddress = !!addressString && isAuthenticated;
+  const promptText = isFetchingLocation ? "Detecting location..." : "Tap to set location";
 
   useEffect(() => {
     const c = buildMiniCartColor(baseHeaderColor);
@@ -385,13 +415,13 @@ const MainLocationHeader = ({
 
             {/* Top Row: Location only (full width) */}
             <div className="flex flex-col py-2 pr-14 relative">
-              <div className="text-[20px] font-black leading-none tracking-tight text-white">
-                zeppe
+              <div className="text-[18px] font-extrabold leading-none tracking-tight text-white/95">
+                zeppe in
               </div>
-              <div className="mt-0.5 text-[32px] font-bold leading-[0.88] tracking-[-0.06em] text-white -ml-1">
+              <div className="mt-0.5 text-[24px] font-extrabold leading-[0.9] tracking-[-0.04em] text-white">
                 {deliveryTimeText}
               </div>
-              <div className="mt-1.5 mb-1 overflow-hidden relative w-full flex items-center h-[26px]">
+              <div className="mt-1.5 mb-1 overflow-hidden relative w-full flex items-center h-[28px] bg-white/10 rounded-md px-2">
                 <style>{`
                   @keyframes scrollingTextShine {
                     0% { background-position: 200% center; }
@@ -423,7 +453,7 @@ const MainLocationHeader = ({
                     ease: "linear",
                   }}
                   className="inline-flex items-center whitespace-nowrap h-full">
-                  <span className="text-[16px] font-bold tracking-[0.02em] text-glass-flare">
+                  <span className="text-[14px] font-bold tracking-[0.02em] text-glass-flare">
                     Our favourite offer is back "{featuredOffer?.title || "Sugar"} @ {featuredOffer?.subtitle || "Rs. 1 per Kg*"}"
                   </span>
                 </motion.div>
@@ -431,14 +461,22 @@ const MainLocationHeader = ({
               <button
                 type="button"
                 onClick={() => setIsLocationOpen(true)}
-                className="mt-1 mb-1 flex items-center gap-0.5 border-0 bg-transparent p-0 text-left relative z-10 hover:opacity-80">
-                <span className="text-[14px] font-bold uppercase tracking-[0.04em] text-white/90">
-                  {currentLocationLabel}
-                </span>
-                <span className="text-[12px] font-bold tracking-[0.04em] text-white/90">
-                  - {locationPromptText}
-                </span>
-                <ChevronDownIcon sx={{ fontSize: 12, opacity: 0.9, color: "#FFFFFF" }} />
+                className="mt-1 mb-1 flex items-center gap-0.5 border-0 bg-transparent p-0 text-left relative z-10 hover:opacity-80 max-w-[260px] sm:max-w-[320px] overflow-hidden">
+                {showDetailedAddress ? (
+                  <span className="text-[13px] sm:text-[14px] font-medium tracking-wide text-white/95 truncate">
+                    {addressString}
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-[14px] font-bold uppercase tracking-[0.04em] text-white/90">
+                      HOME
+                    </span>
+                    <span className="text-[12px] font-bold tracking-[0.04em] text-white/90 whitespace-nowrap">
+                      - {promptText}
+                    </span>
+                  </>
+                )}
+                <ChevronDownIcon sx={{ fontSize: 14, opacity: 0.9, color: "#FFFFFF" }} className="shrink-0" />
               </button>
             </div>
 
@@ -454,109 +492,94 @@ const MainLocationHeader = ({
         )}>
         <div
           style={{
-            backgroundImage: isScrolled ? "none" : buildHeaderGradient(baseHeaderColor),
-            backgroundColor: isScrolled ? "#0f0f0f" : "transparent",
+            backgroundImage:
+              isDesktopViewport || isScrolled
+                ? "none"
+                : buildHeaderGradient(baseHeaderColor),
+            backgroundColor: isDesktopViewport
+              ? "#ffffff"
+              : isScrolled
+                ? "#0f0f0f"
+                : "transparent",
             transition: "all 0.3s ease"
           }}
           className={cn(
-            "w-full z-10 rounded-b-none px-4 pb-0 md:rounded-b-2xl md:bg-none md:bg-white md:pt-3 transition-all duration-300 border-b-0",
-            isScrolled ? "shadow-[0_4px_20px_rgba(0,0,0,0.3)]" : "shadow-none"
+            "w-full z-10 rounded-b-none px-4 pb-0 md:rounded-none md:pt-4 md:pb-3 md:border-b md:border-black/10 transition-all duration-300 border-b-0",
+            isScrolled && !isDesktopViewport
+              ? "shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+              : "shadow-none"
           )}>
 
-          {/* Corner Lottie */}
-          <div className="hidden md:block">
+          {/* Desktop/Tablet Header Layout (md and above) */}
+          <div className="mx-auto hidden w-full max-w-[1360px] items-center gap-5 px-1 pb-1 md:flex lg:gap-8">
             <button
               type="button"
-              aria-label="Open cart"
-              onClick={() => navigate("/checkout")}
-              className="absolute right-5 top-[calc(env(safe-area-inset-top,_0px)+12px)] z-20 h-12 w-12 cursor-pointer md:top-5 md:right-8 md:h-20 md:w-20">
-              <Lottie
-                animationData={shoppingCartAnimation}
-                loop
-                className="w-full h-full pointer-events-none drop-shadow-[0_8px_18px_rgba(0,0,0,0.14)]"
+              data-lenis-prevent
+              data-lenis-prevent-touch
+              onClick={() => {
+                navigate("/");
+                setIsLocationOpen(true);
+              }}
+              className="flex min-w-[320px] items-center gap-5 border-0 bg-transparent p-0 text-left transition-opacity hover:opacity-90">
+              <img
+                src={logoUrl}
+                alt={`${appName} Logo`}
+                className="h-11 w-auto object-contain"
               />
+              <div className="border-l border-[#e5e7eb] pl-5">
+                <div className="text-[15px] font-extrabold leading-none text-[#111827]">
+                  Delivery in {deliveryTimeText.replace(/\bmin\b/i, "minutes")}
+                </div>
+                <div className="mt-1 flex items-center gap-1 text-[13px] leading-none text-[#111827] max-w-[280px]">
+                  {showDetailedAddress ? (
+                    <span className="font-medium truncate">{addressString}</span>
+                  ) : (
+                    <>
+                      <span className="font-black uppercase">HOME</span>
+                      <span className="font-medium whitespace-nowrap">- {promptText}</span>
+                    </>
+                  )}
+                  <ChevronDownIcon sx={{ fontSize: 14, color: "#111827" }} className="shrink-0" />
+                </div>
+              </div>
             </button>
-          </div>
 
-          {/* Desktop/Tablet Header Layout (md and above) */}
-          <div className="hidden md:flex items-center justify-between relative z-20 px-2 lg:px-6 mb-4 mt-1">
-            <div className="flex items-center gap-4 lg:gap-8">
-              <div
-                onClick={() => navigate("/")}
-                className="flex items-center gap-3 cursor-pointer group shrink-0">
-                <div className="group-hover:scale-110 transition-all duration-300 drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]">
-                  <img
-                    src={logoUrl}
-                    alt={`${appName} Logo`}
-                    className="h-10 w-auto object-contain"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col border-l border-black/10 pl-4 lg:pl-8 h-10 justify-center">
-                <div className="flex items-center gap-1.5 opacity-70">
-                  <AccessTimeIcon sx={{ fontSize: 13, color: "#111827" }} />
-                  <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest leading-none">
-                    {currentLocation.time}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  data-lenis-prevent
-                  data-lenis-prevent-touch
-                  onClick={() => setIsLocationOpen(true)}
-                  className="flex items-center gap-1 text-slate-900 hover:text-slate-700 cursor-pointer group active:scale-95 transition-all border-0 bg-transparent p-0 text-left">
-                  <LocationOnIcon sx={{ fontSize: 14, color: "inherit" }} />
-                  <div className="text-[13px] font-bold leading-tight max-w-[250px] lg:max-w-[320px] truncate">
-                    {isFetchingLocation ? "Detecting location..." : currentLocation.name}
-                  </div>
-                  <ChevronDownIcon sx={{ fontSize: 12, opacity: 0.5, color: "#111827" }} />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 max-w-[450px] lg:max-w-2xl px-6">
+            <div className="min-w-0 flex-1">
               <motion.div
                 onClick={handleSearchClick}
-                whileHover={{ scale: 1.01 }}
+                whileHover={{ scale: 1.005 }}
                 whileTap={{ scale: 0.99 }}
-                style={{ backgroundColor: searchBarBg }}
-                className="rounded-full px-4 h-11 shadow-md flex items-center border border-white/50 transition-all duration-200 focus-within:ring-2 focus-within:ring-cyan-400/60 cursor-pointer">
-                <SearchIcon sx={{ color: "#000000", fontSize: 20 }} />
+                style={{ backgroundColor: "#f5f7fb" }}
+                className="flex h-12 items-center rounded-xl border border-[#edf0f5] px-4 shadow-none transition-all duration-200 cursor-pointer">
+                <SearchIcon sx={{ color: "#6b7280", fontSize: 24 }} />
                 <input
                   type="text"
                   placeholder={searchPlaceholder || "Search Products..."}
                   readOnly
-                  className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-semibold placeholder:text-slate-300 text-[15px] cursor-pointer"
+                  className="flex-1 bg-transparent border-none outline-none pl-3 text-[#111827] font-medium placeholder:text-[#94a3b8] text-[16px] cursor-pointer"
                 />
-                <div className="flex items-center gap-2 border-l border-slate-100 pl-3">
-                  <MicIcon sx={{ color: "#000000", fontSize: 20 }} />
+                <div className="flex items-center gap-2 border-l border-[#e2e8f0] pl-4">
+                  <MicIcon sx={{ color: "#6b7280", fontSize: 22 }} />
                 </div>
               </motion.div>
             </div>
 
-            <div className="flex items-center gap-5 lg:gap-8 shrink-0">
-              <motion.button
-                whileHover={{ scale: 1.15, rotate: 5 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/wishlist")}
-                className="text-slate-900 hover:text-red-500 transition-all">
-                <FavoriteBorderOutlinedIcon sx={{ fontSize: 24 }} />
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.15, rotate: -5 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/checkout")}
-                className="text-slate-900 hover:text-slate-700 transition-all relative group">
-                <ShoppingCartOutlinedIcon sx={{ fontSize: 24 }} />
-                <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-cyan-900 text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-cyan-800 shadow-sm transition-transform group-hover:-translate-y-0.5">0</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.9 }}
+            <div className="flex shrink-0 items-center gap-4">
+              <button
+                type="button"
                 onClick={handleProfileClick}
-                className="text-slate-900 lg:bg-white/30 p-1.5 lg:rounded-full hover:bg-white hover:text-slate-900 transition-all">
-                <AccountCircleOutlinedIcon sx={{ fontSize: 28 }} />
-              </motion.button>
+                className="border-0 bg-transparent px-2 text-[15px] font-semibold text-[#111827] transition-colors hover:text-[#374151]">
+                {isAuthenticated ? "Profile" : "Login"}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/checkout")}
+                className="inline-flex h-12 items-center gap-3 rounded-xl border border-[#edf0f5] bg-[#f5f7fb] px-5 text-[#64748b] transition-colors hover:bg-[#eef2f7]">
+                <ShoppingCartOutlinedIcon sx={{ fontSize: 24, color: "#64748b" }} />
+                <span className="text-[15px] font-medium text-[#64748b]">
+                  My Cart
+                </span>
+              </button>
             </div>
           </div>
 
@@ -624,7 +647,7 @@ const MainLocationHeader = ({
           {categories.length > 0 && (
             <>
               <div
-                className="no-scrollbar relative z-20 mt-0 flex min-h-[52px] items-center gap-2 overflow-x-auto pt-0 pb-0 scroll-smooth md:mx-0 md:min-h-[76px] md:gap-6 md:py-2 border-t-0 border-b-0 shadow-none">
+                className="no-scrollbar relative z-20 mt-0 flex min-h-[52px] items-center gap-2 overflow-x-auto pt-0 pb-0 scroll-smooth md:hidden border-t-0 border-b-0 shadow-none">
                 {categories.map((cat) => {
                   const isActive = activeCategory?.id === cat.id;
                   return (
@@ -646,50 +669,6 @@ const MainLocationHeader = ({
         </div>
       </div>
 
-      {categories.length > 0 && (
-        <div className="relative z-[1] w-full mt-0 mb-4 md:hidden">
-          <motion.button
-            type="button"
-            onClick={() => navigate("/offers")}
-            whileTap={{ scale: 0.98 }}
-            className="relative w-full z-10 flex items-stretch group rounded-none overflow-hidden shadow-none">
-
-            <div
-              className="relative z-10 flex h-[110px] w-full items-center justify-between px-4"
-              style={{ backgroundColor: (!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "#0A0A0A" : baseHeaderColor }}
-            >
-
-              {/* Left: Product Name */}
-              <div className="flex-[0.8] z-20 overflow-hidden pr-2">
-                <h2 className="font-serif text-[clamp(20px,6vw,38px)] font-black text-white leading-[1.05] tracking-tight line-clamp-2">
-                  {(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "Sugar" : (featuredOffer?.title || "Exclusive Deals")}
-                </h2>
-              </div>
-
-              {/* Center: Image */}
-              <div className="absolute left-1/2 -translate-x-[60%] top-1/2 -translate-y-1/2 h-[130px] w-[90px] flex items-center justify-center z-10">
-                <img
-                  src={(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? FORTUNE_SUGAR_PACK_IMAGE : (featuredOffer?.image || FORTUNE_SUGAR_PACK_IMAGE)}
-                  alt={(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "Fortune Sugar" : (featuredOffer?.title || "Offer")}
-                  className="h-full w-full object-contain drop-shadow-2xl"
-                />
-              </div>
-
-              {/* Right: Price details */}
-              <div className="flex-1 flex flex-col items-end justify-center text-right z-20 pl-[80px]">
-                <div className="font-serif text-[clamp(16px,4vw,24px)] font-bold text-white leading-[1.1] tracking-tight line-clamp-2 min-w-0 break-words">
-                  {(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "Rs. 1 per Kg*" : (featuredOffer?.subtitle || "Shop now")}
-                </div>
-                <div className="text-[11px] font-bold text-white mt-2 tracking-wide opacity-90 line-clamp-2">
-                  {(!activeCategory || activeCategory?.id === "all" || activeCategory?.slug === "all" || activeCategory?._id === "all") ? "On Order above 399" : (featuredOffer?.description || "For best prices")}
-                </div>
-              </div>
-
-            </div>
-          </motion.button>
-        </div>
-      )}
-
       <LocationDrawer
         isOpen={isLocationOpen}
         onClose={() => setIsLocationOpen(false)}
@@ -699,6 +678,28 @@ const MainLocationHeader = ({
         isOpen={isGuestPromptOpen}
         onClose={() => setIsGuestPromptOpen(false)}
       />
+
+      {isDesktopLoginOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-md"
+          onClick={() => setIsDesktopLoginOpen(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <CustomerAuth isModal isSignup={false} onClose={() => setIsDesktopLoginOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      {isDesktopSignupOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-md"
+          onClick={() => setIsDesktopSignupOpen(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <CustomerAuth isModal isSignup={true} onClose={() => setIsDesktopSignupOpen(false)} />
+          </div>
+        </div>
+      )}
     </>
   );
 };
