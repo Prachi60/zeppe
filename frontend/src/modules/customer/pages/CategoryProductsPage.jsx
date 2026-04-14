@@ -160,9 +160,9 @@ const KuikloCard = React.memo(({ product }) => {
 const EmptyCategoryView = ({ categoryName }) => {
     const navigate = useNavigate();
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center py-12 px-6 text-center bg-[#F9F9F9]">
+        <div className="w-full flex flex-col items-center justify-start pt-6 px-6 text-center bg-[#F9F9F9]">
             {/* Main Graphic Container */}
-            <div className="relative mb-8 mt-4">
+            <div className="relative mb-8 mt-0">
                 {/* Outer soft glow */}
                 <div className="absolute inset-0 bg-[#5E17EB] opacity-10 blur-3xl rounded-full scale-150" />
                 

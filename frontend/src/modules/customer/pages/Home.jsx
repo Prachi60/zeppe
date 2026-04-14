@@ -2222,11 +2222,11 @@ const Home = () => {
                                 {product.discountText}
                               </p>
                               <div className="mt-0.5 flex items-baseline gap-1">
-                                <span className="text-[9px] font-black text-[#111827]">
-                                  Rs{product.price}
+                                <span className="text-[10px] font-black text-[#111827]">
+                                  ₹{product.price}
                                 </span>
-                                <span className="text-[7px] font-semibold text-[#9ca3af] line-through">
-                                  MRP {product.originalPrice}
+                                <span className="text-[8px] font-semibold text-[#9ca3af] line-through">
+                                  ₹{product.originalPrice}
                                 </span>
                               </div>
                             </div>
