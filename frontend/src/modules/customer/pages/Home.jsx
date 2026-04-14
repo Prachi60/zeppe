@@ -52,6 +52,7 @@ import { customerApi } from "../services/customerApi";
 import { toast } from "sonner";
 import ProductCard from "../components/shared/ProductCard";
 import MainLocationHeader from "../components/shared/MainLocationHeader";
+import PromoBanner from "../components/layout/PromoBanner";
 import {
   HeaderCategoryVisual,
   VISUAL_IMAGES,
@@ -1955,6 +1956,7 @@ const Home = () => {
         onCategorySelect={setActiveCategory}
         featuredOffer={featuredOffer}
       />
+      <PromoBanner activeCategory={activeCategory} />
 
       {/* Main Page Content - Conditionally Hidden if No Service */}
       {products.length === 0 && !isLoading ? (
