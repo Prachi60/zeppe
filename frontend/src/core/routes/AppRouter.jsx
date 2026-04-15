@@ -142,7 +142,7 @@ const AppRouter = () => {
                     children: [
                         { index: true, element: <Home /> },
                         { path: 'categories', element: <CategoriesPage /> },
-                        { path: 'category/:categoryName', element: <CategoryProductsPage /> },
+                        { path: 'category/:categoryId', element: <CategoryProductsPage /> },
                         { path: 'product/:id', element: <ProductDetailPage /> },
                         { path: 'terms', element: <TermsPage /> },
                         { path: 'privacy', element: <PrivacyPage /> },

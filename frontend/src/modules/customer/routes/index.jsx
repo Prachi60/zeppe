@@ -41,7 +41,7 @@ const CustomerRoutes = () => {
                         <Routes>
                             <Route path="/" element={<Home />} />
                             <Route path="categories" element={<CategoriesPage />} />
-                            <Route path="category/:categoryName" element={<CategoryProductsPage />} />
+                            <Route path="category/:categoryId" element={<CategoryProductsPage />} />
                             <Route path="product/:id" element={<ProductDetailPage />} />
                             <Route path="terms" element={<TermsPage />} />
                             <Route path="privacy" element={<PrivacyPage />} />

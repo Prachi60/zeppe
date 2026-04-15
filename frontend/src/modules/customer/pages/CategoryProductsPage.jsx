@@ -11,11 +11,11 @@ import ProductDetailSheet from '../components/shared/ProductDetailSheet';
 import { useProductDetail } from '../context/ProductDetailContext';
 import { customerApi } from '../services/customerApi';
 import MiniCart from '../components/shared/MiniCart';
-import { useLocation as useAppLocation } from '../context/LocationContext';
 import { useSettings } from '@core/context/SettingsContext';
 import { useCartAnimation } from '../context/CartAnimationContext';
 import Lottie from 'lottie-react';
 import noServiceAnimation from '@/assets/lottie/animation.json';
+import { getCategoryLocation } from '../utils/categoryNavigation';
 
 /* ─── Compact Kuiklo-style card ─────────────────────────────────────────── */
 const KuikloCard = React.memo(({ product }) => {
@@ -228,7 +228,7 @@ const EmptyCategoryView = ({ categoryName }) => {
                  className="w-full max-w-[300px] flex flex-col gap-3 mx-auto"
             >
                 {/* Card 1 */}
-                <button onClick={() => navigate('/category/all')} className="bg-white border border-[#F1F3F5] rounded-2xl p-4 flex items-center gap-4 hover:border-[#E2E8F0] active:scale-[0.98] transition-all text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                <button onClick={() => navigate(getCategoryLocation('all'))} className="bg-white border border-[#F1F3F5] rounded-2xl p-4 flex items-center gap-4 hover:border-[#E2E8F0] active:scale-[0.98] transition-all text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
                     <div className="w-11 h-11 bg-[#F9FAFB] rounded-[14px] flex items-center justify-center flex-shrink-0 border border-[#F1F5F9]">
                          <LayoutGrid size={20} className="text-[#5E17EB]" strokeWidth={2.5} />
                     </div>
@@ -261,11 +261,14 @@ const EmptyCategoryView = ({ categoryName }) => {
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 const CategoryProductsPage = () => {
-    const { categoryName: catId } = useParams();
+    const { categoryId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const { currentLocation } = useAppLocation();
     const { settings } = useSettings();
+    const finalCategoryId = location.state?.selectedCategory || categoryId;
+    console.log("URL categoryId:", categoryId);
+    console.log("STATE categoryId:", location.state?.selectedCategory);
+    console.log("FINAL categoryId:", finalCategoryId);
     const initialSubcategoryId = location.state?.activeSubcategoryId || 'all';
     const { isOpen: isProductDetailOpen } = useProductDetail();
     const [selectedSubCategory, setSelectedSubCategory] = useState(initialSubcategoryId);
@@ -273,80 +276,89 @@ const CategoryProductsPage = () => {
     const [subCategories, setSubCategories] = useState([{ id: 'all', name: 'All' }]);
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    useEffect(() => {
+        setSelectedSubCategory(location.state?.activeSubcategoryId || 'all');
+    }, [location.state?.activeSubcategoryId]);
 
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            const hasValidLocation =
-                Number.isFinite(currentLocation?.latitude) &&
-                Number.isFinite(currentLocation?.longitude);
+    useEffect(() => {
+        if (!finalCategoryId) return;
 
-            if (hasValidLocation) {
-                const prodRes = await customerApi.getProducts({
-                    categoryId: catId,
-                    lat: currentLocation.latitude,
-                    lng: currentLocation.longitude,
+        const fetchProducts = async () => {
+            setIsLoading(true);
+            try {
+                const res = await customerApi.getProducts({
+                    categoryId: finalCategoryId,
+                    limit: 50,
                 });
-                if (prodRes.data.success) {
-                    const rawResult = prodRes.data.result;
-                    const dbProds = Array.isArray(prodRes.data.results)
-                        ? prodRes.data.results
-                        : Array.isArray(rawResult?.items)
-                        ? rawResult.items
-                        : Array.isArray(rawResult)
-                        ? rawResult
-                        : [];
 
-                    const formattedProds = dbProds.map(p => ({
-                        ...p,
-                        id: p._id,
-                        image: p.mainImage || p.image || "https://images.unsplash.com/photo-1550989460-0adf9ea622e2",
-                        price: p.salePrice || p.price,
-                        originalPrice: p.price,
-                        weight: p.weight || "1 unit",
-                        deliveryTime: "8-15 mins"
-                    }));
-                    setProducts(Array.isArray(formattedProds) ? formattedProds : []);
+                console.log("API RESPONSE:", res.data);
+
+                if (res.data.success) {
+                    const items = res.data.result?.items || res.data.results || [];
+                    if (Array.isArray(items) && items.length === 0) {
+                        const isMongoObjectId = /^[a-f\d]{24}$/i.test(String(finalCategoryId || ""));
+                        console.warn("API empty result, categoryId ObjectId check:", {
+                            finalCategoryId,
+                            isMongoObjectId,
+                        });
+                    }
+                    setProducts(Array.isArray(items) ? items : []);
+                } else {
+                    setProducts([]);
                 }
-            } else {
+            } catch (error) {
+                console.error("Error fetching products:", error);
                 setProducts([]);
+            } finally {
+                setIsLoading(false);
             }
+        };
 
-            const catRes = await customerApi.getCategories({ tree: true });
-            if (catRes.data.success) {
+        fetchProducts();
+    }, [finalCategoryId]);
+
+    useEffect(() => {
+        if (!finalCategoryId) return;
+
+        const fetchCategoryMeta = async () => {
+            try {
+                const catRes = await customerApi.getCategories({ tree: true });
+                if (!catRes.data.success) return;
+
                 const tree = catRes.data.results || catRes.data.result || [];
                 let currentCat = null;
                 for (const header of tree) {
-                    const found = (header.children || []).find(c => c._id === catId);
-                    if (found) { currentCat = found; break; }
+                    const found = (header.children || []).find((c) => c._id === finalCategoryId);
+                    if (found) {
+                        currentCat = found;
+                        break;
+                    }
                 }
-                if (currentCat) {
-                    setCategory(currentCat);
-                    const subs = (currentCat.children || []).map(s => ({
-                        id: s._id,
-                        name: s.name,
-                        image: s.image || s.mainImage || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png"
-                    }));
-                    
-                    // Assign generic category image for 'All'
-                    setSubCategories([{ 
-                        id: 'all', 
-                        name: 'All', 
-                        image: currentCat.image || currentCat.mainImage || "https://cdn-icons-png.flaticon.com/128/1040/1040230.png"
-                    }, ...subs]);
-                }
-            }
-        } catch (error) {
-            console.error("Error fetching category data:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
-    useEffect(() => {
-        fetchData();
-        setSelectedSubCategory(location.state?.activeSubcategoryId || 'all');
-    }, [catId, location.state?.activeSubcategoryId, currentLocation?.latitude, currentLocation?.longitude]);
+                if (!currentCat) return;
+
+                setCategory(currentCat);
+                const subs = (currentCat.children || []).map((s) => ({
+                    id: s._id,
+                    name: s.name,
+                    image: s.image || s.mainImage || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
+                }));
+
+                setSubCategories([
+                    {
+                        id: 'all',
+                        name: 'All',
+                        image: currentCat.image || currentCat.mainImage || "https://cdn-icons-png.flaticon.com/128/1040/1040230.png",
+                    },
+                    ...subs,
+                ]);
+            } catch (error) {
+                console.error("Error fetching category metadata:", error);
+            }
+        };
+
+        fetchCategoryMeta();
+    }, [finalCategoryId]);
 
     const safeProducts = Array.isArray(products) ? products : [];
 
@@ -442,7 +454,7 @@ const CategoryProductsPage = () => {
                                 </div>
                             ))}
                         </div>
-                    ) : filteredProducts.length === 0 ? (
+                    ) : safeProducts.length === 0 ? (
                         <EmptyCategoryView categoryName={subCategories.find(c => c.id === selectedSubCategory)?.name || 'this category'} />
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pb-[120px] bg-white">

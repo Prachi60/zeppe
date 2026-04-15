@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import ExperienceBannerCarousel from "./ExperienceBannerCarousel";
 import { motion } from "framer-motion";
 import { mixHexColors } from "../../utils/headerTheme";
+import { navigateToCategory } from "../../utils/categoryNavigation";
 
 const SectionRenderer = ({
   sections = [],
@@ -66,7 +67,7 @@ const SectionRenderer = ({
                             sectionId: section._id,
                           }),
                         );
-                        navigate(`/category/${cat._id}`);
+                        navigateToCategory(navigate, cat._id);
                       }}>
                       <motion.div
                         animate={{
@@ -147,12 +148,12 @@ const SectionRenderer = ({
                             null;
 
                           if (parentId) {
-                            navigate(`/category/${parentId}`, {
-                              state: { activeSubcategoryId: cat._id },
+                            navigateToCategory(navigate, parentId, {
+                              activeSubcategoryId: cat._id,
                             });
                           } else {
                             // Fallback to previous behavior if we can't resolve parent
-                            navigate(`/category/${cat._id}`);
+                            navigateToCategory(navigate, cat._id);
                           }
                         }}>
                         <motion.div

@@ -1,7 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { buildHeaderGradient } from '../../utils/headerTheme';
 import { getCategoryImage } from '@/shared/constants/categoryImageMap';
+import { getCategoryLocation } from '../../utils/categoryNavigation';
 
 const PromoBanner = ({ activeCategory }) => {
     const isAllCategory =
@@ -11,10 +13,8 @@ const PromoBanner = ({ activeCategory }) => {
 
     const gradientColor = activeCategory?.headerColor || '#45B0E2';
     const categoryName = String(activeCategory?.name || 'All');
-    const activeCategoryKey = activeCategory?.id || activeCategory?._id || categoryName;
-    const bannerHref = isAllCategory
-        ? '/category/Grocery'
-        : `/category/${encodeURIComponent(activeCategoryKey)}`;
+    const activeCategoryKey = activeCategory?._id || activeCategory?.id || 'all';
+    const bannerLocation = getCategoryLocation(activeCategoryKey || 'all');
 
     const bannerTitle = isAllCategory ? 'Sugar' : categoryName;
     const bannerPrimaryText = isAllCategory ? 'Rs. 1 per Kg*' : `${categoryName} Deals`;
@@ -36,8 +36,8 @@ const PromoBanner = ({ activeCategory }) => {
                     : buildHeaderGradient(gradientColor),
             }}
         >
-            <a
-                href={bannerHref}
+            <Link
+                to={bannerLocation}
                 className="mx-auto block w-full max-w-341.25 overflow-hidden"
             >
                 <div
@@ -81,7 +81,7 @@ const PromoBanner = ({ activeCategory }) => {
                         </p>
                     </div>
                 </div>
-            </a>
+            </Link>
         </motion.div>
     );
 };

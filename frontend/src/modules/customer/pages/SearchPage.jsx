@@ -8,6 +8,7 @@ import { useProductDetail } from '../context/ProductDetailContext';
 import { useSettings } from '@core/context/SettingsContext';
 import { cn } from '@/lib/utils';
 import { useLocation as useAppLocation } from '../context/LocationContext';
+import { navigateToCategory } from '../utils/categoryNavigation';
 import Lottie from 'lottie-react';
 import noServiceAnimation from '@/assets/lottie/animation.json';
 
@@ -83,7 +84,7 @@ const EmptySearchView = ({ query }) => {
                  className="w-full max-w-[280px] flex flex-col gap-3 mx-auto"
             >
                 {/* Card 1 */}
-                <button onClick={() => navigate('/category/all')} className="bg-white border border-[#F1F3F5] rounded-2xl p-4 flex items-center gap-4 hover:border-[#E2E8F0] active:scale-[0.98] transition-all text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                <button onClick={() => navigateToCategory(navigate, 'all')} className="bg-white border border-[#F1F3F5] rounded-2xl p-4 flex items-center gap-4 hover:border-[#E2E8F0] active:scale-[0.98] transition-all text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
                     <div className="w-10 h-10 bg-[#F9FAFB] rounded-[12px] flex items-center justify-center flex-shrink-0 border border-[#F1F5F9]">
                          <LayoutGrid size={18} className="text-[#5E17EB]" strokeWidth={2.5} />
                     </div>
@@ -408,7 +409,7 @@ const SearchPage = () => {
                                 <button 
                                     className="flex items-center gap-1 md:gap-1.5 px-3 py-1 md:px-4 md:py-1.5 bg-slate-50 hover:bg-slate-100 rounded-full text-xs md:text-sm font-black transition-all" 
                                     style={{ color: settings?.primaryColor || 'var(--primary)' }}
-                                    onClick={() => navigate('/category/all')}
+                                    onClick={() => navigateToCategory(navigate, 'all')}
                                 >
                                     See All <ChevronRight size={14} strokeWidth={3} />
                                 </button>

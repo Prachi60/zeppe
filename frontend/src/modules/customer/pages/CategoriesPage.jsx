@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { customerApi } from '../services/customerApi';
+import MainHeader from '../components/shared/MainHeader';
+import { getCategoryLocation, navigateToCategory } from '../utils/categoryNavigation';
 
 const COLORS = [
     "#F2EEE4", "#EFE7E2", "#EAF1F4", "#F0E8F2",
@@ -9,7 +11,10 @@ const COLORS = [
 ];
 
 const CategoriesPage = () => {
+    const navigate = useNavigate();
     const [groups, setGroups] = useState([]);
+    const [headerCategories, setHeaderCategories] = useState([]);
+    const [activeHeaderCategory, setActiveHeaderCategory] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [columnsPerRow, setColumnsPerRow] = useState(() => {
         if (typeof window === 'undefined') return 4;
@@ -25,6 +30,26 @@ const CategoriesPage = () => {
             const res = await customerApi.getCategories({ tree: true });
             if (res.data.success) {
                 const tree = res.data.results || res.data.result || [];
+                const defaultCategoryImage = 'https://cdn-icons-png.flaticon.com/128/1040/1040230.png';
+
+                const formattedHeaderCategories = tree.map((header) => ({
+                    id: header._id || header.id || header.slug || header.name,
+                    _id: header._id || header.id || header.slug || header.name,
+                    name: header.name,
+                    image: header.image || header.mainImage || defaultCategoryImage,
+                    headerColor: header.headerColor || null,
+                }));
+
+                setHeaderCategories(formattedHeaderCategories);
+                setActiveHeaderCategory((prev) => {
+                    if (prev) return prev;
+                    return (
+                        formattedHeaderCategories.find((category) => String(category.name || '').trim().toLowerCase() === 'all') ||
+                        formattedHeaderCategories[0] ||
+                        null
+                    );
+                });
+
                 const formattedGroups = tree
                     .filter((header) => (header.name || '').trim().toLowerCase() !== 'all')
                     .map((header, idx) => {
@@ -136,10 +161,15 @@ const CategoriesPage = () => {
     }, [flipRows]);
 
     return (
-        <div className="min-h-screen bg-white max-w-md mx-auto">
-            <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-center p-4 h-16">
-                <h1 className="text-xl font-black text-[#1A1A1A] tracking-tight">Categories</h1>
-            </div>
+        <div className="min-h-screen bg-white w-full">
+            <MainHeader
+                categories={headerCategories}
+                activeCategory={activeHeaderCategory}
+                onCategorySelect={(category) => {
+                    setActiveHeaderCategory(category);
+                    navigateToCategory(navigate, category._id || category.id || 'all');
+                }}
+            />
             <div className="px-3 pt-6 pb-24">
                 {groups.map((group, groupIdx) => (
                     <div key={groupIdx} className="mb-8" style={{ animationDelay: `${groupIdx * 100}ms` }}>
@@ -153,7 +183,7 @@ const CategoriesPage = () => {
                             {group.categories.map((category) => (
                                 <Link
                                     key={category.id}
-                                    to={`/category/${category.id}`}
+                                    to={getCategoryLocation(category._id || category.id)}
                                     className="flex flex-col items-center gap-1.5 group cursor-pointer"
                                 >
                                     {/* Square image box */}

@@ -1,5 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { getCategoryLocation } from '../../utils/categoryNavigation';
 
 const categories = [
     { id: 1, name: 'Fruits', image: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=200&auto=format&fit=crop', color: 'bg-red-50' },
@@ -20,16 +22,16 @@ const Categories = () => {
             <div className="container w-full max-w-[1920px] mx-auto px-4 md:px-[50px]">
                 <div className="flex items-center justify-between mb-8">
                     <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#45B0E2]">Shop by Category</h2>
-                    <a href="/categories" className="text-sm font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
+                    <Link to="/categories" className="text-sm font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
                         See All <ArrowRight size={16} />
-                    </a>
+                    </Link>
                 </div>
 
                 <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide snap-x -mx-4 px-4 md:mx-0 md:px-0 md:flex md:flex-wrap md:gap-8 md:justify-start">
                     {categories.slice(0, 8).map((category) => (
-                        <a
+                        <Link
                             key={category.id}
-                            href={`/category/${category.name.toLowerCase()}`}
+                            to={getCategoryLocation(category._id || category.id)}
                             className="flex flex-col items-center gap-4 min-w-[140px] snap-start group cursor-pointer"
                         >
                             <div className={`h-36 w-36 rounded-full ${category.color} p-4 flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl border border-slate-100`}>
@@ -42,7 +44,7 @@ const Categories = () => {
                             <span className="text-lg font-medium text-slate-700 group-hover:text-brand-600 transition-colors">
                                 {category.name}
                             </span>
-                        </a>
+                        </Link>
                     ))}
                 </div>
             </div>

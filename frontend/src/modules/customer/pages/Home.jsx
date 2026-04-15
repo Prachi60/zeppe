@@ -51,7 +51,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { customerApi } from "../services/customerApi";
 import { toast } from "sonner";
 import ProductCard from "../components/shared/ProductCard";
-import MainLocationHeader from "../components/shared/MainLocationHeader";
+import MainHeader from "../components/shared/MainHeader";
 import PromoBanner from "../components/layout/PromoBanner";
 import {
   HeaderCategoryVisual,
@@ -76,6 +76,7 @@ import {
 import { resolveStoreLogo } from "../utils/storeVisuals";
 import { mixHexColors, shiftHex } from "../utils/headerTheme";
 import { getCategoryImage } from "@/shared/constants/categoryImageMap";
+import { navigateToCategory } from "../utils/categoryNavigation";
 
 const DEFAULT_CATEGORY_THEME = {
   gradient: "linear-gradient(to bottom, #7B4419, #9D5C3A)",
@@ -1950,7 +1951,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-white pb-10">
-      <MainLocationHeader
+      <MainHeader
         categories={categories}
         activeCategory={activeCategory}
         onCategorySelect={setActiveCategory}
@@ -2018,7 +2019,7 @@ const Home = () => {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
                           setActiveCategory(category);
-                          navigate(`/category/${category.id}`);
+                          navigateToCategory(navigate, category._id || category.id);
                         }}
                         className="absolute inset-0 flex flex-col items-start justify-end p-4 text-left group">
                         <h3 className="text-2xl font-black text-white drop-shadow-lg mb-2 group-hover:text-yellow-300 transition-colors">
@@ -2377,8 +2378,8 @@ const Home = () => {
                                 sectionId: section._id,
                               }),
                             );
-                            navigate(`/category/${section._id}`, {
-                              state: { activeSubcategoryId: sub._id },
+                            navigateToCategory(navigate, section._id, {
+                              activeSubcategoryId: sub._id,
                             });
                           }}
                           className="flex flex-col items-center cursor-pointer group transition-all duration-300">
