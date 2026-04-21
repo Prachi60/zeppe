@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import http from "http";
+import dns from "node:dns";
 import cors from "cors";
 import helmet from "helmet";
 import path from "path";
@@ -38,6 +39,31 @@ import { stopScheduledJobs } from "./app/services/distributedScheduler.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, ".env") });
+
+/**
+ * Force known public DNS resolvers to avoid local DNS issues (e.g., MongoDB Atlas SRV lookups).
+ */
+function configureDnsResolvers() {
+  const mongoUri = String(
+    process.env.MONGO_URI || process.env.MONGODB_URI || process.env.DATABASE_URL || "",
+  ).trim();
+
+  // Only needed for Atlas SRV connection strings.
+  if (!mongoUri.startsWith("mongodb+srv://")) return;
+
+  try {
+    dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
+    logger.info("DNS resolvers configured for MongoDB SRV lookups", {
+      servers: dns.getServers(),
+    });
+  } catch (error) {
+    logger.warn("Failed to configure DNS resolvers; MongoDB SRV lookups may fail", {
+      error: error?.message || String(error),
+    });
+  }
+}
+
+configureDnsResolvers();
 
 const PORT = parseInt(process.env.PORT || '7000', 10);
 const HEALTH_CHECK_PORT = parseInt(process.env.HEALTH_CHECK_PORT || '9090', 10);
