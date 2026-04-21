@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import {
   getAdminExperienceSections,
   createExperienceSection,
@@ -14,6 +15,7 @@ import {
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Admin routes (protected)
 router.get(
@@ -36,6 +38,14 @@ router.put(
   verifyToken,
   allowRoles("admin"),
   reorderExperienceSections
+);
+
+router.post(
+  "/admin/experience/upload-banner",
+  verifyToken,
+  allowRoles("admin"),
+  upload.single("image"),
+  uploadBannerImage
 );
 
 // Admin hero config (separate from experience sections) - before :id so "hero" is not matched as id
@@ -64,13 +74,6 @@ router.delete(
   verifyToken,
   allowRoles("admin"),
   deleteExperienceSection
-);
-
-router.post(
-  "/admin/experience/upload-banner",
-  verifyToken,
-  allowRoles("admin"),
-  uploadBannerImage
 );
 
 // Public routes

@@ -32,6 +32,56 @@ import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 
+// MUI Category Icons (same as admin IconSelector)
+import MuiHomeIcon from "@mui/icons-material/Home";
+import DevicesIcon from "@mui/icons-material/Devices";
+import LocalGroceryStoreIcon from "@mui/icons-material/LocalGroceryStore";
+import ChildCareIcon from "@mui/icons-material/ChildCare";
+import MuiPetsIcon from "@mui/icons-material/Pets";
+import SportsSoccerIcon from "@mui/icons-material/SportsSoccer";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import SpaIcon from "@mui/icons-material/Spa";
+import ToysIcon from "@mui/icons-material/Toys";
+import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
+import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
+import YardIcon from "@mui/icons-material/Yard";
+import BusinessCenterIcon from "@mui/icons-material/BusinessCenter";
+import MusicNoteIcon from "@mui/icons-material/MusicNote";
+import CheckroomIcon from "@mui/icons-material/Checkroom";
+import LocalCafeIcon from "@mui/icons-material/LocalCafe";
+import DiamondIcon from "@mui/icons-material/Diamond";
+import ColorLensIcon from "@mui/icons-material/ColorLens";
+import BuildIcon from "@mui/icons-material/Build";
+import LuggageIcon from "@mui/icons-material/Luggage";
+import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
+import KitchenIcon from "@mui/icons-material/Kitchen";
+
+/** Map iconId (set in admin) to MUI icon component */
+const MUI_ICON_MAP = {
+  electronics: DevicesIcon,
+  fashion: CheckroomIcon,
+  home: MuiHomeIcon,
+  food: LocalCafeIcon,
+  sports: SportsSoccerIcon,
+  books: MenuBookIcon,
+  beauty: SpaIcon,
+  toys: ToysIcon,
+  automotive: DirectionsCarIcon,
+  pets: MuiPetsIcon,
+  health: LocalHospitalIcon,
+  garden: YardIcon,
+  office: BusinessCenterIcon,
+  music: MusicNoteIcon,
+  jewelry: DiamondIcon,
+  baby: ChildCareIcon,
+  tools: BuildIcon,
+  luggage: LuggageIcon,
+  art: ColorLensIcon,
+  grocery: LocalGroceryStoreIcon,
+  gifts: CardGiftcardIcon,
+  kitchen: KitchenIcon,
+};
+
 const FORTUNE_SUGAR_PACK_IMAGE =
   "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png";
 
@@ -120,7 +170,10 @@ function CategoryNavColumn({
   activeColor,
 }) {
   const isAll = cat.id === "all" || cat.slug === "all";
-  const IconComponent = isAll ? LayoutGrid : getCategoryIcon(cat.name);
+
+  // Priority: 1) MUI icon from admin-set iconId, 2) Lucide fallback by name
+  const MuiIcon = !isAll && cat.iconId ? MUI_ICON_MAP[cat.iconId] : null;
+  const LucideIcon = isAll ? LayoutGrid : getCategoryIcon(cat.name);
 
   return (
     <div
@@ -129,15 +182,23 @@ function CategoryNavColumn({
         "group relative flex min-w-[58px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1 pb-1.5 transition-all duration-200 active:scale-95 md:min-w-[70px] md:gap-1.5 md:pb-1 md:hover:scale-105",
       )}>
       <div className="flex h-8 w-8 items-center justify-center md:h-12 md:w-12">
-        <IconComponent
-          className={cn(
-            "h-[17px] w-[17px] transition-colors duration-200 md:h-6 md:w-6",
-            isActive
-              ? "text-white"
-              : "text-white/70 group-hover:text-white",
-          )}
-          strokeWidth={2.2}
-        />
+        {MuiIcon ? (
+          <MuiIcon
+            className={cn(
+              "transition-colors duration-200",
+              isActive ? "text-white" : "text-white/70 group-hover:text-white",
+            )}
+            style={{ fontSize: 20 }}
+          />
+        ) : (
+          <LucideIcon
+            className={cn(
+              "h-[17px] w-[17px] transition-colors duration-200 md:h-6 md:w-6",
+              isActive ? "text-white" : "text-white/70 group-hover:text-white",
+            )}
+            strokeWidth={2.2}
+          />
+        )}
       </div>
       <span
         className={cn(

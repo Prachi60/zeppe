@@ -86,6 +86,22 @@ const categorySchema = new mongoose.Schema(
       type: String,
       trim: true, // Hex color selected in admin panel (e.g. #ff0000)
     },
+    promoBannerTitle: {
+      type: String,
+      trim: true,
+    },
+    promoBannerSubtitle: {
+      type: String,
+      trim: true,
+    },
+    promoBannerDescription: {
+      type: String,
+      trim: true,
+    },
+    promoBannerImage: {
+      type: String, // Cloudinary URL
+      trim: true,
+    },
   },
   {
     timestamps: true,

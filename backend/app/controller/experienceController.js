@@ -5,6 +5,7 @@ import Product from "../models/product.js";
 import handleResponse from "../utils/helper.js";
 import mongoose from "mongoose";
 import { buildKey, getOrSet, getTTL, invalidate } from "../services/cacheService.js";
+import { uploadToCloudinary } from "../services/mediaService.js";
 
 /* ===============================
    Helpers
@@ -383,10 +384,20 @@ export const getPublicExperienceSections = async (req, res) => {
 ================================ */
 export const uploadBannerImage = async (req, res) => {
   try {
-    const url = normalizeUrl(req.body?.url || req.body?.imageUrl);
-    if (!url) {
-      return handleResponse(res, 400, "A valid image URL is required");
+    let url = null;
+
+    // Case 1: file upload via multipart/form-data
+    if (req.file) {
+      url = await uploadToCloudinary(req.file.buffer, "experience/banners");
+    } else {
+      // Case 2: URL string passed in body
+      url = normalizeUrl(req.body?.url || req.body?.imageUrl);
     }
+
+    if (!url) {
+      return handleResponse(res, 400, "A valid image file or URL is required");
+    }
+
     await invalidate("cache:experience:public:*");
     return handleResponse(res, 200, "Banner image uploaded", { url });
   } catch (error) {

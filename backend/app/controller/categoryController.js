@@ -57,7 +57,7 @@ export const getCategories = async (req, res) => {
       const categories = await getOrSet(
         cacheKey,
         async () => {
-          const selectFields = "name slug image iconId headerVisualKey type parentId headerColor";
+          const selectFields = "name slug image iconId headerVisualKey type parentId headerColor promoBannerTitle promoBannerSubtitle promoBannerDescription promoBannerImage";
           return Category.find({ type: "header" })
             .select(selectFields)
             .populate({
@@ -141,7 +141,7 @@ export const getCategories = async (req, res) => {
 export const createCategory = async (req, res) => {
   try {
     const categoryData = {};
-    const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "iconId", "headerVisualKey", "headerColor", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue"];
+    const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "iconId", "headerVisualKey", "headerColor", "promoBannerTitle", "promoBannerSubtitle", "promoBannerDescription", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue"];
     
     // Strict Whitelisting and Sanitization
     for (const key of allowedKeys) {
@@ -156,9 +156,12 @@ export const createCategory = async (req, res) => {
     }
     
     // Handle Images
-    if (req.file) {
+    const imageFile = req.files?.image?.[0];
+    const promoBannerImageFile = req.files?.promoBannerImage?.[0];
+
+    if (imageFile) {
       try {
-        const url = await uploadToCloudinary(req.file.buffer, "categories");
+        const url = await uploadToCloudinary(imageFile.buffer, "categories");
         categoryData.image = url;
       } catch (err) {
         console.error("Cloudinary upload failed for category:", err);
@@ -166,8 +169,18 @@ export const createCategory = async (req, res) => {
     } else if (typeof req.body.image === 'string' && req.body.image.startsWith('http')) {
       categoryData.image = req.body.image;
     } else {
-       // FORCED FIX: Ensure no phantom object remains
        delete categoryData.image; 
+    }
+
+    if (promoBannerImageFile) {
+      try {
+        const url = await uploadToCloudinary(promoBannerImageFile.buffer, "categories/promo");
+        categoryData.promoBannerImage = url;
+      } catch (err) {
+        console.error("Cloudinary upload failed for promo banner image:", err);
+      }
+    } else if (typeof req.body.promoBannerImage === 'string' && req.body.promoBannerImage.startsWith('http')) {
+      categoryData.promoBannerImage = req.body.promoBannerImage;
     }
 
     // Explicitly validate Parent ID hierarchy
@@ -219,7 +232,7 @@ export const updateCategory = async (req, res) => {
     }
 
     const categoryData = {};
-    const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "iconId", "headerVisualKey", "headerColor", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue"];
+    const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "iconId", "headerVisualKey", "headerColor", "promoBannerTitle", "promoBannerSubtitle", "promoBannerDescription", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue"];
     
     for (const key of allowedKeys) {
       if (Object.prototype.hasOwnProperty.call(req.body, key)) {
@@ -231,9 +244,9 @@ export const updateCategory = async (req, res) => {
       }
     }
 
-    if (req.file) {
+    if (req.files?.image?.[0]) {
       try {
-        const url = await uploadToCloudinary(req.file.buffer, "categories");
+        const url = await uploadToCloudinary(req.files.image[0].buffer, "categories");
         categoryData.image = url;
       } catch (err) {
         console.error("Cloudinary upload failed for category update:", err);
@@ -245,6 +258,19 @@ export const updateCategory = async (req, res) => {
         categoryData.image = "";
     } else {
         if (req.body.image && typeof req.body.image === 'object') delete categoryData.image;
+    }
+
+    if (req.files?.promoBannerImage?.[0]) {
+      try {
+        const url = await uploadToCloudinary(req.files.promoBannerImage[0].buffer, "categories/promo");
+        categoryData.promoBannerImage = url;
+      } catch (err) {
+        console.error("Cloudinary upload failed for promo banner image update:", err);
+      }
+    } else if (typeof req.body.promoBannerImage === 'string' && req.body.promoBannerImage.startsWith('http')) {
+      categoryData.promoBannerImage = req.body.promoBannerImage;
+    } else if (req.body.promoBannerImage === "") {
+      categoryData.promoBannerImage = "";
     }
 
     const existing = await Category.findById(id).select("type parentId").lean();

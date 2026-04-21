@@ -21,7 +21,7 @@ router.post(
     "/",
     verifyToken,
     allowRoles("admin"),
-    upload.single("image"),
+    upload.fields([{ name: "image", maxCount: 1 }, { name: "promoBannerImage", maxCount: 1 }]),
     createCategory
 );
 
@@ -29,7 +29,7 @@ router.put(
     "/:id",
     verifyToken,
     allowRoles("admin"),
-    upload.single("image"),
+    upload.fields([{ name: "image", maxCount: 1 }, { name: "promoBannerImage", maxCount: 1 }]),
     updateCategory
 );
 

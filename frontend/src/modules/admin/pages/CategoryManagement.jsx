@@ -43,7 +43,10 @@ const CategoryManagement = () => {
         status: 'active',
         type: 'header',
         parentId: '',
-        headerColor: '#ab7458'
+        headerColor: '#ab7458',
+        promoBannerTitle: '',
+        promoBannerSubtitle: '',
+        promoBannerDescription: '',
     });
 
     const [imageFile, setImageFile] = useState(null);
@@ -233,7 +236,10 @@ const CategoryManagement = () => {
                 status: item.status || 'active',
                 type: item.type,
                 parentId: item.parentId || '',
-                headerColor: item.headerColor || '#ab7458'
+                headerColor: item.headerColor || '#ab7458',
+                promoBannerTitle: item.promoBannerTitle || '',
+                promoBannerSubtitle: item.promoBannerSubtitle || '',
+                promoBannerDescription: item.promoBannerDescription || '',
             });
             setEditingItem(item);
             setPreviewUrl(item.image || null);
@@ -246,7 +252,10 @@ const CategoryManagement = () => {
                 status: 'active',
                 type: type,
                 parentId: parentId || '',
-                headerColor: '#ab7458'
+                headerColor: '#ab7458',
+                promoBannerTitle: '',
+                promoBannerSubtitle: '',
+                promoBannerDescription: '',
             });
             setEditingItem(null);
             setPreviewUrl(null);
@@ -759,6 +768,40 @@ const CategoryManagement = () => {
                                         </div>
                                         <p className="text-[8px] text-slate-400 font-bold mt-1">This color will appear as gradient when users select this category</p>
                                     </div>
+
+                                    {formData.type === 'header' && (
+                                        <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Promo Banner Text</p>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Banner Title</label>
+                                                <input
+                                                    value={formData.promoBannerTitle}
+                                                    onChange={(e) => setFormData({ ...formData, promoBannerTitle: e.target.value })}
+                                                    className="w-full px-4 py-2.5 bg-white border-none rounded-xl text-xs font-bold outline-none ring-1 ring-slate-200"
+                                                    placeholder="e.g. Sugar"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Subtitle (Price / Offer)</label>
+                                                <input
+                                                    value={formData.promoBannerSubtitle}
+                                                    onChange={(e) => setFormData({ ...formData, promoBannerSubtitle: e.target.value })}
+                                                    className="w-full px-4 py-2.5 bg-white border-none rounded-xl text-xs font-bold outline-none ring-1 ring-slate-200"
+                                                    placeholder="e.g. Rs. 1 per Kg*"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Description</label>
+                                                <input
+                                                    value={formData.promoBannerDescription}
+                                                    onChange={(e) => setFormData({ ...formData, promoBannerDescription: e.target.value })}
+                                                    className="w-full px-4 py-2.5 bg-white border-none rounded-xl text-xs font-bold outline-none ring-1 ring-slate-200"
+                                                    placeholder="e.g. On Order above 399"
+                                                />
+                                            </div>
+                                            <p className="text-[8px] text-slate-400 font-bold">Leave empty to use category name as default</p>
+                                        </div>
+                                    )}
 
                                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                         <div>

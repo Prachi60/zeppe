@@ -16,13 +16,20 @@ const PromoBanner = ({ activeCategory }) => {
     const activeCategoryKey = activeCategory?._id || activeCategory?.id || 'all';
     const bannerLocation = getCategoryLocation(activeCategoryKey || 'all');
 
-    const bannerTitle = isAllCategory ? 'Sugar' : categoryName;
-    const bannerPrimaryText = isAllCategory ? 'Rs. 1 per Kg*' : `${categoryName} Deals`;
-    const bannerSecondaryText = isAllCategory ? 'On Order above 399' : 'Top picks for you';
-    const bannerImage = isAllCategory
-        ? '/FortuneSugarPack.png'
-        : (activeCategory?.image || getCategoryImage(categoryName) || '/FortuneSugarPack.png');
+    // Use backend promo fields if available, else fallback to defaults
+    const bannerTitle = activeCategory?.promoBannerTitle || (isAllCategory ? 'Sugar' : categoryName);
+    const bannerPrimaryText = activeCategory?.promoBannerSubtitle || (isAllCategory ? 'Rs. 1 per Kg*' : `${categoryName} Deals`);
+    const bannerSecondaryText = activeCategory?.promoBannerDescription || (isAllCategory ? 'On Order above 399' : 'Top picks for you');
+    const bannerImage = activeCategory?.promoBannerImage ||
+        (isAllCategory
+            ? '/FortuneSugarPack.png'
+            : (activeCategory?.image || getCategoryImage(categoryName) || '/FortuneSugarPack.png'));
     const bannerImageAlt = isAllCategory ? 'Fortune sugar pack' : `${categoryName} banner`;
+
+    // Color: if admin set headerColor use it, else "All" defaults to black, others use their headerColor
+    const bannerBackground = (isAllCategory && !activeCategory?.headerColor)
+        ? '#000000'
+        : buildHeaderGradient(gradientColor);
 
     return (
         <motion.div
@@ -30,11 +37,7 @@ const PromoBanner = ({ activeCategory }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
             className="w-full"
-            style={{
-                background: isAllCategory
-                    ? '#000000'
-                    : buildHeaderGradient(gradientColor),
-            }}
+            style={{ background: bannerBackground }}
         >
             <Link
                 to={bannerLocation}
@@ -42,11 +45,7 @@ const PromoBanner = ({ activeCategory }) => {
             >
                 <div
                     className="grid w-full grid-cols-[1.15fr_auto_1.35fr] items-center px-3 py-2 sm:px-4 sm:py-2.5 md:min-h-52 md:px-10 md:py-4"
-                    style={{
-                        background: isAllCategory
-                            ? '#000000'
-                            : buildHeaderGradient(gradientColor),
-                    }}
+                    style={{ background: bannerBackground }}
                 >
                     <div className="pr-2 text-white">
                         <h2

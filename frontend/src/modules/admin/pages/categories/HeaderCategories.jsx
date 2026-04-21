@@ -20,9 +20,7 @@ import IconSelector from "@shared/components/IconSelector";
 import Pagination from "@shared/components/ui/Pagination";
 import { getIconSvg } from "@shared/constants/categoryIcons";
 import {
-  headerCategoryVisuals,
   HeaderCategoryVisual,
-  getHeaderCategoryVisualMeta,
 } from "@shared/constants/headerCategoryVisuals";
 
 // MUI icon library (shared with customer app & icon selector)
@@ -84,11 +82,17 @@ const HeaderCategories = () => {
     adminCommission: "",
     handlingFees: "",
     headerColor: "#FF1E1E",
+    promoBannerTitle: "",
+    promoBannerSubtitle: "",
+    promoBannerDescription: "",
   });
 
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
+  const [promoBannerImageFile, setPromoBannerImageFile] = useState(null);
+  const [promoBannerPreviewUrl, setPromoBannerPreviewUrl] = useState(null);
+  const promoBannerImageRef = useRef(null);
 
   // Map our icon ids to MUI icon components so admin UI
   // previews the same icons used in the customer app.
@@ -202,6 +206,12 @@ const HeaderCategories = () => {
         data.append("image", previewUrl);
       }
 
+      if (promoBannerImageFile) {
+        data.append("promoBannerImage", promoBannerImageFile);
+      } else if (promoBannerPreviewUrl && !promoBannerPreviewUrl.startsWith("blob:")) {
+        data.append("promoBannerImage", promoBannerPreviewUrl);
+      }
+
       if (editingItem) {
         await adminApi.updateCategory(editingItem._id || editingItem.id, data);
         toast.success("Header category updated");
@@ -248,9 +258,14 @@ const HeaderCategories = () => {
       adminCommission: "",
       handlingFees: "",
       headerColor: "#FF1E1E",
+      promoBannerTitle: "",
+      promoBannerSubtitle: "",
+      promoBannerDescription: "",
     });
     setImageFile(null);
     setPreviewUrl(null);
+    setPromoBannerImageFile(null);
+    setPromoBannerPreviewUrl(null);
     setIsAddModalOpen(true);
   };
 
@@ -268,8 +283,14 @@ const HeaderCategories = () => {
       adminCommission: item.adminCommission ?? "",
       handlingFees: item.handlingFees ?? "",
       headerColor: item.headerColor || "#FF1E1E",
+      promoBannerTitle: item.promoBannerTitle || "",
+      promoBannerSubtitle: item.promoBannerSubtitle || "",
+      promoBannerDescription: item.promoBannerDescription || "",
     });
     setPreviewUrl(item.image || null);
+    setImageFile(null);
+    setPromoBannerImageFile(null);
+    setPromoBannerPreviewUrl(item.promoBannerImage || null);
     setIsAddModalOpen(true);
   };
 
@@ -502,11 +523,6 @@ const HeaderCategories = () => {
                             alt="Preview"
                             className="w-full h-full rounded-full object-cover"
                           />
-                        ) : formData.headerVisualKey ? (
-                          <HeaderCategoryVisual
-                            visualKey={formData.headerVisualKey}
-                            size={42}
-                          />
                         ) : formData.iconId && iconComponents[formData.iconId] ? (
                           <div className="w-12 h-12 text-indigo-600 flex items-center justify-center">
                             {(() => {
@@ -520,6 +536,11 @@ const HeaderCategories = () => {
                             dangerouslySetInnerHTML={{
                               __html: getIconSvg(formData.iconId),
                             }}
+                          />
+                        ) : formData.headerVisualKey ? (
+                          <HeaderCategoryVisual
+                            visualKey={formData.headerVisualKey}
+                            size={42}
                           />
                         ) : (
                           <Sparkles className="w-10 h-10 text-indigo-300" />
@@ -617,51 +638,6 @@ const HeaderCategories = () => {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">
-                      Curated Visual
-                    </label>
-                    <span className="text-xs text-gray-400">
-                      Used when no custom image is uploaded
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-5 gap-2">
-                    {headerCategoryVisuals.map((visual) => {
-                      const isSelected = formData.headerVisualKey === visual.id;
-                      const meta = getHeaderCategoryVisualMeta(visual.id);
-                      return (
-                        <button
-                          key={visual.id}
-                          type="button"
-                          onClick={() =>
-                            setFormData({
-                              ...formData,
-                              headerVisualKey: visual.id,
-                            })
-                          }
-                          className={cn(
-                            "flex flex-col items-center gap-2 rounded-xl border px-2 py-3 transition-all",
-                            isSelected
-                              ? "border-indigo-500 bg-indigo-50 shadow-sm"
-                              : "border-gray-200 bg-white hover:border-indigo-300",
-                          )}>
-                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
-                            <HeaderCategoryVisual
-                              visualKey={visual.id}
-                              size={24}
-                              color={meta?.color}
-                            />
-                          </div>
-                          <span className="text-[10px] font-semibold text-gray-600">
-                            {visual.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">
                     Name
@@ -742,6 +718,87 @@ const HeaderCategories = () => {
                     />
                   </div>
                 </div>
+
+                {/* Promo Banner Text */}
+                <div className="space-y-3 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                  <div>
+                    <p className="text-sm font-semibold text-indigo-800">Promo Banner</p>
+                    <p className="text-xs text-indigo-500 mt-0.5">Shown in the banner section when this category is selected. Leave empty to use defaults.</p>
+                  </div>
+
+                  {/* Promo Banner Image Upload */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-600">Center Image</label>
+                    <div className="flex items-center gap-3">
+                      <div
+                        onClick={() => promoBannerImageRef.current?.click()}
+                        className="w-20 h-20 rounded-xl border-2 border-dashed border-indigo-300 bg-white flex items-center justify-center cursor-pointer hover:border-indigo-500 overflow-hidden transition-colors shrink-0">
+                        {promoBannerPreviewUrl ? (
+                          <img src={promoBannerPreviewUrl} alt="Promo" className="w-full h-full object-contain" />
+                        ) : (
+                          <div className="text-center p-2">
+                            <Upload className="w-5 h-5 text-indigo-300 mx-auto" />
+                            <span className="text-[10px] text-indigo-400 mt-1 block">Upload</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">Product image shown in the center of the banner (e.g. Fortune Sugar pack)</p>
+                        {promoBannerPreviewUrl && (
+                          <button
+                            type="button"
+                            onClick={() => { setPromoBannerImageFile(null); setPromoBannerPreviewUrl(null); }}
+                            className="mt-1 text-xs text-red-500 hover:text-red-700">
+                            Remove image
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <input
+                      type="file"
+                      ref={promoBannerImageRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setPromoBannerImageFile(file);
+                          setPromoBannerPreviewUrl(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-600">Banner Title</label>
+                    <input
+                      type="text"
+                      value={formData.promoBannerTitle}
+                      onChange={(e) => setFormData({ ...formData, promoBannerTitle: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
+                      placeholder="e.g. Sugar"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-600">Subtitle (Price / Offer)</label>
+                    <input
+                      type="text"
+                      value={formData.promoBannerSubtitle}
+                      onChange={(e) => setFormData({ ...formData, promoBannerSubtitle: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
+                      placeholder="e.g. Rs. 1 per Kg*"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-600">Description</label>
+                    <input
+                      type="text"
+                      value={formData.promoBannerDescription}
+                      onChange={(e) => setFormData({ ...formData, promoBannerDescription: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
+                      placeholder="e.g. On Order above 399"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="p-6 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 shrink-0">
@@ -771,7 +828,7 @@ const HeaderCategories = () => {
           <IconSelector
             selectedIcon={formData.iconId}
             onSelect={(iconId) => {
-              setFormData({ ...formData, iconId });
+              setFormData({ ...formData, iconId, headerVisualKey: "" });
               setIsIconSelectorOpen(false);
             }}
             onClose={() => setIsIconSelectorOpen(false)}

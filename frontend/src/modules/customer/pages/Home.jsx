@@ -1245,9 +1245,10 @@ const Home = () => {
           .filter((cat) => cat.type === "header")
           .map((cat) => {
             const catName = cat.name;
-            const visualMeta =
-              getHeaderCategoryVisualMeta(cat.iconId) ||
-              getHeaderCategoryVisualMeta(catName);
+            // Only use visualMeta for PNG fallback if no iconId is explicitly set
+            const visualMeta = !cat.iconId
+              ? (getHeaderCategoryVisualMeta(catName))
+              : null;
 
             // Find matching category tile for fallback image
             const matchingCategoryTile = dbCats.find(
@@ -1256,7 +1257,7 @@ const Home = () => {
                 (c.name === catName || c.iconId === cat.iconId),
             );
 
-            // Use the new 3D icon for the image fallback
+            // Use the PNG visual image only when no iconId is set
             const visualImage = visualMeta ? VISUAL_IMAGES[visualMeta.id] : null;
 
             return {
@@ -1284,10 +1285,14 @@ const Home = () => {
         const mergedAllCategory = allHeaderFromAdmin
           ? {
             ...ALL_CATEGORY,
-            headerColor: allHeaderFromAdmin.headerColor || ALL_CATEGORY.headerColor, // Priority to Backend
+            headerColor: allHeaderFromAdmin.headerColor || ALL_CATEGORY.headerColor,
             icon: allHeaderFromAdmin.icon || ALL_CATEGORY.icon,
             image: allHeaderFromAdmin.image || ALL_CATEGORY.image,
             headerVisualKey: allHeaderFromAdmin.headerVisualKey || ALL_CATEGORY.headerVisualKey || "",
+            promoBannerTitle: allHeaderFromAdmin.promoBannerTitle || "",
+            promoBannerSubtitle: allHeaderFromAdmin.promoBannerSubtitle || "",
+            promoBannerDescription: allHeaderFromAdmin.promoBannerDescription || "",
+            promoBannerImage: allHeaderFromAdmin.promoBannerImage || "",
           }
           : ALL_CATEGORY;
 
@@ -1435,55 +1440,17 @@ const Home = () => {
     fetchHeaderSections();
   }, [activeCategory]);
 
-  // Fetch featured offer for active category
+  // Derive featured offer directly from activeCategory (uses backend promo fields if set)
   useEffect(() => {
-    const fetchFeaturedOffer = async () => {
-      if (!activeCategory) {
-        setFeaturedOffer({
-          title: "Sugar",
-          image: "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
-          subtitle: "Rs. 1 per Kg*",
-          description: "On Order above 399",
-        });
-        return;
-      }
-
-      try {
-        // Fetch top product from active category
-        const res = await customerApi.getProducts({
-          limit: 1,
-          headerId: activeCategory._id !== "all" ? activeCategory._id : undefined,
-        });
-
-        if (res.data?.success && res.data?.result?.items?.length > 0) {
-          const product = res.data.result.items[0];
-          setFeaturedOffer({
-            title: product.name || activeCategory.name,
-            image: product.image || product.thumbImage || activeCategory.image || "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
-            subtitle: product.price ? `Rs. ${Math.floor(product.price)} per unit` : "Special Offer",
-            description: product.description?.substring(0, 50) || "Limited time offer",
-          });
-        } else {
-          // Fallback to category-based offer
-          setFeaturedOffer({
-            title: activeCategory.name,
-            image: activeCategory.image || "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
-            subtitle: "Exclusive Deals",
-            description: "Shop now for best prices",
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching featured offer:", error);
-        setFeaturedOffer({
-          title: activeCategory.name || "All Offers",
-          image: activeCategory.image || "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
-          subtitle: "Exclusive Deals",
-          description: "Shop now for best prices",
-        });
-      }
-    };
-
-    fetchFeaturedOffer();
+    const isAll = !activeCategory || activeCategory._id === 'all';
+    setFeaturedOffer({
+      title: activeCategory?.promoBannerTitle || (isAll ? 'Sugar' : activeCategory?.name || 'All Offers'),
+      image: isAll
+        ? '/FortuneSugarPack.png'
+        : (activeCategory?.image || '/FortuneSugarPack.png'),
+      subtitle: activeCategory?.promoBannerSubtitle || (isAll ? 'Rs. 1 per Kg*' : 'Exclusive Deals'),
+      description: activeCategory?.promoBannerDescription || (isAll ? 'On Order above 399' : 'Shop now for best prices'),
+    });
   }, [activeCategory]);
 
   // Fetch hero config (separate from experience sections): header first, then fallback to home
@@ -1958,6 +1925,16 @@ const Home = () => {
         featuredOffer={featuredOffer}
       />
       <PromoBanner activeCategory={activeCategory} />
+
+      {/* Hero Banner Carousel - backend driven via HeroConfig */}
+      {heroConfig?.banners?.items?.length > 0 && (
+        <div className="w-full mt-2">
+          <ExperienceBannerCarousel
+            items={heroConfig.banners.items.filter(b => b.status !== 'inactive')}
+            fullWidth={true}
+          />
+        </div>
+      )}
 
       {/* Main Page Content - Conditionally Hidden if No Service */}
       {products.length === 0 && !isLoading ? (
