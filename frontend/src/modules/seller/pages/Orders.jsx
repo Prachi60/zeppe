@@ -73,10 +73,44 @@ const Orders = () => {
     const tabs = ['All', 'Pending', 'Confirmed', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled'];
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const safeOrders = useMemo(
+const safeOrders = useMemo(
         () => (Array.isArray(orders) ? orders : []),
         [orders]
     );
+
+const filteredOrders = useMemo(() => {
+        const normalizedSearch = searchTerm.trim().toLowerCase();
+        const start = startDate ? new Date(`${startDate}T00:00:00`) : null;
+        const end = endDate ? new Date(`${endDate}T23:59:59`) : null;
+        const statusFilter =
+            activeTab === "All"
+                ? ""
+                : activeTab === "Out for Delivery"
+                    ? "out_for_delivery"
+                    : activeTab.toLowerCase();
+
+        return safeOrders.filter((o) => {
+            const legacyStatus = getLegacyStatusFromOrder(o);
+            if (statusFilter && legacyStatus !== statusFilter) return false;
+
+            if (normalizedSearch) {
+                const orderId = String(o?.orderId ?? o?.id ?? "").toLowerCase();
+                const customerName = String(o?.customer?.name ?? "").toLowerCase();
+                if (!orderId.includes(normalizedSearch) && !customerName.includes(normalizedSearch)) {
+                    return false;
+                }
+            }
+
+            if (start || end) {
+                const createdAt = o?.createdAt ? new Date(o.createdAt) : null;
+                if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
+                if (start && createdAt < start) return false;
+                if (end && createdAt > end) return false;
+            }
+
+            return true;
+        });
+    }, [safeOrders, activeTab, searchTerm, startDate, endDate]);
 
 
 
@@ -354,7 +388,7 @@ const Orders = () => {
           <DynamicDataTable
             apiService={sellerApi}
             refreshSelected={refreshKey}
-            endpoint="/orders/seller-orders"
+            endpoint="orders/seller-orders"
             searchPlaceholder="Search by Order ID or Customer Name..."
             defaultParams={{
               startDate,

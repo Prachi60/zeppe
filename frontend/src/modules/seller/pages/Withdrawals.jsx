@@ -192,7 +192,7 @@ const Withdrawals = () => {
                     </div>
                     <DynamicDataTable
                         apiService={sellerApi}
-                        endpoint="/seller/ledger"
+                        endpoint="seller/ledger"
                         refreshSelected={refreshKey}
                         defaultParams={{
                             type: 'Withdrawal',

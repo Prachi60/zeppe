@@ -29,9 +29,13 @@ const Returns = () => {
     const [rejectReason, setRejectReason] = useState("");
     const [refreshKey, setRefreshKey] = useState(0);
     const [searchTerm, setSearchTerm] = useState("");
+    const [activeOtps, setActiveOtps] = useState({});
+    const [submittingReject, setSubmittingReject] = useState(false);
+    const [assigningPickup, setAssigningPickup] = useState(false);
     const canManageReturns = true;
 
     const refreshTable = () => setRefreshKey(prev => prev + 1);
+    const fetchReturns = () => refreshTable();
 
     const tabs = [
         "All",
@@ -283,7 +287,7 @@ const Returns = () => {
 
                             <DynamicDataTable
                                 apiService={sellerApi}
-                                endpoint="/orders/seller-returns"
+                                endpoint="orders/seller-returns"
                                 refreshSelected={refreshKey}
                                 defaultParams={{
                                     status: activeTab === 'Requested' ? 'return_requested' : (activeTab === 'Approved' ? 'return_approved' : (activeTab === 'Completed' ? 'returned' : '')),

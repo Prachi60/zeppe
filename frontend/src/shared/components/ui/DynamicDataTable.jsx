@@ -41,6 +41,9 @@ const DynamicDataTable = ({
     const fetchData = useCallback(async (requestedPage = 1) => {
         setIsLoading(true);
         try {
+            // Normalize endpoint to remove leading slash for axios baseURL compatibility
+            const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+
             const params = {
                 page: requestedPage,
                 limit: pageSize,
@@ -50,7 +53,7 @@ const DynamicDataTable = ({
                 ...defaultParams
             };
 
-            const response = await apiService.fetchData(endpoint, params);
+            const response = await apiService.fetchData(normalizedEndpoint, params);
             
             if (response.data.success) {
                 const payload = response.data.result || {};

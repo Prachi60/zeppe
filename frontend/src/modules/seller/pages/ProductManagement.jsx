@@ -54,6 +54,7 @@ const ProductManagement = () => {
   const categories = dbCategories;
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterDropdownRef = useRef(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -482,7 +483,7 @@ const ProductManagement = () => {
       <DynamicDataTable
         apiService={sellerApi}
         refreshSelected={refreshKey}
-        endpoint="/products/seller/me"
+        endpoint="products/seller/me"
         defaultParams={{
           search: searchTerm,
           category: filterCategory !== "all" ? filterCategory : undefined,
