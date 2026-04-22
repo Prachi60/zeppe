@@ -46,6 +46,7 @@ import {
   allowRoles,
   requireApprovedSeller,
 } from "../middleware/authMiddleware.js";
+import sellerOrderController from "../controller/seller/order.controller.js";
 
 const router = express.Router();
 
@@ -107,7 +108,7 @@ router.get(
   verifyToken,
   allowRoles("admin", "seller"),
   requireApprovedSeller,
-  getSellerOrders,
+  sellerOrderController.getAll,
 );
 router.put(
   "/status/:orderId",

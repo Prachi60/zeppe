@@ -398,3 +398,54 @@ export const getSellerEarnings = async (req, res) => {
         return handleResponse(res, 500, error.message);
     }
 };
+
+/* ===============================
+   GET PAGINATED LEDGER
+================================ */
+export const getLedger = async (req, res) => {
+    try {
+        const sellerId = req.user.id;
+        const { page = 1, limit = 20, type, search } = req.query;
+
+        const query = { user: sellerId, userModel: 'Seller' };
+        if (type && type !== 'All') query.type = type;
+        if (search) {
+            query.$or = [
+                { reference: { $regex: search, $options: 'i' } },
+                { status: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const transactions = await Transaction.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .populate("order", "orderId");
+
+        const total = await Transaction.countDocuments(query);
+
+        const items = transactions.map(t => ({
+            id: (t.reference || t._id).toString(),
+            _id: t._id,
+            type: t.type,
+            amount: t.amount,
+            status: t.status,
+            createdAt: t.createdAt,
+            date: t.createdAt.toISOString().split('T')[0],
+            time: t.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            customer: t.type === 'Withdrawal' ? 'Bank Transfer' : 'Customer',
+            ref: t.order ? `#${t.order.orderId}` : t.reference || t._id
+        }));
+
+        return handleResponse(res, 200, "Ledger fetched successfully", {
+            items,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            totalPages: Math.ceil(total / limit)
+        });
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};

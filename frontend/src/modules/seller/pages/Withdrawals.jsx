@@ -33,6 +33,17 @@ const Withdrawals = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    const [profile, setProfile] = useState(null);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const res = await sellerApi.getProfile();
+                if (res.data.success) setProfile(res.data.result);
+            } catch (err) {}
+        };
+        fetchProfile();
+    }, []);
 
     const ledger = Array.isArray(data?.ledger) ? data.ledger : [];
     const withdrawalHistory = ledger.filter((t) => (t.type || '').toString() === 'Withdrawal');
@@ -312,13 +323,24 @@ const Withdrawals = () => {
                             <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Transfer Destination</p>
                             <div className="flex items-center gap-4">
                                 <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                                    <Building2 className="h-5 w-5 text-indigo-400" />
+                                    <Building2 className={cn("h-5 w-5", profile?.bankDetails?.bankName ? "text-indigo-400" : "text-rose-400")} />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-xs font-black text-slate-900 uppercase">HDFC Bank Limited</p>
-                                    <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Acct Ending in **** 4589</p>
+                                    {profile?.bankDetails?.bankName ? (
+                                        <>
+                                            <p className="text-xs font-black text-slate-900 uppercase">{profile.bankDetails.bankName}</p>
+                                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">
+                                                Acct Ending in **** {profile.bankDetails.accountNumber.slice(-4)}
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="text-xs font-black text-rose-600 uppercase italic">No Bank Linked</p>
+                                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Please update in settings</p>
+                                        </>
+                                    )}
                                 </div>
-                                <ArrowRight className="h-4 w-4 text-slate-300" />
+                                {profile?.bankDetails?.bankName && <ArrowRight className="h-4 w-4 text-slate-300" />}
                             </div>
                         </div>
                     </div>

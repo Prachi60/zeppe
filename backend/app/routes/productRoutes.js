@@ -14,6 +14,7 @@ import {
     optionalVerifyToken,
     requireApprovedSeller,
 } from "../middleware/authMiddleware.js";
+import sellerProductController from "../controller/seller/product.controller.js";
 import multer from "multer";
 
 const storage = multer.memoryStorage();
@@ -25,7 +26,7 @@ const router = express.Router();
 router.get("/", optionalVerifyToken, getProducts);
 
 // Seller protected routes
-router.get("/seller/me", verifyToken, allowRoles("seller"), requireApprovedSeller, getSellerProducts);
+router.get("/seller/me", verifyToken, allowRoles("seller"), requireApprovedSeller, sellerProductController.getAll);
 router.get("/stock-history", verifyToken, allowRoles("seller"), requireApprovedSeller, getStockHistory);
 router.post("/adjust-stock", verifyToken, allowRoles("seller"), requireApprovedSeller, adjustStock);
 router.get("/:id", optionalVerifyToken, getProductById);
@@ -36,7 +37,7 @@ router.post(
     allowRoles("seller"),
     requireApprovedSeller,
     upload.any(),
-    createProduct
+    sellerProductController.create
 );
 
 router.put(
@@ -45,7 +46,7 @@ router.put(
     allowRoles("seller", "admin"),
     requireApprovedSeller,
     upload.any(),
-    updateProduct
+    sellerProductController.update
 );
 
 router.delete(
@@ -53,7 +54,7 @@ router.delete(
     verifyToken,
     allowRoles("seller", "admin"),
     requireApprovedSeller,
-    deleteProduct
+    sellerProductController.delete
 );
 
 export default router;

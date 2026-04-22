@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import Card from "@shared/components/ui/Card";
 import Badge from "@shared/components/ui/Badge";
 import Input from "@shared/components/ui/Input";
@@ -7,16 +7,14 @@ import Modal from "@shared/components/ui/Modal";
 import {
   HiOutlineCreditCard,
   HiOutlineArrowDownTray,
-  HiOutlineFunnel,
   HiOutlineMagnifyingGlass,
   HiOutlineDocumentText,
   HiOutlineBanknotes,
   HiOutlineClock,
   HiOutlineCheckCircle,
-  HiOutlineXCircle,
   HiOutlineArrowUpRight,
   HiOutlineArrowDownLeft,
-  HiOutlineCalendarDays,
+  HiOutlineXMark,
 } from "react-icons/hi2";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -25,7 +23,8 @@ import { MagicCard } from "@/components/ui/magic-card";
 import { toast } from "sonner";
 import { exportToCSV } from "@/lib/exportUtils";
 import { useSellerEarnings } from "../context/SellerEarningsContext";
-import Pagination from "@shared/components/ui/Pagination";
+import { sellerApi } from "../services/sellerApi";
+import DynamicDataTable from "@shared/components/ui/DynamicDataTable";
 
 const Transactions = () => {
   const { earningsData: data, earningsLoading: loading } = useSellerEarnings();
@@ -34,20 +33,18 @@ const Transactions = () => {
   const [selectedTxn, setSelectedTxn] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
 
   const stats = [
     {
       label: "Settled Balance",
       value: `₹${(data?.balances?.settledBalance || 0).toLocaleString()}`,
       icon: HiOutlineBanknotes,
-      color: "text-brand-600",
-      bg: "bg-brand-50",
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
     },
     {
-      label: "Pending Payouts",
-      value: `₹${(data?.balances?.pendingPayouts || 0).toLocaleString()}`,
+      label: "On Hold Balance",
+      value: `₹${(data?.balances?.onHoldBalance || 0).toLocaleString()}`,
       icon: HiOutlineClock,
       color: "text-amber-600",
       bg: "bg-amber-50",
@@ -56,71 +53,24 @@ const Transactions = () => {
       label: "Total Revenue",
       value: `₹${(data?.balances?.totalRevenue || 0).toLocaleString()}`,
       icon: HiOutlineCreditCard,
-      color: "text-indigo-600",
-      bg: "bg-indigo-50",
+      color: "text-primary",
+      bg: "bg-primary/5",
     },
   ];
-
-  const ledger = Array.isArray(data?.ledger) ? data.ledger : [];
-  const filteredTransactions = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    const result = ledger.filter((txn) => {
-      if (!term && activeTab === "All") return true;
-      const id = (txn.id ?? txn.ref ?? "").toString().toLowerCase();
-      const customer = (txn.customer ?? "").toString().toLowerCase();
-      const ref = (txn.ref ?? "").toString().toLowerCase();
-      const status = (txn.status ?? "").toString().toLowerCase();
-      const type = (txn.type ?? "").toString().toLowerCase();
-      const amount = Math.abs(Number(txn.amount ?? 0)).toString();
-      const matchesSearch =
-        !term ||
-        id.includes(term) ||
-        customer.includes(term) ||
-        ref.includes(term) ||
-        status.includes(term) ||
-        type.includes(term) ||
-        amount.includes(term);
-      const txnType = (txn.type ?? "").toString();
-      const matchesType = activeTab === "All" || txnType === activeTab;
-      return matchesSearch && matchesType;
-    });
-    const totalPages = Math.max(1, Math.ceil(result.length / pageSize));
-    if (page > totalPages) {
-      setPage(1);
-    }
-    return result;
-  }, [searchTerm, activeTab, ledger, page, pageSize]);
-
-  const paginatedTransactions = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    const end = start + pageSize;
-    return filteredTransactions.slice(start, end);
-  }, [filteredTransactions, page, pageSize]);
 
   const handleDownloadReceipt = (txn) => {
     try {
       const record = {
-        id: txn.id ?? txn.ref ?? "",
-        type: txn.type ?? "",
-        amount: `₹${Math.abs(Number(txn.amount ?? 0)).toLocaleString()}`,
-        status: txn.status ?? "",
-        date:
-          txn.date ??
-          (txn.createdAt
-            ? new Date(txn.createdAt).toLocaleDateString()
-            : ""),
-        time:
-          txn.time ??
-          (txn.createdAt
-            ? new Date(txn.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : ""),
-        customer: txn.customer ?? "",
-        ref: txn.ref ?? "",
+        id: txn.id || "",
+        type: txn.type || "",
+        amount: `₹${Math.abs(Number(txn.amount || 0)).toLocaleString()}`,
+        status: txn.status || "",
+        date: txn.date || (txn.createdAt ? new Date(txn.createdAt).toLocaleDateString() : ""),
+        time: txn.time || (txn.createdAt ? new Date(txn.createdAt).toLocaleTimeString() : ""),
+        customer: txn.customer || "",
+        ref: txn.ref || "",
       };
-      exportToCSV([record], `Transaction_${record.id || "receipt"}`, {
+      exportToCSV([record], `Transaction_${record.id}`, {
         id: "Transaction ID",
         type: "Type",
         amount: "Amount",
@@ -132,12 +82,48 @@ const Transactions = () => {
       });
       toast.success("Receipt downloaded");
     } catch (error) {
-      console.error("Receipt download error:", error);
       toast.error("Failed to download receipt");
     }
   };
 
-  if (loading) {
+  const handleExportAll = async () => {
+    setIsDownloading(true);
+    try {
+        const res = await sellerApi.getLedger({ limit: 1000, type: activeTab, search: searchTerm });
+        if (res.data.success) {
+            const items = res.data.result.items || [];
+            if (items.length === 0) {
+                toast.info("No transactions to export");
+                return;
+            }
+            const exportData = items.map(txn => ({
+                id: txn.id,
+                type: txn.type,
+                amount: (txn.amount || 0).toLocaleString(),
+                status: txn.status,
+                date: txn.date,
+                customer: txn.customer,
+                ref: txn.ref
+            }));
+            exportToCSV(exportData, "Seller_Transactions", {
+                id: "ID",
+                type: "Type",
+                amount: "Amount",
+                status: "Status",
+                date: "Date",
+                customer: "Recipient",
+                ref: "Reference"
+            });
+            toast.success("Statement downloaded");
+        }
+    } catch (err) {
+        toast.error("Export failed");
+    } finally {
+        setIsDownloading(false);
+    }
+  };
+
+  if (loading && !data) {
     return <div className="flex items-center justify-center h-screen font-black text-slate-600">LOADING TRANSACTIONS...</div>;
   }
 
@@ -151,52 +137,21 @@ const Transactions = () => {
               Transaction Ledger
               <Badge
                 variant="primary"
-                className="text-[10px] sm:text-xs px-1.5 py-0 font-bold tracking-wider uppercase bg-blue-100 text-blue-700">
-                Audit Trail
+                className="text-[10px] px-2 py-0.5 font-black tracking-widest uppercase bg-primary/10 text-primary rounded-lg">
+                Verified Entries
               </Badge>
             </h1>
-            <p className="text-slate-600 text-sm mt-0.5 font-medium">
-              Keep track of all financial movements, payouts, and settlements.
+            <p className="text-slate-500 text-sm mt-1 font-bold uppercase tracking-tight opacity-70">
+              Audit trail for settlements and payouts.
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Button
-              onClick={() => {
-                setIsDownloading(true);
-                try {
-                  const exportData = filteredTransactions.map((txn) => ({
-                    id: txn.id ?? txn.ref ?? "",
-                    type: txn.type ?? "",
-                    amount: `₹${Number(txn.amount ?? 0).toLocaleString()}`,
-                    status: txn.status ?? "",
-                    date: txn.date ?? (txn.createdAt ? new Date(txn.createdAt).toLocaleDateString() : ""),
-                    time: txn.time ?? (txn.createdAt ? new Date(txn.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""),
-                    customer: txn.customer ?? "",
-                    ref: txn.ref ?? "",
-                  }));
-
-                  exportToCSV(exportData, "Seller_Transactions", {
-                    id: "Transaction ID",
-                    type: "Type",
-                    amount: "Amount",
-                    status: "Status",
-                    date: "Date",
-                    time: "Time",
-                    customer: "Customer",
-                    ref: "Reference"
-                  });
-                  toast.success("Statement downloaded successfully!");
-                } catch (error) {
-                  console.error("Download Error:", error);
-                  toast.error("Failed to download statement");
-                } finally {
-                  setIsDownloading(false);
-                }
-              }}
-              className="rounded-lg px-4 py-2 shadow-lg shadow-primary/20 disabled:opacity-50"
-              disabled={isDownloading || filteredTransactions.length === 0}>
+              onClick={handleExportAll}
+              disabled={isDownloading}
+              className="rounded-2xl px-6 py-3 shadow-xl shadow-primary/10 disabled:opacity-50 font-black text-[10px] uppercase tracking-widest">
               <HiOutlineDocumentText className="h-4 w-4 mr-2" />
-              {isDownloading ? "DOWNLOADING..." : "DOWNLOAD STATEMENTS"}
+              {isDownloading ? "Processing..." : "Download CSV"}
             </Button>
           </div>
         </div>
@@ -205,24 +160,24 @@ const Transactions = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {stats.map((stat, i) => (
-          <BlurFade key={i} delay={0.1 + i * 0.05}>
+          <BlurFade key={i} delay={0.15 + i * 0.05}>
             <MagicCard
-              className="border-none shadow-md overflow-hidden bg-white p-0"
+              className="border-none shadow-sm ring-1 ring-slate-100 overflow-hidden bg-white p-0 hover:ring-primary/20 transition-all duration-500"
               gradientColor="#f8fafc">
               <div className="p-6 relative z-10 flex items-center gap-4">
                 <div
                   className={cn(
-                    "h-14 w-14 rounded-lg flex items-center justify-center shadow-lg shadow-black/5",
+                    "h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg shadow-black/5 transition-transform duration-500 hover:scale-110",
                     stat.bg,
                     stat.color,
                   )}>
                   <stat.icon className="h-7 w-7" />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-slate-600 uppercase tracking-widest">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
                     {stat.label}
                   </p>
-                  <h4 className="text-3xl font-black text-slate-900 tracking-tight">
+                  <h4 className="text-2xl font-black text-slate-900 tracking-tight">
                     {stat.value}
                   </h4>
                 </div>
@@ -233,271 +188,208 @@ const Transactions = () => {
       </div>
 
       <BlurFade delay={0.4}>
-        <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden rounded-lg p-0 bg-white">
+        <Card className="border-none shadow-2xl shadow-slate-200/50 overflow-hidden rounded-[2rem] p-0 bg-white">
           {/* Toolbar */}
-          <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between bg-white">
-            <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shrink-0">
+          <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row gap-6 items-center justify-between bg-white/50 backdrop-blur-sm">
+            <div className="flex bg-slate-100 p-1.5 rounded-[1.25rem] border border-slate-200 shrink-0">
               {["All", "Order Payment", "Withdrawal", "Refund"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={cn(
-                    "px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
+                    "px-5 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all",
                     activeTab === tab
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-600 hover:text-slate-700",
+                      ? "bg-white text-slate-900 shadow-md scale-105"
+                      : "text-slate-500 hover:text-slate-700",
                   )}>
-                  {tab === "Order Payment" ? "Payments" : tab}
+                  {tab === "Order Payment" ? "Earnings" : tab}
                 </button>
               ))}
             </div>
             <div className="relative w-full md:w-80">
-              <HiOutlineMagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600" />
+              <HiOutlineMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Search by customer..."
-                className="pl-10 pr-4 py-2.5 rounded-lg border-none ring-1 ring-slate-100 bg-slate-50/50 focus:ring-2 focus:ring-primary/20 transition-all text-xs font-semibold"
+                placeholder="Reference or Status..."
+                className="pl-12 pr-4 py-3.5 rounded-2xl border-none ring-1 ring-slate-100 bg-slate-50/50 focus:ring-2 focus:ring-primary/20 transition-all text-xs font-black shadow-inner"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left min-w-[720px]">
-              <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">
-                    Transaction Details
-                  </th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">
-                    Reference
-                  </th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">
-                    Amount
-                  </th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                <AnimatePresence>
-                  {filteredTransactions.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-slate-600 text-sm font-medium">
-                        {ledger.length === 0 ? "No transactions yet." : "No matches for your search or filter."}
-                      </td>
-                    </tr>
-                  ) : paginatedTransactions.map((txn, idx) => (
-                    <motion.tr
-                      key={txn.id || txn.ref || txn.reference || `txn-${idx}`}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      onClick={() => {
-                        setSelectedTxn(txn);
-                        setIsDetailModalOpen(true);
-                      }}
-                      className="group hover:bg-slate-50/50 transition-all cursor-pointer">
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-4">
-                          <div
-                            className={cn(
-                              "h-10 w-10 rounded-lg flex items-center justify-center font-black transition-all group-hover:scale-110",
-                              txn.amount > 0
-                                ? "bg-brand-50 text-brand-600"
-                                : "bg-rose-50 text-rose-600",
-                            )}>
-                            {txn.amount > 0 ? (
-                              <HiOutlineArrowDownLeft className="h-5 w-5" />
-                            ) : (
-                              <HiOutlineArrowUpRight className="h-5 w-5" />
-                            )}
-                          </div>
-                          <div>
+          <DynamicDataTable
+            apiService={sellerApi}
+            endpoint="/ledger"
+            searchKey="search"
+            defaultParams={{ type: activeTab, search: searchTerm }}
+            columns={[
+              {
+                header: "Reference",
+                cell: (t) => (
+                    <div className="flex items-center gap-4 group">
+                        <div className={cn(
+                            "h-10 w-10 rounded-xl flex items-center justify-center font-black transition-all group-hover:rotate-12",
+                            (t.amount || 0) > 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                        )}>
+                            {(t.amount || 0) > 0 ? <HiOutlineArrowDownLeft className="h-5 w-5" /> : <HiOutlineArrowUpRight className="h-5 w-5" />}
+                        </div>
+                        <div>
                             <p className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">
-                              {txn.id ?? txn.ref ?? "—"}
+                                {t.id}
                             </p>
-                            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                              {txn.type ?? "—"}
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                {t.type}
                             </p>
-                          </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <p className="text-xs font-bold text-slate-900">
-                          {txn.customer ?? "—"}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <Badge className="text-[10px] sm:text-xs px-1 py-0 bg-slate-100 text-slate-600 font-bold border-none">
-                            {txn.ref ?? "—"}
-                          </Badge>
-                          <span className="text-[10px] sm:text-xs text-slate-600 font-bold uppercase tracking-tighter">
-                            {txn.date ?? (txn.createdAt ? new Date(txn.createdAt).toLocaleDateString() : "—")} • {txn.time ?? (txn.createdAt ? new Date(txn.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—")}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <p
-                          className={cn(
+                    </div>
+                )
+              },
+              {
+                header: "Entity / Source",
+                cell: (t) => (
+                    <div>
+                        <p className="text-xs font-black text-slate-900">{t.customer}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{t.ref}</p>
+                    </div>
+                )
+              },
+              {
+                header: "Financials",
+                cell: (t) => (
+                    <div>
+                        <p className={cn(
                             "text-sm font-black tracking-tight",
-                            Number(txn.amount ?? 0) > 0
-                              ? "text-brand-600"
-                              : "text-rose-600",
-                          )}>
-                          {Number(txn.amount ?? 0) > 0 ? "+" : ""}₹
-                          {Math.abs(Number(txn.amount ?? 0)).toLocaleString()}
+                            (t.amount || 0) > 0 ? "text-emerald-600" : "text-rose-600"
+                        )}>
+                            {(t.amount || 0) > 0 ? "+" : ""}₹{Math.abs(t.amount || 0).toLocaleString()}
                         </p>
-                        <p className="text-[10px] sm:text-xs font-bold text-slate-600 mt-0.5">
-                          Settlement: {(txn.status ?? "") === "Settled" ? "Complete" : "T+2"}
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                            {(t.status === "Settled") ? "Settled Funds" : "Pending Sync"}
                         </p>
-                      </td>
-                      <td className="px-6 py-5">
-                        <Badge
-                          variant={
-                            txn.status === "Settled"
-                              ? "success"
-                              : txn.status === "Pending" || txn.status === "Processing"
-                                ? "warning"
-                                : "default"
-                          }
-                          className="text-[10px] sm:text-xs font-black uppercase tracking-widest px-2-5 py-0.5 rounded-lg">
-                          {txn.status === "Settled" ? (
-                            <HiOutlineCheckCircle className="mr-1 h-3 w-3" />
-                          ) : (
-                            <HiOutlineClock className="mr-1 h-3 w-3" />
-                          )}
-                          {txn.status}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-5 text-right">
+                    </div>
+                )
+              },
+              {
+                header: "Audit",
+                cell: (t) => (
+                    <Badge variant={t.status === 'Settled' ? 'success' : (['Pending', 'Processing'].includes(t.status) ? 'warning' : 'destructive')}
+                           className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg">
+                        {t.status === 'Settled' ? <HiOutlineCheckCircle className="mr-1 h-3 w-3" /> : <HiOutlineClock className="mr-1 h-3 w-3" />}
+                        {t.status}
+                    </Badge>
+                )
+              },
+              {
+                header: "Details",
+                align: "right",
+                cell: (t) => (
+                    <div className="flex justify-end gap-2">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownloadReceipt(txn);
-                          }}
-                          className="h-9 w-9 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all ml-auto">
-                          <HiOutlineArrowDownTray className="h-5 w-5" />
+                            onClick={() => {
+                                setSelectedTxn(t);
+                                setIsDetailModalOpen(true);
+                            }}
+                            className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 transition-all">
+                            <HiOutlineDocumentText className="h-5 w-5" />
                         </button>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-              </tbody>
-            </table>
-          </div>
-
-          {filteredTransactions.length > 0 && (
-            <div className="p-4 border-t border-slate-50 bg-slate-50/40">
-              <Pagination
-                page={page}
-                totalPages={Math.max(1, Math.ceil(filteredTransactions.length / pageSize))}
-                total={filteredTransactions.length}
-                pageSize={pageSize}
-                onPageChange={(newPage) => setPage(newPage)}
-                onPageSizeChange={(newSize) => {
-                  setPageSize(newSize);
-                  setPage(1);
-                }}
-                loading={loading}
-              />
-            </div>
-          )}
+                        <button
+                            onClick={() => handleDownloadReceipt(t)}
+                            className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
+                            <HiOutlineArrowDownTray className="h-5 w-5" />
+                        </button>
+                    </div>
+                )
+              }
+            ]}
+          />
         </Card>
       </BlurFade>
 
       {/* Transaction Detail Modal */}
-      <Modal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        title="Transaction Receipt">
-        {selectedTxn && (
-          <div className="space-y-6">
-            <div className="text-center p-6 bg-slate-50 rounded-lg border border-slate-100">
-              <p className="text-xs font-black text-slate-600 uppercase tracking-widest mb-1">
-                Total Amount
-              </p>
-              <h2
-                className={cn(
-                  "text-4xl font-black tracking-tight",
-                  Number(selectedTxn.amount ?? 0) > 0 ? "text-brand-600" : "text-rose-600",
-                )}>
-                {Number(selectedTxn.amount ?? 0) > 0 ? "+" : ""}₹
-                {Math.abs(Number(selectedTxn.amount ?? 0)).toLocaleString()}
-              </h2>
-              <Badge className="mt-4 uppercase font-black text-[10px] sm:text-xs px-3 py-1">
-                {selectedTxn.status ?? "—"}
-              </Badge>
-            </div>
+      <AnimatePresence>
+        {isDetailModalOpen && selectedTxn && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
+                    onClick={() => setIsDetailModalOpen(false)}
+                />
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    className="w-full max-w-lg relative z-10 bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+                >
+                    <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-slate-900/20">
+                                <HiOutlineBanknotes className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Receipt Details</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Ref: {selectedTxn.id}</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setIsDetailModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                            <HiOutlineXMark className="h-6 w-6 text-slate-400" />
+                        </button>
+                    </div>
 
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600 font-bold">Transaction ID</span>
-                <span className="text-slate-900 font-black">
-                  {selectedTxn.id ?? selectedTxn.ref ?? "—"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600 font-bold">Type</span>
-                <span className="text-slate-900 font-black">
-                  {selectedTxn.type ?? "—"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600 font-bold">
-                  Customer/Recipient
-                </span>
-                <span className="text-slate-900 font-black">
-                  {selectedTxn.customer ?? "—"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600 font-bold">Reference</span>
-                <span className="text-slate-900 font-black">
-                  {selectedTxn.ref ?? "—"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600 font-bold">Date & Time</span>
-                <span className="text-slate-900 font-black">
-                  {selectedTxn.date && selectedTxn.time
-                    ? `${selectedTxn.date} at ${selectedTxn.time}`
-                    : selectedTxn.createdAt
-                      ? `${new Date(selectedTxn.createdAt).toLocaleDateString()} at ${new Date(selectedTxn.createdAt).toLocaleTimeString()}`
-                      : "—"}
-                </span>
-              </div>
-            </div>
+                    <div className="p-10 space-y-8">
+                        <div className="text-center p-8 bg-slate-50 rounded-[2rem] border border-slate-100 shadow-inner">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Net Adjustment</p>
+                            <h2 className={cn(
+                                "text-5xl font-black tracking-tight",
+                                (selectedTxn.amount || 0) > 0 ? "text-emerald-600" : "text-rose-600"
+                            )}>
+                                {(selectedTxn.amount || 0) > 0 ? "+" : ""}₹{Math.abs(selectedTxn.amount || 0).toLocaleString()}
+                            </h2>
+                            <div className="flex items-center justify-center gap-2 mt-4">
+                                <Badge className="uppercase font-black text-[10px] px-4 py-1.5 rounded-full shadow-sm">
+                                    {selectedTxn.status}
+                                </Badge>
+                                {(selectedTxn.status === 'Settled') && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
+                            </div>
+                        </div>
 
-            <div className="p-4 bg-amber-50 rounded-lg border border-amber-100 flex gap-3">
-              <HiOutlineClock className="h-5 w-5 text-amber-600 shrink-0" />
-              <p className="text-[10px] text-amber-800 font-bold leading-relaxed">
-                This transaction is scheduled for settlement in your bank
-                account via T+2 rolling cycle. Settlements usually occur before
-                6:00 PM.
-              </p>
-            </div>
+                        <div className="grid grid-cols-2 gap-y-10 gap-x-6">
+                            {[
+                                { label: "Transaction ID", value: selectedTxn.id },
+                                { label: "Operation Type", value: selectedTxn.type },
+                                { label: "Counterparty", value: selectedTxn.customer },
+                                { label: "Reference", value: selectedTxn.ref },
+                                { label: "Date", value: selectedTxn.date },
+                                { label: "Time", value: selectedTxn.time }
+                            ].map((item, i) => (
+                                <div key={i} className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</p>
+                                    <p className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">{item.value || "—"}</p>
+                                </div>
+                            ))}
+                        </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => window.print()}
-                className="rounded-lg py-4 font-black bg-white">
-                PRINT RECEIPT
-              </Button>
-              <Button
-                onClick={() => setIsDetailModalOpen(false)}
-                className="rounded-lg py-4 font-black shadow-xl shadow-primary/20">
-                CLOSE
-              </Button>
+                        <div className="p-5 bg-primary/5 rounded-[1.5rem] border border-primary/10 flex gap-4">
+                            <HiOutlineClock className="h-6 w-6 text-primary shrink-0" />
+                            <p className="text-[10px] text-slate-600 font-bold leading-relaxed">
+                                Funds are settled via T+2 rolling cycle. If you have any discrepancy regarding this entry, please contact our financial support desk.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="p-10 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-4">
+                        <Button variant="outline" onClick={() => window.print()} className="rounded-2xl py-4 font-black uppercase tracking-widest text-[10px] bg-white border-slate-200">
+                            Print Receipt
+                        </Button>
+                        <Button onClick={() => setIsDetailModalOpen(false)} className="rounded-2xl py-4 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20">
+                            Close
+                        </Button>
+                    </div>
+                </motion.div>
             </div>
-          </div>
         )}
-      </Modal>
+      </AnimatePresence>
     </div>
   );
 };

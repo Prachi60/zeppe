@@ -28,49 +28,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
-import Pagination from "@shared/components/ui/Pagination";
+import DynamicDataTable from "@shared/components/ui/DynamicDataTable";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const qFromUrl = searchParams.get("q") || "";
 
-  const [products, setProducts] = useState([]);
   const [dbCategories, setDbCategories] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [total, setTotal] = useState(0);
-
-  const fetchProducts = async (requestedPage = 1) => {
-    setIsLoading(true);
-    try {
-      const res = await sellerApi.getProducts({ page: requestedPage, limit: pageSize, sort: sortBy });
-      if (res.data.success) {
-        // Backend returns handleResponse(..., { items, page, limit, total, totalPages })
-        const payload = res.data.result || {};
-        const rawProducts = Array.isArray(payload.items)
-          ? payload.items
-          : (res.data.results || []);
-        const safe = Array.isArray(rawProducts) ? rawProducts : [];
-        setProducts(safe);
-        if (typeof payload.total === "number") {
-          setTotal(payload.total);
-        } else {
-          setTotal(safe.length);
-        }
-        if (typeof payload.page === "number") {
-          setPage(payload.page);
-        } else {
-          setPage(requestedPage);
-        }
-      }
-    } catch (error) {
-      toast.error("Failed to fetch products");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [searchTerm, setSearchTerm] = useState(qFromUrl);
 
   const fetchCategories = async () => {
     try {
@@ -78,9 +44,7 @@ const ProductManagement = () => {
       if (res.data.success) {
         setDbCategories(res.data.results || res.data.result || []);
       }
-    } catch (error) {
-      // fail silently
-    }
+    } catch (error) {}
   };
 
   React.useEffect(() => {
@@ -89,19 +53,7 @@ const ProductManagement = () => {
 
   const categories = dbCategories;
 
-  const [searchTerm, setSearchTerm] = useState(qFromUrl);
-
-  React.useEffect(() => {
-    if (qFromUrl !== searchTerm) setSearchTerm(qFromUrl);
-  }, [qFromUrl]);
-
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("All");
-  const [sortBy, setSortBy] = useState("newest");
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const filterDropdownRef = useRef(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
@@ -109,6 +61,9 @@ const ProductManagement = () => {
   const [isVariantsViewModalOpen, setIsVariantsViewModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [modalTab, setModalTab] = useState("general");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshTable = () => setRefreshKey(prev => prev + 1);
 
   const makeSku = (name, index = 1) => {
     const prefix = String(name || "")
@@ -286,7 +241,7 @@ const ProductManagement = () => {
 
       setIsProductModalOpen(false);
       setEditingItem(null);
-      fetchProducts();
+      refreshTable();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to save product");
     }
@@ -327,7 +282,7 @@ const ProductManagement = () => {
       toast.success("Product deleted successfully");
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
-      fetchProducts();
+      refreshTable();
     } catch (error) {
       toast.error("Failed to delete product");
     }
@@ -548,119 +503,122 @@ const ProductManagement = () => {
 
       {/* Product Table */}
 
-      <Card className="border-none shadow-xl ring-1 ring-slate-100 overflow-hidden rounded-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
-                  Product
-                </th>
-                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
-                  Product Code
-                </th>
-                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
-                  Header
-                </th>
-                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
-                  Subcategory
-                </th>
-                <th className="px-6 py-3 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
-                  Variant
-                </th>
-                <th className="px-6 py-3 text-right text-[10px] font-semibold text-gray-600 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map((p) => (
-                <tr
-                  key={p._id || p.id}
-                  className="hover:bg-gray-50/50 transition-colors group border-b border-gray-100 last:border-b-0">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-14 w-14 rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200">
-                        <img
-                          src={p.mainImage || p.image || "https://images.unsplash.com/photo-1550989460-0adf9ea622e2"}
-                          alt={p.name}
-                          className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">
-                          {p.name}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-slate-900">
-                        {displaySku(p)}
-                      </span>
-                    </td>
-                  <td className="px-6 py-4 text-left">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-medium text-slate-900 uppercase tracking-tight bg-slate-100 px-3 py-0.5 rounded-full w-fit">
-                        {p.headerId?.name || "N/A"}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-slate-900">
-                      {p.categoryId?.name || "N/A"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-slate-900">
-                      {p.subcategoryId?.name || "N/A"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    {p.variants?.length > 0 ? (
-                      <div
-                        onClick={() => {
-                          setViewingVariants(p);
-                          setIsVariantsViewModalOpen(true);
-                        }}
-                        className="flex flex-col items-center cursor-pointer hover:bg-slate-50 p-1.5 rounded-xl transition-all active:scale-95 group"
-                      >
-                        <Badge
-                          variant="indigo"
-                          className="text-xs font-medium px-3 py-0.5 group-hover:shadow-sm transition-all"
-                        >
-                          {p.variants.length} VARIANTS
-                        </Badge>
-                      </div>
-                    ) : (
-                      <span className="text-xs font-medium text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded italic">
-                        None
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button
-                        onClick={() => openEditModal(p)}
-                        className="p-1 hover:text-indigo-600 rounded-lg transition-all text-slate-500">
-                        <HiOutlinePencilSquare className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(p)}
-                        className="p-1 hover:text-rose-600 rounded-lg transition-all text-slate-500">
-                        <HiOutlineTrash className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* Product Table */}
+      <DynamicDataTable
+        apiService={sellerApi}
+        refreshSelected={refreshKey}
+        endpoint="/products/seller/me"
+        searchPlaceholder="Search products by name or SKU..."
+        columns={[
+          {
+            header: "Product",
+            width: "30%",
+            cell: (p) => (
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200 shrink-0">
+                  <img
+                    src={p.mainImage || p.image || "https://images.unsplash.com/photo-1550989460-0adf9ea622e2"}
+                    alt={p.name}
+                    className="h-full w-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-500"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-900 truncate">
+                    {p.name}
+                  </p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
+                    {p.brand || "Generics"}
+                  </p>
+                </div>
+              </div>
+            )
+          },
+          {
+            header: "Product Code",
+            accessor: "sku",
+            cell: (p) => (
+              <span className="text-xs font-black text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">
+                {p.sku || "N/A"}
+              </span>
+            )
+          },
+          {
+            header: "Category",
+            cell: (p) => (
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
+                  {p.headerId?.name || "No Header"}
+                </span>
+                <span className="text-xs font-bold text-slate-700">
+                  {p.categoryId?.name || "No Category"}
+                </span>
+              </div>
+            )
+          },
+          {
+            header: "Inventory",
+            cell: (p) => (
+              <div className="flex flex-col">
+                <span className={cn(
+                  "text-xs font-black",
+                  p.stock === 0 ? "text-rose-600" : p.stock <= 10 ? "text-amber-600" : "text-emerald-600"
+                )}>
+                  {p.stock} IN STOCK
+                </span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                  ₹{Number(p.price).toLocaleString()}
+                </span>
+              </div>
+            )
+          },
+          {
+            header: "Variants",
+            align: "center",
+            cell: (p) => p.variants?.length > 0 ? (
+              <button
+                onClick={() => {
+                  setViewingVariants(p);
+                  setIsVariantsViewModalOpen(true);
+                }}
+                className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all"
+              >
+                {p.variants.length} VARS
+              </button>
+            ) : <span className="text-[10px] font-bold text-slate-300 uppercase italic">None</span>
+          },
+          {
+            header: "Actions",
+            align: "right",
+            cell: (p) => (
+              <div className="flex items-center justify-end space-x-2">
+                <button
+                  onClick={() => openEditModal(p)}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600"
+                >
+                  <HiOutlinePencilSquare className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => handleDeleteClick(p)}
+                  className="p-2 hover:bg-rose-50 rounded-xl transition-all text-slate-400 hover:text-rose-600"
+                >
+                  <HiOutlineTrash className="h-5 w-5" />
+                </button>
+              </div>
+            )
+          }
+        ]}
+        filters={[
+          {
+            key: "status",
+            label: "Status",
+            options: [
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+              { label: "Low Stock", value: "low-stock" }
+            ]
+          }
+        ]}
+      />
 
 
       {isFilterOpen && (

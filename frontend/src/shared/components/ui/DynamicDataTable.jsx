@@ -17,6 +17,7 @@ import { toast } from 'sonner';
  * @param {string} props.searchPlaceholder - Placeholder for search input
  * @param {Object} props.defaultParams - Default API parameters
  * @param {Function} props.onRowClick - Callback when a row is clicked
+ * @param {Object} props.apiService - API service to use for fetching (defaults to adminApi)
  */
 const DynamicDataTable = ({ 
     endpoint, 
@@ -25,7 +26,8 @@ const DynamicDataTable = ({
     searchPlaceholder = "Search...",
     defaultParams = {},
     onRowClick,
-    refreshSelected = 0 // Used to trigger refresh from parent
+    refreshSelected = 0,
+    apiService = adminApi
 }) => {
     const [data, setData] = useState([]);
     const [total, setTotal] = useState(0);
@@ -48,7 +50,7 @@ const DynamicDataTable = ({
                 ...defaultParams
             };
 
-            const response = await adminApi.fetchData(endpoint, params);
+            const response = await apiService.fetchData(endpoint, params);
             
             if (response.data.success) {
                 const payload = response.data.result || {};

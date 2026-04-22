@@ -166,6 +166,7 @@ export const updateSellerProfile = async (req, res) => {
       radius,
       shopLogo,
       shopBanner,
+      bankDetails,
     } = req.body;
 
     // Find seller
@@ -185,6 +186,12 @@ export const updateSellerProfile = async (req, res) => {
     if (state !== undefined) seller.state = state;
     if (shopLogo !== undefined) seller.shopLogo = String(shopLogo || "").trim();
     if (shopBanner !== undefined) seller.shopBanner = String(shopBanner || "").trim();
+    if (bankDetails !== undefined) {
+      seller.bankDetails = {
+        ...(seller.bankDetails || {}),
+        ...bankDetails
+      };
+    }
 
     // Validate and update geo data
     if (lat !== undefined && lng !== undefined) {

@@ -4,20 +4,15 @@ import Card from '@shared/components/ui/Card';
 import Button from '@shared/components/ui/Button';
 import Badge from '@shared/components/ui/Badge';
 import Input from '@shared/components/ui/Input';
-import Pagination from '@shared/components/ui/Pagination';
 import {
     HiOutlineCube,
     HiOutlineExclamationTriangle,
     HiOutlineArchiveBoxXMark,
     HiOutlineArrowsUpDown,
     HiOutlineMagnifyingGlass,
-    HiOutlineFunnel,
     HiOutlinePlus,
     HiOutlineMinus,
-    HiOutlineArrowPath,
-    HiOutlineClipboardDocumentList,
     HiOutlineXMark,
-    HiOutlineCheck,
     HiOutlineCalendarDays
 } from 'react-icons/hi2';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { BlurFade } from '@/components/ui/blur-fade';
 import { MagicCard } from '@/components/ui/magic-card';
 import { sellerApi } from '../services/sellerApi';
+import DynamicDataTable from "@shared/components/ui/DynamicDataTable";
 import { toast } from 'sonner';
 
 const StockManagement = () => {
@@ -40,89 +36,40 @@ const StockManagement = () => {
     const [adjustType, setAdjustType] = useState('Restock');
     const [adjustValue, setAdjustValue] = useState('');
     const [adjustNote, setAdjustNote] = useState('');
+    const [refreshKey, setRefreshKey] = useState(0);
 
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(20);
-
-    const fetchInventory = async (silent = false, stockStatus) => {
-        if (!silent) setIsLoading(true);
-        try {
-            const params = {};
-            if (stockStatus === 'in') params.stockStatus = 'in';
-            if (stockStatus === 'out') params.stockStatus = 'out';
-
-            const res = await sellerApi.getProducts(params);
-            if (res.data.success) {
-                // Backend returns handleResponse(..., { items, page, limit, total, totalPages })
-                const payload = res.data.result || {};
-                const rawProducts = Array.isArray(payload.items)
-                    ? payload.items
-                    : (res.data.results || []);
-
-                const safeProducts = Array.isArray(rawProducts) ? rawProducts : [];
-
-                setInventory(
-                    safeProducts.map(p => ({
-                        ...p,
-                        id: p._id,
-                        threshold: p.lowStockAlert || 5,
-                        status:
-                            p.stock === 0
-                                ? 'Out of Stock'
-                                : (p.stock <= (p.lowStockAlert || 5) ? 'Low Stock' : 'In Stock')
-                    }))
-                );
-            }
-        } catch (error) {
-            toast.error("Failed to load inventory");
-        } finally {
-            if (!silent) setIsLoading(false);
-        }
-    };
-
-    const fetchHistory = async (silent = false) => {
-        if (!silent) setIsLoading(true);
-        try {
-            const res = await sellerApi.getStockHistory();
-            if (res.data.success) {
-                setHistory(res.data.result || []);
-            }
-        } catch (error) {
-            toast.error("Failed to load stock history");
-        } finally {
-            if (!silent) setIsLoading(false);
-        }
-    };
+    const refreshData = () => setRefreshKey(prev => prev + 1);
 
     useEffect(() => {
-        if (activeView === 'inventory') {
-            let stockStatusParam;
-            if (filterStatus === 'In Stock') stockStatusParam = 'in';
-            else if (filterStatus === 'Out of Stock') stockStatusParam = 'out';
-            else stockStatusParam = undefined; // All / Low Stock -> no backend filter
-            fetchInventory(false, stockStatusParam);
-        } else {
-            fetchHistory();
-        }
-    }, [activeView, filterStatus]);
+        const fetchStats = async () => {
+            try {
+                const res = await sellerApi.getProducts({ limit: 100 });
+                if (res.data.success) {
+                    setInventory(res.data.result?.items || []);
+                }
+            } catch (err) {}
+        };
+        
+        const fetchHist = async () => {
+            try {
+                const res = await sellerApi.getStockHistory();
+                if (res.data.success) {
+                    setHistory(res.data.result || []);
+                }
+            } catch (err) {}
+        };
+
+        fetchStats();
+        fetchHist();
+        setIsLoading(false);
+    }, [refreshKey]);
 
     const stats = useMemo(() => [
-        { label: 'Total Inventory', value: inventory.reduce((acc, item) => acc + item.stock, 0), icon: HiOutlineCube, color: 'text-indigo-600', bg: 'bg-indigo-50', status: 'All' },
-        { label: 'Low Stock Items', value: inventory.filter(i => i.stock > 0 && i.stock <= i.threshold).length, icon: HiOutlineExclamationTriangle, color: 'text-amber-600', bg: 'bg-amber-50', status: 'Low Stock' },
-        { label: 'Out of Stock', value: inventory.filter(i => i.stock === 0).length, icon: HiOutlineArchiveBoxXMark, color: 'text-rose-600', bg: 'bg-rose-50', status: 'Out of Stock' },
-        { label: 'Stock Valuation', value: `₹${inventory.reduce((acc, item) => acc + (item.stock * item.price), 0).toLocaleString()}`, icon: HiOutlineArrowsUpDown, color: 'text-brand-600', bg: 'bg-brand-50', status: 'In Stock' }
+        { label: 'Total Inventory', value: inventory.reduce((acc, item) => acc + (item.stock || 0), 0), icon: HiOutlineCube, color: 'text-indigo-600', bg: 'bg-indigo-50', status: 'All' },
+        { label: 'Low Stock Items', value: inventory.filter(i => (i.stock || 0) > 0 && (i.stock || 0) <= (i.lowStockAlert || 5)).length, icon: HiOutlineExclamationTriangle, color: 'text-amber-600', bg: 'bg-amber-50', status: 'Low Stock' },
+        { label: 'Out of Stock', value: inventory.filter(i => (i.stock || 0) === 0).length, icon: HiOutlineArchiveBoxXMark, color: 'text-rose-600', bg: 'bg-rose-50', status: 'Out of Stock' },
+        { label: 'Stock Valuation', value: `₹${inventory.reduce((acc, item) => acc + ((item.stock || 0) * (item.price || 0)), 0).toLocaleString()}`, icon: HiOutlineArrowsUpDown, color: 'text-brand-600', bg: 'bg-brand-50', status: 'In Stock' }
     ], [inventory]);
-
-    const filteredInventory = useMemo(() => {
-        const term = searchTerm.toLowerCase();
-        return inventory.filter(item => {
-            const matchesSearch =
-                item.name.toLowerCase().includes(term) ||
-                (item.sku || '').toString().toLowerCase().includes(term);
-            const matchesStatus = filterStatus === 'All' || item.status === filterStatus;
-            return matchesSearch && matchesStatus;
-        });
-    }, [inventory, searchTerm, filterStatus]);
 
     const handleFullAdjustment = async () => {
         const value = parseInt(adjustValue);
@@ -142,7 +89,7 @@ const StockManagement = () => {
             if (res.data.success) {
                 toast.success("Stock adjusted successfully");
                 setIsAdjustModalOpen(false);
-                fetchInventory(true);
+                refreshData();
             }
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to adjust stock");
@@ -156,7 +103,7 @@ const StockManagement = () => {
         setIsAdjustModalOpen(true);
     };
 
-    if (isLoading && inventory.length === 0 && history.length === 0) {
+    if (isLoading && inventory.length === 0) {
         return <div className="flex items-center justify-center h-screen font-black text-slate-600">LOADING STOCK DATA...</div>;
     }
 
@@ -176,6 +123,26 @@ const StockManagement = () => {
                             Monitor stock levels, manage restocks, and track movements.
                         </p>
                     </div>
+                    <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                        <button
+                            onClick={() => setActiveView('inventory')}
+                            className={cn(
+                                "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                activeView === 'inventory' ? "bg-white text-slate-900 shadow-md" : "text-slate-500 hover:text-slate-700"
+                            )}
+                        >
+                            Inventory
+                        </button>
+                        <button
+                            onClick={() => setActiveView('history')}
+                            className={cn(
+                                "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                activeView === 'history' ? "bg-white text-slate-900 shadow-md" : "text-slate-500 hover:text-slate-700"
+                            )}
+                        >
+                            History
+                        </button>
+                    </div>
                 </div>
             </BlurFade>
 
@@ -187,15 +154,15 @@ const StockManagement = () => {
                             <BlurFade key={i} delay={0.1 + (i * 0.05)}>
                                 <div onClick={() => setFilterStatus(stat.status)} className="cursor-pointer">
                                     <MagicCard
-                                        className="border-none shadow-sm ring-1 ring-slate-100 p-0 overflow-hidden group bg-white"
+                                        className="border-none shadow-sm ring-1 ring-slate-100 p-0 overflow-hidden group bg-white hover:ring-primary/20 transition-all duration-500"
                                         gradientColor="#f8fafc"
                                     >
                                         <div className="flex items-center gap-3 p-4 relative z-10">
-                                            <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 shadow-sm", stat.bg, stat.color)}>
+                                            <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 duration-500 shadow-sm", stat.bg, stat.color)}>
                                                 <stat.icon className="h-5 w-5" />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">{stat.label}</p>
+                                                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{stat.label}</p>
                                                 <h4 className="text-xl font-black text-slate-900 tracking-tight">{stat.value}</h4>
                                             </div>
                                         </div>
@@ -208,27 +175,24 @@ const StockManagement = () => {
                     <BlurFade delay={0.3}>
                         <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden rounded-3xl">
                             {/* Toolbox */}
-                            <div className="p-4 border-b border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-50/30">
+                            <div className="p-4 border-b border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between bg-white">
                                 <div className="flex flex-col md:flex-row gap-3 items-center w-full">
                                     <div className="relative w-full md:w-72">
-                                        <HiOutlineMagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600" />
+                                        <HiOutlineMagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                         <Input
-                                            placeholder="Search by product name or SKU..."
-                                            className="pl-10 pr-4 py-2.5 rounded-2xl border-none ring-1 ring-slate-200 bg-white focus:ring-2 focus:ring-primary/20 transition-all text-xs font-semibold"
+                                            placeholder="Search product..."
+                                            className="pl-10 pr-4 py-2.5 rounded-2xl border-none ring-1 ring-slate-100 bg-slate-50/50 focus:ring-2 focus:ring-primary/20 transition-all text-xs font-bold shadow-inner"
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                         />
                                     </div>
                                     <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-sm">
-                                        {['All', 'In Stock', 'Out of Stock'].map((status) => (
+                                        {['All', 'In Stock', 'Out of Stock', 'Low Stock'].map((status) => (
                                             <button
                                                 key={status}
-                                                onClick={() => {
-                                                    setFilterStatus(status);
-                                                    setPage(1);
-                                                }}
+                                                onClick={() => setFilterStatus(status)}
                                                 className={cn(
-                                                    "px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all",
+                                                    "px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all uppercase tracking-tighter",
                                                     filterStatus === status
                                                         ? "bg-white text-slate-900 shadow-md"
                                                         : "text-slate-600 hover:text-slate-700"
@@ -242,149 +206,122 @@ const StockManagement = () => {
                                 <div className="flex items-center gap-2">
                                     <Button
                                         onClick={() => navigate('/seller/products/add')}
-                                        className="rounded-xl px-4 py-2 text-[10px] font-bold shadow-lg shadow-primary/20"
+                                        className="rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
                                     >
                                         <HiOutlinePlus className="h-4 w-4 mr-2" />
-                                        ADD NEW PRODUCT
+                                        NEW PRODUCT
                                     </Button>
                                 </div>
                             </div>
 
-                            {/* Stock Table */}
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                                            <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">Product Information</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">Inventory Capacity</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">Stock Health</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">Price</th>
-                                            <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-widest text-right whitespace-nowrap">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {filteredInventory.length === 0 ? (
-                                            <tr>
-                                                <td
-                                                    colSpan={5}
-                                                    className="px-6 py-10 text-center text-slate-600 text-xs font-black tracking-widest uppercase"
+                            {/* Dynamic Stock Table */}
+                            <DynamicDataTable
+                                apiService={sellerApi}
+                                endpoint="/products"
+                                searchKey="name"
+                                refreshSelected={refreshKey}
+                                defaultParams={{
+                                    stockStatus: filterStatus === 'In Stock' ? 'in' : (filterStatus === 'Out of Stock' ? 'out' : (filterStatus === 'Low Stock' ? 'low' : '')),
+                                    search: searchTerm
+                                }}
+                                columns={[
+                                    {
+                                        header: "Product Detail",
+                                        cell: (p) => (
+                                            <div className="flex items-center gap-4 group">
+                                                <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center text-slate-600 group-hover:scale-105 transition-transform overflow-hidden ring-1 ring-slate-100 shadow-sm">
+                                                    {p.mainImage ? (
+                                                        <img src={p.mainImage} alt={p.name} className="h-full w-full object-cover" />
+                                                    ) : (
+                                                        <HiOutlineCube className="h-6 w-6 opacity-30" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">
+                                                        {p.name}
+                                                    </h4>
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                                        SKU: {p.sku || 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )
+                                    },
+                                    {
+                                        header: "Inventory",
+                                        cell: (p) => (
+                                            <div className="flex flex-col">
+                                                <span className={cn(
+                                                    "text-sm font-black",
+                                                    (p.stock || 0) <= (p.lowStockAlert || 5) ? "text-rose-600" : "text-slate-900"
+                                                )}>
+                                                    {(p.stock || 0)} units
+                                                </span>
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                                    Threshold: {p.lowStockAlert || 5}
+                                                </span>
+                                            </div>
+                                        )
+                                    },
+                                    {
+                                        header: "Status",
+                                        cell: (p) => {
+                                            const status = (p.stock || 0) === 0 ? 'Out of Stock' : ((p.stock || 0) <= (p.lowStockAlert || 5) ? 'Low Stock' : 'In Stock');
+                                            return (
+                                                <Badge
+                                                    variant={status === 'In Stock' ? 'success' : (status === 'Low Stock' ? 'warning' : 'destructive')}
+                                                    className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg"
                                                 >
-                                                    No products found for this filter.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            <AnimatePresence>
-                                                {filteredInventory
-                                                    .slice((page - 1) * pageSize, page * pageSize)
-                                                    .map((item) => (
-                                                        <motion.tr
-                                                            key={item.id}
-                                                            initial={{ opacity: 0 }}
-                                                            animate={{ opacity: 1 }}
-                                                            exit={{ opacity: 0 }}
-                                                            className="group hover:bg-slate-50/80 transition-all cursor-default"
-                                                        >
-                                                            <td className="px-6 py-5">
-                                                                <div className="flex items-center gap-4 group">
-                                                                    <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 group-hover:scale-105 transition-transform overflow-hidden">
-                                                                        {item.mainImage ? (
-                                                                            <img src={item.mainImage} alt={item.name} className="h-full w-full object-cover" />
-                                                                        ) : (
-                                                                            <HiOutlineCube className="h-6 w-6" />
-                                                                        )}
-                                                                    </div>
-                                                                    <div>
-                                                                        <h4 className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">
-                                                                            {item.name}
-                                                                        </h4>
-                                                                        <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-                                                                            Product Code: {item.sku || 'N/A'}
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-5">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="flex flex-col">
-                                                                        <span
-                                                                            className={cn(
-                                                                                "text-sm font-black",
-                                                                                item.stock <= item.threshold ? "text-rose-600" : "text-slate-900"
-                                                                            )}
-                                                                        >
-                                                                            {item.stock} units
-                                                                        </span>
-                                                                        {item.stock <= item.threshold && (
-                                                                            <span className="text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded w-fit mt-0.5">
-                                                                                Low Stock
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-6 py-5">
-                                                                <Badge
-                                                                    variant={item.status === 'In Stock' ? 'success' : 'destructive'}
-                                                                    className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg"
-                                                                >
-                                                                    {item.status}
-                                                                </Badge>
-                                                            </td>
-                                                            <td className="px-6 py-5">
-                                                                <p className="text-sm font-black text-slate-900">₹{item.price}</p>
-                                                            </td>
-                                                            <td className="px-6 py-5 text-right">
-                                                                <button
-                                                                    onClick={() => openAdjustModal(item)}
-                                                                    className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition-colors"
-                                                                >
-                                                                    Adjust Stock
-                                                                </button>
-                                                            </td>
-                                                        </motion.tr>
-                                                    ))}
-                                            </AnimatePresence>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                    {status}
+                                                </Badge>
+                                            );
+                                        }
+                                    },
+                                    {
+                                        header: "Price",
+                                        cell: (p) => <p className="text-sm font-black text-slate-900">₹{(p.price || 0).toLocaleString()}</p>
+                                    },
+                                    {
+                                        header: "Actions",
+                                        align: "right",
+                                        cell: (p) => (
+                                            <button
+                                                onClick={() => openAdjustModal({ ...p, id: p._id, threshold: p.lowStockAlert || 5 })}
+                                                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-primary transition-all shadow-md shadow-slate-900/10 hover:shadow-primary/20"
+                                            >
+                                                Adjust
+                                            </button>
+                                        )
+                                    }
+                                ]}
+                            />
                         </Card>
                     </BlurFade>
-
-                    <div className="mt-4">
-                        <Pagination
-                            page={page}
-                            totalPages={Math.ceil(filteredInventory.length / pageSize) || 1}
-                            total={filteredInventory.length}
-                            pageSize={pageSize}
-                            onPageChange={(p) => setPage(p)}
-                            onPageSizeChange={(newSize) => {
-                                setPageSize(newSize);
-                                setPage(1);
-                            }}
-                            loading={isLoading}
-                        />
-                    </div>
                 </>
             ) : (
                 /* History View */
                 <BlurFade delay={0.2}>
                     <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl p-0 overflow-hidden">
-                        <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/20">
+                        <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/10">
                             <div>
                                 <h3 className="text-base font-black text-slate-900">Inventory Movement Log</h3>
-                                <p className="text-sm text-slate-600 font-medium">Audit trail for all stock adjustments and sales.</p>
+                                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Audit trail for all stock movements.</p>
                             </div>
                         </div>
                         <div className="divide-y divide-slate-50">
                             {history.length === 0 ? (
-                                <div className="p-10 text-center text-slate-600 font-black uppercase tracking-widest">No history found</div>
+                                <div className="p-16 text-center">
+                                    <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                                        <HiOutlineArrowsUpDown className="h-8 w-8 text-slate-300" />
+                                    </div>
+                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No movement history found</p>
+                                </div>
                             ) : history.map((log) => (
-                                <div key={log._id} className="p-6 hover:bg-slate-50/50 transition-colors flex items-center justify-between group">
+                                <div key={log._id} className="p-5 hover:bg-slate-50/50 transition-colors flex items-center justify-between group">
                                     <div className="flex items-center gap-5">
                                         <div className={cn(
                                             "h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm",
-                                            log.type === 'Restock' ? "bg-brand-50 text-brand-600" :
+                                            log.type === 'Restock' ? "bg-emerald-50 text-emerald-600" :
                                                 log.type === 'Sale' ? "bg-indigo-50 text-indigo-600" : "bg-rose-50 text-rose-600"
                                         )}>
                                             {log.type === 'Restock' ? <HiOutlinePlus className="h-6 w-6" /> :
@@ -394,26 +331,28 @@ const StockManagement = () => {
                                             <div className="flex items-center gap-2">
                                                 <h4 className="text-sm font-black text-slate-900">{log.product?.name || 'Unknown Product'}</h4>
                                                 <Badge className={cn(
-                                                    "text-[9px] font-bold px-1.5 py-0",
-                                                    log.type === 'Restock' ? "bg-brand-100 text-brand-700" :
+                                                    "text-[8px] font-black uppercase px-2 py-0.5 rounded-md",
+                                                    log.type === 'Restock' ? "bg-emerald-100 text-emerald-700" :
                                                         log.type === 'Sale' ? "bg-indigo-100 text-indigo-700" : "bg-rose-100 text-rose-700"
                                                 )}>
-                                                    {log.type.toUpperCase()}
+                                                    {log.type}
                                                 </Badge>
                                             </div>
-                                            <p className="text-[11px] text-slate-600 font-semibold mt-1">Note: {log.note || 'N/A'}</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                                {log.note || 'Internal Adjustment'}
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="text-right">
                                         <div className={cn(
-                                            "text-lg font-black tracking-tight mb-0.5",
-                                            log.quantity > 0 ? "text-brand-600" : "text-rose-600"
+                                            "text-lg font-black tracking-tight",
+                                            log.quantity > 0 ? "text-emerald-600" : "text-rose-600"
                                         )}>
                                             {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
                                         </div>
-                                        <div className="flex items-center justify-end gap-1.5 text-[10px] font-bold text-slate-600">
-                                            <HiOutlineCalendarDays className="h-3.5 w-3.5" />
-                                            {new Date(log.createdAt).toLocaleDateString()} • {new Date(log.createdAt).toLocaleTimeString()}
+                                        <div className="flex items-center justify-end gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                            {new Date(log.createdAt).toLocaleDateString()}
                                         </div>
                                     </div>
                                 </div>
@@ -423,7 +362,7 @@ const StockManagement = () => {
                 </BlurFade>
             )}
 
-            {/* Advanced Adjustment Modal */}
+            {/* Adjustment Modal */}
             <AnimatePresence>
                 {isAdjustModalOpen && selectedItem && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -438,16 +377,16 @@ const StockManagement = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="w-full max-w-md relative z-10 bg-white rounded-3xl shadow-2xl overflow-hidden"
+                            className="w-full max-w-md relative z-10 bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
                         >
-                            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg shadow-slate-900/20">
+                            <div className="p-6 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-10 w-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-900/20">
                                         <HiOutlineArrowsUpDown className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <h3 className="text-base font-black text-slate-900">Adjust Inventory</h3>
-                                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-none mt-1">Update product stock</p>
+                                        <h3 className="text-base font-black text-slate-900">Inventory Sync</h3>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">Refine stock levels</p>
                                     </div>
                                 </div>
                                 <button onClick={() => setIsAdjustModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600">
@@ -455,30 +394,33 @@ const StockManagement = () => {
                                 </button>
                             </div>
 
-                            <div className="p-8 space-y-6">
-                                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-4">
-                                    <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 overflow-hidden">
+                            <div className="p-8 space-y-8">
+                                <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100 flex items-center gap-4">
+                                    <div className="h-14 w-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-600 overflow-hidden shadow-sm">
                                         {selectedItem.mainImage ? (
                                             <img src={selectedItem.mainImage} alt="" className="h-full w-full object-cover" />
-                                        ) : <HiOutlineCube className="h-6 w-6" />}
+                                        ) : <HiOutlineCube className="h-8 w-8 opacity-20" />}
                                     </div>
                                     <div>
                                         <h4 className="text-sm font-black text-slate-900">{selectedItem.name}</h4>
-                                        <p className="text-[10px] font-bold text-slate-600">CURRENT STOCK: <span className="text-slate-900 font-black">{selectedItem.stock} UNITS</span></p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Stock:</span>
+                                            <span className="text-[10px] font-black text-slate-900 bg-white px-2 py-0.5 rounded-lg border border-slate-200">{(selectedItem.stock || 0)} Units</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                                <div className="space-y-6">
+                                    <div className="flex p-1.5 bg-slate-100 rounded-[1.5rem] border border-slate-200">
                                         {['Restock', 'Remove'].map((type) => (
                                             <button
                                                 key={type}
                                                 onClick={() => setAdjustType(type)}
                                                 className={cn(
-                                                    "flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                                    "flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300",
                                                     adjustType === type
-                                                        ? "bg-white text-slate-900 shadow-md"
-                                                        : "text-slate-600 hover:text-slate-600"
+                                                        ? "bg-white text-slate-900 shadow-lg"
+                                                        : "text-slate-500 hover:text-slate-600"
                                                 )}
                                             >
                                                 {type}
@@ -486,45 +428,44 @@ const StockManagement = () => {
                                         ))}
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-black text-slate-600 uppercase tracking-widest ml-1">Quantity Change</label>
-                                        <div className="relative group">
-                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-slate-600">#</div>
+                                    <div className="space-y-2 text-center">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Quantity of Units</label>
+                                        <div className="relative group flex items-center justify-center">
                                             <input
                                                 type="number"
                                                 value={adjustValue}
                                                 onChange={(e) => setAdjustValue(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-4 bg-slate-50 border-none rounded-2xl text-2xl font-black text-slate-900 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                                className="w-32 bg-transparent border-b-2 border-slate-100 text-4xl font-black text-slate-900 focus:border-primary transition-all outline-none text-center py-2"
                                                 placeholder="0"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-black text-slate-600 uppercase tracking-widest ml-1">Internal Note (Optional)</label>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Internal Reference Note</label>
                                         <textarea
                                             value={adjustNote}
                                             onChange={(e) => setAdjustNote(e.target.value)}
-                                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none h-20"
-                                            placeholder="Reason for adjustment..."
+                                            className="w-full px-5 py-4 bg-slate-50 border-none rounded-3xl text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none h-24 shadow-inner"
+                                            placeholder="Why are we adjusting this stock?"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
                                 <Button
                                     onClick={() => setIsAdjustModalOpen(false)}
                                     variant="outline"
-                                    className="flex-1 py-4 text-xs font-bold rounded-2xl bg-white"
+                                    className="flex-1 py-4 text-[10px] font-black rounded-2xl bg-white uppercase tracking-widest"
                                 >
-                                    CANCEL
+                                    Cancel
                                 </Button>
                                 <Button
                                     onClick={handleFullAdjustment}
-                                    className="flex-1 py-4 text-xs font-bold rounded-2xl shadow-xl shadow-primary/20"
+                                    className="flex-1 py-4 text-[10px] font-black rounded-2xl shadow-xl shadow-primary/20 uppercase tracking-widest"
                                 >
-                                    SAVE CHANGES
+                                    Confirm Update
                                 </Button>
                             </div>
                         </motion.div>
