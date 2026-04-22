@@ -68,7 +68,7 @@ const Orders = () => {
             }
         };
         fetchStats();
-    }, []);
+    }, [refreshKey]);
 
     const tabs = ['All', 'Pending', 'Confirmed', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled'];
     const todayStr = new Date().toISOString().split('T')[0];
@@ -78,15 +78,7 @@ const Orders = () => {
         [orders]
     );
 
-    const filteredOrders = useMemo(() => {
-        return safeOrders.filter(order => {
-            const matchesSearch = (order?.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (order?.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-            const statusToMatch = activeTab === 'Out for Delivery' ? 'out_for_delivery' : activeTab.toLowerCase();
-            const matchesTab = activeTab === 'All' || (order?.status || '').toLowerCase() === statusToMatch;
-            return matchesSearch && matchesTab;
-        });
-    }, [safeOrders, searchTerm, activeTab]);
+
 
     const stats = useMemo(() => [
         {

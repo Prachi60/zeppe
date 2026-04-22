@@ -69,17 +69,8 @@ const ProductManagement = () => {
   const [sortBy, setSortBy] = useState("newest");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState([]);
-  const [total, setTotal] = useState(0);
-  const filterDropdownRef = React.useRef(null);
-
-  // fetchProducts is referenced in the Pagination callbacks
-  const fetchProducts = async (p = 1) => {
-    setPage(p);
-  };
 
   const refreshTable = () => setRefreshKey(prev => prev + 1);
 
@@ -122,16 +113,25 @@ const ProductManagement = () => {
   React.useEffect(() => {
     if (!isFilterOpen) return;
     const handleClickOutside = (event) => {
-      if (
-        filterDropdownRef.current &&
-        !filterDropdownRef.current.contains(event.target)
-      ) {
+      const dropdown = document.getElementById('filter-dropdown');
+      if (dropdown && !dropdown.contains(event.target)) {
         setIsFilterOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isFilterOpen]);
+
+  // Fetch products for stats
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await sellerApi.getProducts({ limit: 100 });
+        setProducts(res.data.result?.items || []);
+      } catch (err) {}
+    };
+    fetchStats();
+  }, [refreshKey]);
 
 
 
@@ -163,48 +163,7 @@ const ProductManagement = () => {
     [products]
   );
 
-  const filteredProducts = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    const min = priceMin ? Number(priceMin) : null;
-    const max = priceMax ? Number(priceMax) : null;
 
-    return safeProducts.filter((p) => {
-      const variantSkus = Array.isArray(p.variants)
-        ? p.variants
-            .map((v) => (v?.sku || "").toString().toLowerCase())
-            .filter(Boolean)
-        : [];
-      const skuCandidate =
-        (p.sku || "").toString().toLowerCase() ||
-        (variantSkus.length > 0 ? variantSkus[0] : "");
-
-      const matchesSearch =
-        !term ||
-        (p?.name || '').toLowerCase().includes(term) ||
-        (!!skuCandidate && skuCandidate.includes(term));
-      const matchesCategory =
-        filterCategory === "all" ||
-        (p.categoryId?._id || p.categoryId) === filterCategory ||
-        (p.headerId?._id || p.headerId) === filterCategory;
-
-      let matchesStatus = filterStatus === "All";
-      if (filterStatus === "Active") matchesStatus = p.status === "active";
-      if (filterStatus === "Low Stock")
-        matchesStatus = p.stock > 0 && p.stock <= 10;
-      if (filterStatus === "Out of Stock") matchesStatus = p.stock === 0;
-
-      let matchesPrice = true;
-      const effectivePrice = Number(p.salePrice ?? p.price ?? 0);
-      if (min !== null && !Number.isNaN(min)) {
-        matchesPrice = matchesPrice && effectivePrice >= min;
-      }
-      if (max !== null && !Number.isNaN(max)) {
-        matchesPrice = matchesPrice && effectivePrice <= max;
-      }
-
-      return matchesSearch && matchesCategory && matchesStatus && matchesPrice;
-    });
-  }, [safeProducts, searchTerm, filterCategory, filterStatus, priceMin, priceMax]);
 
   const stats = useMemo(
     () => ({

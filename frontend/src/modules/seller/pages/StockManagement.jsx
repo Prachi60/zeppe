@@ -308,54 +308,71 @@ const StockManagement = () => {
                             </div>
                         </div>
                         <div className="divide-y divide-slate-50">
-                            {history.length === 0 ? (
-                                <div className="p-16 text-center">
-                                    <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
-                                        <HiOutlineArrowsUpDown className="h-8 w-8 text-slate-300" />
-                                    </div>
-                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No movement history found</p>
-                                </div>
-                            ) : history.map((log) => (
-                                <div key={log._id} className="p-5 hover:bg-slate-50/50 transition-colors flex items-center justify-between group">
-                                    <div className="flex items-center gap-5">
-                                        <div className={cn(
-                                            "h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm",
-                                            log.type === 'Restock' ? "bg-emerald-50 text-emerald-600" :
-                                                log.type === 'Sale' ? "bg-indigo-50 text-indigo-600" : "bg-rose-50 text-rose-600"
-                                        )}>
-                                            {log.type === 'Restock' ? <HiOutlinePlus className="h-6 w-6" /> :
-                                                log.type === 'Sale' ? <HiOutlineCube className="h-6 w-6" /> : <HiOutlineMinus className="h-6 w-6" />}
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="text-sm font-black text-slate-900">{log.product?.name || 'Unknown Product'}</h4>
-                                                <Badge className={cn(
-                                                    "text-[8px] font-black uppercase px-2 py-0.5 rounded-md",
-                                                    log.type === 'Restock' ? "bg-emerald-100 text-emerald-700" :
-                                                        log.type === 'Sale' ? "bg-indigo-100 text-indigo-700" : "bg-rose-100 text-rose-700"
-                                                )}>
-                                                    {log.type}
-                                                </Badge>
+                        <DynamicDataTable
+                            apiService={sellerApi}
+                            endpoint="/products/stock-history"
+                            refreshSelected={refreshKey}
+                            defaultParams={{}}
+                            columns={[
+                                {
+                                    header: "Activity",
+                                    cell: (log) => (
+                                        <div className="flex items-center gap-4">
+                                            <div className={cn(
+                                                "h-10 w-10 rounded-2xl flex items-center justify-center shadow-sm",
+                                                log.type === 'Restock' ? "bg-emerald-50 text-emerald-600" :
+                                                    log.type === 'Sale' ? "bg-indigo-50 text-indigo-600" : "bg-rose-50 text-rose-600"
+                                            )}>
+                                                {log.type === 'Restock' ? <HiOutlinePlus className="h-5 w-5" /> :
+                                                    log.type === 'Sale' ? <HiOutlineCube className="h-5 w-5" /> : <HiOutlineMinus className="h-5 w-5" />}
                                             </div>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
-                                                {log.note || 'Internal Adjustment'}
-                                            </p>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="text-sm font-black text-slate-900">{log.product?.name || 'Unknown Product'}</h4>
+                                                    <Badge className={cn(
+                                                        "text-[8px] font-black uppercase px-2 py-0.5 rounded-md border-none",
+                                                        log.type === 'Restock' ? "bg-emerald-100 text-emerald-700" :
+                                                            log.type === 'Sale' ? "bg-indigo-100 text-indigo-700" : "bg-rose-100 text-rose-700"
+                                                    )}>
+                                                        {log.type}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                                    {log.note || 'Internal Adjustment'}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="text-right">
+                                    )
+                                },
+                                {
+                                    header: "Qty",
+                                    align: "center",
+                                    cell: (log) => (
                                         <div className={cn(
                                             "text-lg font-black tracking-tight",
                                             log.quantity > 0 ? "text-emerald-600" : "text-rose-600"
                                         )}>
                                             {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
                                         </div>
-                                        <div className="flex items-center justify-end gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                            {new Date(log.createdAt).toLocaleDateString()}
+                                    )
+                                },
+                                {
+                                    header: "Timestamp",
+                                    align: "right",
+                                    cell: (log) => (
+                                        <div className="flex flex-col items-end gap-1">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                {new Date(log.createdAt).toLocaleDateString()}
+                                            </p>
+                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">
+                                                {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
                                         </div>
-                                    </div>
-                                </div>
-                            ))}
+                                    )
+                                }
+                            ]}
+                        />
                         </div>
                     </Card>
                 </BlurFade>
