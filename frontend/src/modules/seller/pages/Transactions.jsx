@@ -89,9 +89,9 @@ const Transactions = () => {
   const handleExportAll = async () => {
     setIsDownloading(true);
     try {
-        const res = await sellerApi.getLedger({ limit: 1000, type: activeTab, search: searchTerm });
+        const res = await sellerApi.getLedger({ limit: 1000, search: searchTerm });
         if (res.data.success) {
-            const items = res.data.result.items || [];
+            const items = res.data.result?.items || [];
             if (items.length === 0) {
                 toast.info("No transactions to export");
                 return;
@@ -189,39 +189,25 @@ const Transactions = () => {
 
       <BlurFade delay={0.4}>
         <Card className="border-none shadow-2xl shadow-slate-200/50 overflow-hidden rounded-[2rem] p-0 bg-white">
-          {/* Toolbar */}
-          <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row gap-6 items-center justify-between bg-white/50 backdrop-blur-sm">
-            <div className="flex bg-slate-100 p-1.5 rounded-[1.25rem] border border-slate-200 shrink-0">
-              {["All", "Order Payment", "Withdrawal", "Refund"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    "px-5 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all",
-                    activeTab === tab
-                      ? "bg-white text-slate-900 shadow-md scale-105"
-                      : "text-slate-500 hover:text-slate-700",
-                  )}>
-                  {tab === "Order Payment" ? "Earnings" : tab}
-                </button>
-              ))}
-            </div>
-            <div className="relative w-full md:w-80">
-              <HiOutlineMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Reference or Status..."
-                className="pl-12 pr-4 py-3.5 rounded-2xl border-none ring-1 ring-slate-100 bg-slate-50/50 focus:ring-2 focus:ring-primary/20 transition-all text-xs font-black shadow-inner"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
+          {/* Toolbar handled by DynamicDataTable internal filters */}
+
 
           <DynamicDataTable
             apiService={sellerApi}
-            endpoint="/ledger"
-            searchKey="search"
-            defaultParams={{ type: activeTab, search: searchTerm }}
+            endpoint="seller/ledger"
+            searchPlaceholder="Search Reference or Status..."
+            filters={[
+              {
+                key: "type",
+                label: "All Transactions",
+                options: [
+                  { label: "Earnings", value: "Order Payment" },
+                  { label: "Withdrawals", value: "Withdrawal" },
+                  { label: "Refunds", value: "Refund" }
+                ]
+              }
+            ]}
+            defaultParams={{}}
             columns={[
               {
                 header: "Reference",

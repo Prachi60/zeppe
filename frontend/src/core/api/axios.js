@@ -40,10 +40,15 @@ axiosInstance.interceptors.request.use(
 
         // 2. Fallback to URL-based detection
         if (!token) {
-            if (url.startsWith('/seller')) token = localStorage.getItem('auth_seller');
-            else if (url.startsWith('/admin')) token = localStorage.getItem('auth_admin');
-            else if (url.startsWith('/delivery')) token = localStorage.getItem('auth_delivery');
-            else if (url.startsWith('/customer') || url.startsWith('/cart') || url.startsWith('/wishlist') || url.startsWith('/categories') || url.startsWith('/products') || url.startsWith('/payments')) {
+            const isSellerPath = url.startsWith('/seller') || url.startsWith('seller');
+            const isAdminPath = url.startsWith('/admin') || url.startsWith('admin');
+            const isDeliveryPath = url.startsWith('/delivery') || url.startsWith('delivery');
+
+            if (isSellerPath) token = localStorage.getItem('auth_seller');
+            else if (isAdminPath) token = localStorage.getItem('auth_admin');
+            else if (isDeliveryPath) token = localStorage.getItem('auth_delivery');
+            else if (url.includes('/customer') || url.includes('/cart') || url.includes('/wishlist') || url.includes('/categories') || url.includes('/products') || url.includes('/payments') || 
+                     url.startsWith('customer') || url.startsWith('cart') || url.startsWith('wishlist') || url.startsWith('categories') || url.startsWith('products') || url.startsWith('payments')) {
                 token = localStorage.getItem('auth_customer');
             }
         }
