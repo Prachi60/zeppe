@@ -1,171 +1,155 @@
-// Ultimate FAQ Management System - Functional Version
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
+import { z } from 'zod';
+import PageHeader from '@shared/components/ui/PageHeader';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
 import Modal from '@shared/components/ui/Modal';
-import {
-    HelpCircle,
-    Plus,
-    Search,
-    Filter,
-    MoreVertical,
-    Edit3,
-    Trash2,
-    Eye,
-    EyeOff,
-    ChevronDown,
-    ChevronUp,
-    MessageSquare,
-    Layers,
-    TrendingUp,
-    Settings,
-    ArrowUpRight,
-    GripVertical,
-    Save,
-    X,
-    CheckCircle2,
-    AlertCircle
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useToast } from '@shared/components/ui/Toast';
-import { motion, AnimatePresence } from 'framer-motion';
-import Pagination from '@shared/components/ui/Pagination';
+import DynamicDataTable from '@shared/components/ui/DynamicDataTable';
+import DynamicForm from '@shared/components/ui/DynamicForm';
+import { HiOutlinePlus, HiOutlinePencilSquare, HiOutlineTrash, HiOutlineEye, HiOutlineEyeSlash, HiOutlineQuestionMarkCircle } from 'react-icons/hi2';
 import { adminApi } from '../services/adminApi';
-import { useEffect } from 'react';
+import { toast } from 'sonner';
+
+const faqSchema = z.object({
+    question: z.string().min(10, 'Question must be at least 10 characters'),
+    answer: z.string().min(20, 'Answer must be at least 20 characters'),
+    category: z.string().min(1, 'Category is required'),
+    status: z.enum(['active', 'inactive', 'published', 'draft']).default('published')
+});
 
 const FAQManagement = () => {
-    const { showToast } = useToast();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [activeCategory, setActiveCategory] = useState('All');
-    const [expandedId, setExpandedId] = useState(null);
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-    const [sortBy, setSortBy] = useState('Most Viewed');
-    const [editingFaqId, setEditingFaqId] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [isSaving, setIsSaving] = useState(false);
 
-    // Form States
-    const [newFaq, setNewFaq] = useState({
-        question: '',
-        answer: '',
-        category: 'Customer',
-        status: 'published'
-    });
-
-    const [isLoading, setIsLoading] = useState(true);
-    const [newCategoryName, setNewCategoryName] = useState('');
-
-    // Categories State
-    const [categories, setCategories] = useState([
-        { id: 1, name: 'Customer', color: 'sky' },
-        { id: 2, name: 'Seller', color: 'indigo' },
-        { id: 3, name: 'Delivery', color: 'amber' },
-        { id: 4, name: 'Orders', color: 'emerald' },
-    ]);
-
-    const [faqs, setFaqs] = useState([]);
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(25);
-    const [total, setTotal] = useState(0);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchFaqs(1);
-        }, 500);
-        return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pageSize, searchTerm, activeCategory]);
-
-    const fetchFaqs = async (requestedPage = 1) => {
-        setIsLoading(true);
-        try {
-            const params = { 
-                page: requestedPage, 
-                limit: pageSize,
-                search: searchTerm.trim() || undefined,
-                category: activeCategory !== 'All' ? activeCategory : undefined
-            };
-            const response = await adminApi.getFAQs(params);
-            const payload = response.data.result || {};
-            const data = Array.isArray(payload.items) ? payload.items : (response.data.results || []);
-            setFaqs(data);
-            setTotal(typeof payload.total === 'number' ? payload.total : data.length);
-            setPage(typeof payload.page === 'number' ? payload.page : requestedPage);
-        } catch (error) {
-            showToast('Failed to fetch FAQs', 'error');
-        } finally {
-            setIsLoading(false);
+    const columns = [
+        {
+            header: "Question",
+            width: "40%",
+            cell: (row) => (
+                <div className="flex items-start gap-3">
+                    <div className="p-2 bg-slate-50 rounded-lg text-slate-400 mt-1">
+                        <HiOutlineQuestionMarkCircle className="h-4 w-4" />
+                    </div>
+                    <div>
+                        <p className="font-bold text-slate-900 text-[13px] leading-tight">{row.question}</p>
+                        <p className="text-[11px] text-slate-400 mt-1 font-medium italic truncate max-w-xs">{row.answer}</p>
+                    </div>
+                </div>
+            )
+        },
+        {
+            header: "Category",
+            accessor: "category",
+            width: "15%",
+            cell: (row) => (
+                <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    {row.category}
+                </span>
+            )
+        },
+        {
+            header: "Status",
+            width: "15%",
+            align: "center",
+            cell: (row) => (
+                <Badge variant={row.status === 'published' || row.status === 'active' ? 'success' : 'gray'} className="text-[10px] font-bold uppercase">
+                    {row.status}
+                </Badge>
+            )
+        },
+        {
+            header: "Views",
+            accessor: "views",
+            width: "10%",
+            align: "center",
+            cell: (row) => <span className="font-mono text-[12px] font-bold text-slate-500">{(row.views || 0).toLocaleString()}</span>
+        },
+        {
+            header: "Actions",
+            width: "20%",
+            align: "right",
+            cell: (row) => (
+                <div className="flex justify-end gap-2">
+                    <button 
+                        onClick={() => handleToggleStatus(row)}
+                        className="p-2 hover:bg-slate-100 text-slate-400 hover:text-sky-600 rounded-xl transition-all"
+                    >
+                        {row.status === 'published' ? <HiOutlineEyeSlash className="h-4 w-4" /> : <HiOutlineEye className="h-4 w-4" />}
+                    </button>
+                    <button 
+                        onClick={() => { setEditingItem(row); setIsModalOpen(true); }}
+                        className="p-2 hover:bg-slate-100 text-slate-400 hover:text-brand-600 rounded-xl transition-all"
+                    >
+                        <HiOutlinePencilSquare className="h-4 w-4" />
+                    </button>
+                    <button 
+                        onClick={() => handleDelete(row._id)}
+                        className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-all"
+                    >
+                        <HiOutlineTrash className="h-4 w-4" />
+                    </button>
+                </div>
+            )
         }
-    };
+    ];
 
-    // Computed Categories with Counts
-    const categoriesWithCounts = useMemo(() => {
-        return categories.map(cat => ({
-            ...cat,
-            count: faqs.filter(f => f.category === cat.name).length
-        }));
-    }, [categories, faqs]);
-
-    // Core Filtering and Sorting Logic
-    const filteredAndSortedFaqs = useMemo(() => {
-        let result = [...faqs];
-
-        // Sorting Logic
-        switch (sortBy) {
-            case 'Most Viewed':
-                result.sort((a, b) => b.views - a.views);
-                break;
-            case 'Newest First':
-                result.sort((a, b) => b.createdAt - a.createdAt);
-                break;
-            case 'Alphabetical':
-                result.sort((a, b) => a.question.localeCompare(b.question));
-                break;
-            default:
-                break;
+    const fields = [
+        { name: 'question', label: 'Question', placeholder: 'What are the delivery charges?', required: true, fullWidth: true },
+        { name: 'answer', label: 'Detailed Answer', placeholder: 'Type the answer here...', type: 'textarea', required: true, fullWidth: true },
+        { 
+            name: 'category', 
+            label: 'Category', 
+            type: 'select', 
+            required: true,
+            options: [
+                { label: 'Customer', value: 'Customer' },
+                { label: 'Seller', value: 'Seller' },
+                { label: 'Delivery', value: 'Delivery' },
+                { label: 'Orders', value: 'Orders' }
+            ] 
+        },
+        { 
+            name: 'status', 
+            label: 'Initial Status', 
+            type: 'select', 
+            required: true,
+            options: [
+                { label: 'Published', value: 'published' },
+                { label: 'Draft', value: 'draft' }
+            ] 
         }
+    ];
 
-        return result;
-    }, [faqs, searchTerm, activeCategory, sortBy]);
-
-    // Actions
-    const handleSaveFaq = async (e) => {
-        e.preventDefault();
-
+    const handleSave = async (data, reset) => {
+        setIsSaving(true);
         try {
-            if (editingFaqId) {
-                await adminApi.updateFAQ(editingFaqId, newFaq);
-                showToast(`FAQ updated successfully`, 'success');
+            if (editingItem) {
+                await adminApi.updateFAQ(editingItem._id, data);
+                toast.success('FAQ updated successfully');
             } else {
-                await adminApi.createFAQ(newFaq);
-                showToast(`FAQ created successfully`, 'success');
+                await adminApi.createFAQ(data);
+                toast.success('FAQ created successfully');
             }
-            fetchFaqs(page);
-            setIsAddModalOpen(false);
-            setEditingFaqId(null);
-            setNewFaq({ question: '', answer: '', category: 'Customer', status: 'published' });
+            setIsModalOpen(false);
+            setEditingItem(null);
+            setRefreshTrigger(p => p + 1);
         } catch (error) {
-            showToast('Failed to save FAQ', 'error');
+            toast.error('Failed to save FAQ');
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    const handleEditClick = (faq) => {
-        setNewFaq({
-            question: faq.question,
-            answer: faq.answer,
-            category: faq.category,
-            status: faq.status
-        });
-        setEditingFaqId(faq._id);
-        setIsAddModalOpen(true);
-    };
-
-    const handleDeleteFaq = async (id) => {
+    const handleDelete = async (id) => {
+        if (!window.confirm('Delete this FAQ?')) return;
         try {
             await adminApi.deleteFAQ(id);
-            fetchFaqs(page);
-            showToast('FAQ deleted successfully', 'warning');
+            toast.success('FAQ removed');
+            setRefreshTrigger(p => p + 1);
         } catch (error) {
-            showToast('Failed to delete FAQ', 'error');
+            toast.error('Deletion failed');
         }
     };
 
@@ -173,371 +157,60 @@ const FAQManagement = () => {
         try {
             const newStatus = faq.status === 'published' ? 'draft' : 'published';
             await adminApi.updateFAQ(faq._id, { status: newStatus });
-            fetchFaqs(page);
-            showToast('Visibility state updated', 'info');
+            toast.success(`Visibility updated to ${newStatus}`);
+            setRefreshTrigger(p => p + 1);
         } catch (error) {
-            showToast('Failed to update status', 'error');
+            toast.error('Status update failed');
         }
     };
 
-    const handleAddCategory = () => {
-        if (!newCategoryName.trim()) return;
-        const colors = ['sky', 'emerald', 'amber', 'rose', 'indigo', 'pink', 'violet'];
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-        setCategories([...categories, { id: Date.now(), name: newCategoryName, color: randomColor }]);
-        setNewCategoryName('');
-        showToast('New taxonomy node generated', 'success');
-    };
-
-    const handleDeleteCategory = (name) => {
-        setCategories(categories.filter(c => c.name !== name));
-        showToast('Category node removed', 'warning');
-    };
-
     return (
-        <div className="ds-section-spacing animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
-            {/* Header Section */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 px-1">
-                <div>
-                    <h1 className="ds-h1 flex items-center gap-3">
-                        FAQ Management
-                        <div className="p-2 bg-pink-100 rounded-xl">
-                            <HelpCircle className="h-5 w-5 text-pink-600" />
-                        </div>
-                    </h1>
-                    <p className="ds-description mt-1">Manage categories and help customers with common questions.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setIsCategoryModalOpen(true)}
-                        className="flex items-center gap-2 px-5 py-3 bg-white ring-1 ring-slate-200 text-slate-700 rounded-2xl text-xs font-bold hover:bg-slate-50 transition-all shadow-sm"
+        <div className="ds-section-spacing animate-in fade-in slide-in-from-bottom-2 duration-700">
+            <PageHeader
+                title="FAQ Management"
+                description="Easily manage customer and seller assistance content through this dynamic interface."
+                action={
+                    <button 
+                        onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
+                        className="ds-button-primary"
                     >
-                        <Layers className="h-4 w-4 text-sky-500" />
-                        CATEGORIES
-                    </button>
-                    <button
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="flex items-center gap-2 px-5 py-3 bg-pink-600 text-white rounded-2xl text-xs font-bold hover:bg-pink-700 transition-all shadow-lg active:scale-95 shadow-pink-200"
-                    >
-                        <Plus className="h-4 w-4" />
+                        <HiOutlinePlus className="mr-2 h-4 w-4" />
                         ADD FAQ
                     </button>
-                </div>
-            </div>
+                }
+            />
 
-            {/* Quick Intelligence Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                    { label: 'Total FAQs', value: faqs.length, icon: MessageSquare, bg: 'bg-pink-50', iconColor: 'text-pink-600' },
-                    { label: 'Total Views', value: faqs.reduce((acc, f) => acc + f.views, 0).toLocaleString(), icon: TrendingUp, bg: 'bg-sky-50', iconColor: 'text-sky-600' },
-                    { label: 'Published', value: faqs.filter(f => f.status === 'published').length, icon: CheckCircle2, bg: 'bg-brand-50', iconColor: 'text-brand-600' },
-                    { label: 'Drafts', value: faqs.filter(f => f.status === 'draft').length, icon: Edit3, bg: 'bg-amber-50', iconColor: 'text-amber-600' },
-                ].map((stat, i) => (
-                    <Card key={i} className="p-5 border-none shadow-sm ring-1 ring-slate-100 bg-white group hover:ring-pink-200 transition-all overflow-hidden relative text-left">
-                        <div className="relative z-10 flex items-center gap-4">
-                            <div className={cn("p-3 rounded-2xl h-12 w-12 flex items-center justify-center", stat.bg)}>
-                                <stat.icon className={cn("h-6 w-6", stat.iconColor)} />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{stat.label}</p>
-                                <h3 className="text-2xl font-black text-slate-900">{stat.value}</h3>
-                            </div>
-                        </div>
-                    </Card>
-                ))}
-            </div>
+            <DynamicDataTable
+                endpoint="/admin/faqs"
+                columns={columns}
+                refreshSelected={refreshTrigger}
+                searchPlaceholder="Search questions or answers..."
+                filters={[
+                    { 
+                        key: 'category', 
+                        label: 'All Categories', 
+                        options: [
+                            { label: 'Customer', value: 'Customer' },
+                            { label: 'Seller', value: 'Seller' },
+                            { label: 'Delivery', value: 'Delivery' }
+                        ] 
+                    }
+                ]}
+            />
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                {/* Left Sidebar: Categories */}
-                <div className="lg:col-span-1 space-y-4">
-                    <Card className="p-6 border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl text-left">
-                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6">FAQ Categories</h4>
-                        <div className="space-y-2">
-                            <button
-                                onClick={() => setActiveCategory('All')}
-                                className={cn(
-                                    "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all",
-                                    activeCategory === 'All' ? "bg-slate-900 text-white shadow-lg" : "text-slate-600 hover:bg-slate-50"
-                                )}
-                            >
-                                <span className="flex items-center gap-3">
-                                    <Layers className="h-4 w-4 opacity-70" />
-                                    All Topics
-                                </span>
-                                <span className="text-[10px] opacity-60 font-black">{faqs.length}</span>
-                            </button>
-                            {categoriesWithCounts.map((cat) => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setActiveCategory(cat.name)}
-                                    className={cn(
-                                        "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all",
-                                        activeCategory === cat.name ? "bg-pink-600 text-white shadow-lg shadow-pink-100" : "text-slate-600 hover:bg-slate-50"
-                                    )}
-                                >
-                                    <span className="flex items-center gap-3">
-                                        <div className={cn("h-1.5 w-1.5 rounded-full", activeCategory === cat.name ? "bg-white" : `bg-${cat.color}-500`)} />
-                                        {cat.name}
-                                    </span>
-                                    <span className="text-[10px] opacity-60 font-black">{cat.count}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </Card>
-                </div>
-
-                {/* Main Content: FAQ List */}
-                <div className="lg:col-span-3 space-y-6">
-                    {/* Filter & Search Bar */}
-                    <Card className="p-4 border-none shadow-xl ring-1 ring-slate-100/50 bg-white/80 backdrop-blur-xl rounded-xl flex flex-col md:flex-row gap-4 items-center">
-                        <div className="flex-1 relative group w-full text-left">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="Search questions or answers..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-xs font-semibold outline-none focus:ring-2 focus:ring-pink-500/10 transition-all"
-                            />
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-2">Sort:</span>
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="bg-slate-50 border-none px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none text-slate-600 cursor-pointer"
-                            >
-                                <option>Most Viewed</option>
-                                <option>Newest First</option>
-                                <option>Alphabetical</option>
-                            </select>
-                        </div>
-                    </Card>
-
-                    {/* FAQ Grid/List */}
-                    <div className="space-y-4">
-                        <AnimatePresence mode='popLayout'>
-                            {filteredAndSortedFaqs.map((faq, index) => (
-                                <motion.div
-                                    key={faq.id}
-                                    layout
-                                    initial={{ opacity: 0, scale: 0.98 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.3 }}
-                                >
-                                    <Card className={cn(
-                                        "border-none shadow-lg ring-1 transition-all overflow-hidden rounded-xl text-left",
-                                        expandedId === faq.id ? "ring-pink-200 bg-white" : "ring-slate-100 bg-white hover:ring-slate-200"
-                                    )}>
-                                        <div className="p-6">
-                                            <div className="flex items-start gap-4">
-                                                <div className="p-3 bg-slate-50 rounded-2xl text-slate-300">
-                                                    <GripVertical className="h-4 w-4" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-                                                        <div className="flex items-center gap-3">
-                                                            <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest border-slate-200 text-slate-400">
-                                                                {faq.id}
-                                                            </Badge>
-                                                            <Badge variant={faq.status === 'published' ? 'success' : 'secondary'} className="text-[8px] font-black uppercase tracking-widest">
-                                                                {faq.status}
-                                                            </Badge>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="flex items-center gap-2 mr-4">
-                                                                <Eye className="h-3.5 w-3.5 text-slate-300" />
-                                                                <span className="text-[10px] font-bold text-slate-400">{faq.views.toLocaleString()}</span>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => handleToggleStatus(faq)}
-                                                                title={faq.status === 'published' ? 'Set as Draft' : 'Publish Now'}
-                                                                className="p-2 transition-all text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg"
-                                                            >
-                                                                {faq.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleEditClick(faq)}
-                                                                className="p-2 transition-all text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg"
-                                                            >
-                                                                <Edit3 className="h-4 w-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteFaq(faq._id)}
-                                                                className="p-2 transition-all text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div
-                                                        onClick={() => setExpandedId(expandedId === faq.id ? null : faq.id)}
-                                                        className="cursor-pointer group"
-                                                    >
-                                                        <h3 className="text-base font-black text-slate-900 group-hover:text-pink-600 transition-colors flex items-center justify-between">
-                                                            {faq.question}
-                                                            {expandedId === faq.id ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                                                        </h3>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <AnimatePresence>
-                                                {expandedId === faq.id && (
-                                                    <motion.div
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: 'auto', opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        transition={{ duration: 0.3 }}
-                                                        className="overflow-hidden"
-                                                    >
-                                                        <div className="mt-6 pt-6 border-t border-slate-50 ml-14">
-                                                            <div className="bg-slate-50 p-6 rounded-xl relative">
-                                                                <p className="text-sm font-bold text-slate-600 leading-relaxed italic">
-                                                                    "{faq.answer}"
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex items-center justify-between mt-4">
-                                                                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                                                                    <ArrowUpRight className="h-3 w-3" />
-                                                                    Category: <span className="text-slate-500">{faq.category}</span>
-                                                                </span>
-                                                                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                                                                    Updated: {faq.lastUpdated}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                    </Card>
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
-                    </div>
-                </div>
-            </div>
-            <div className="mt-6 flex justify-center">
-                <Pagination
-                    page={page}
-                    totalPages={Math.ceil(total / pageSize) || 1}
-                    total={total}
-                    pageSize={pageSize}
-                    onPageChange={(p) => fetchFaqs(p)}
-                    onPageSizeChange={(newSize) => {
-                        setPageSize(newSize);
-                        setPage(1);
-                    }}
-                    loading={isLoading}
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title={editingItem ? "Edit FAQ" : "Create New FAQ"}
+            >
+                <DynamicForm
+                    schema={faqSchema}
+                    fields={fields}
+                    defaultValues={editingItem || { category: 'Customer', status: 'published' }}
+                    onSubmit={handleSave}
+                    submitLabel={editingItem ? "Update FAQ" : "Create FAQ"}
+                    isLoading={isSaving}
                 />
-            </div>
-
-            {/* Modals */}
-            <Modal
-                isOpen={isAddModalOpen}
-                onClose={() => {
-                    setIsAddModalOpen(false);
-                    setEditingFaqId(null);
-                    setNewFaq({ question: '', answer: '', category: 'Customer', status: 'published' });
-                }}
-                title={editingFaqId ? `Edit Question: ${editingFaqId}` : "Create New FAQ"}
-                size="lg"
-            >
-                <form onSubmit={handleSaveFaq} className="space-y-6 text-left">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Category</label>
-                                <select
-                                    value={newFaq.category}
-                                    onChange={(e) => setNewFaq({ ...newFaq, category: e.target.value })}
-                                    className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-pink-500/10 transition-all shadow-sm cursor-pointer"
-                                >
-                                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Visibility State</label>
-                                <div className="flex bg-slate-100 p-1 rounded-2xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setNewFaq({ ...newFaq, status: 'published' })}
-                                        className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", newFaq.status === 'published' ? "bg-white text-pink-600 shadow-sm" : "text-slate-400")}
-                                    >PUBLISHED</button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setNewFaq({ ...newFaq, status: 'draft' })}
-                                        className={cn("flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all", newFaq.status === 'draft' ? "bg-white text-pink-600 shadow-sm" : "text-slate-400")}
-                                    >DRAFT</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Question</label>
-                        <input
-                            type="text"
-                            required
-                            value={newFaq.question}
-                            onChange={(e) => setNewFaq({ ...newFaq, question: e.target.value })}
-                            placeholder="Enter the question..."
-                            className="w-full px-5 py-5 bg-slate-50 border-none rounded-2xl text-base font-black outline-none focus:ring-2 focus:ring-pink-500/10 transition-all shadow-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Answer</label>
-                        <textarea
-                            rows={4}
-                            required
-                            value={newFaq.answer}
-                            onChange={(e) => setNewFaq({ ...newFaq, answer: e.target.value })}
-                            placeholder="Type the answer here..."
-                            className="w-full px-5 py-5 bg-slate-50 border-none rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-pink-500/10 transition-all shadow-sm resize-none"
-                        />
-                    </div>
-                    <div className="flex gap-4">
-                        <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-all">CANCEL</button>
-                        <button type="submit" className="flex-[2] py-4 bg-pink-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-pink-700 shadow-xl shadow-pink-100 transition-all flex items-center justify-center gap-2">
-                            <Save className="h-4 w-4" /> SAVE FAQ
-                        </button>
-                    </div>
-                </form>
-            </Modal>
-
-            <Modal
-                isOpen={isCategoryModalOpen}
-                onClose={() => setIsCategoryModalOpen(false)}
-                title="Manage Categories"
-            >
-                <div className="space-y-6 text-left">
-                    <div className="space-y-3">
-                        {categories.map((cat) => (
-                            <div key={cat.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <div className="flex items-center gap-4">
-                                    <div className={cn("h-4 w-4 rounded-full shadow-sm", `bg-${cat.color}-500`)} />
-                                    <span className="text-sm font-black text-slate-900">{cat.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => handleDeleteCategory(cat.name)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg transition-all"><Trash2 className="h-4 w-4" /></button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="relative group">
-                        <Plus className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-sky-500" />
-                        <input
-                            type="text"
-                            value={newCategoryName}
-                            onChange={(e) => setNewCategoryName(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
-                            placeholder="New Category Label..."
-                            className="w-full pl-11 pr-4 py-4 bg-white ring-1 ring-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-sky-500/10 transition-all"
-                        />
-                    </div>
-                    <button onClick={handleAddCategory} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all">GENERATE NEW CATEGORY</button>
-                </div>
             </Modal>
         </div>
     );

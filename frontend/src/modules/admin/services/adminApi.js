@@ -1,6 +1,7 @@
 import axiosInstance from '@core/api/axios';
 
 export const adminApi = {
+    fetchData: (url, params) => axiosInstance.get(url, { params }),
     login: (data) => axiosInstance.post('/admin/login', data),
     signup: (data) => axiosInstance.post('/admin/signup', data),
     getStats: () => axiosInstance.get('/admin/stats'),

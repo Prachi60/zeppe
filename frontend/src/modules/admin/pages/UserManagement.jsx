@@ -1,60 +1,94 @@
 import React from 'react';
-import Card from '@shared/components/ui/Card';
-import Button from '@shared/components/ui/Button';
+import PageHeader from '@shared/components/ui/PageHeader';
 import Badge from '@shared/components/ui/Badge';
-import { HiOutlineUserAdd } from 'react-icons/hi';
+import DynamicDataTable from '@shared/components/ui/DynamicDataTable';
+import { HiOutlineUserAdd, HiOutlineEye } from 'react-icons/hi2';
+import { useNavigate } from 'react-router-dom';
 
 const UserManagement = () => {
-    return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="ds-h1">Platform Users</h2>
-                <Button>
-                    <HiOutlineUserAdd className="mr-2 h-5 w-5" />
-                    Add Internal User
-                </Button>
-            </div>
+    const navigate = useNavigate();
 
-            <Card>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 border-b">
-                            <tr>
-                                <th className="ds-table-header-cell">User</th>
-                                <th className="ds-table-header-cell">Role</th>
-                                <th className="ds-table-header-cell">Status</th>
-                                <th className="ds-table-header-cell">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                            {[1, 2, 3, 4].map((i) => (
-                                <tr key={i}>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center">
-                                            <img 
-                                                src="https://cdn-icons-png.flaticon.com/512/149/149071.png" 
-                                                alt="" 
-                                                className="h-9 w-9 rounded-full bg-slate-50 ring-1 ring-slate-100 object-cover mr-3" 
-                                            />
-                                            <div>
-                                                <p className="font-semibold text-gray-900 text-sm">John Doe {i}</p>
-                                                <p className="text-xs text-gray-500">john{i}@example.com</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-600">SELLER</td>
-                                    <td className="px-6 py-4">
-                                        <Badge variant="success">Active</Badge>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">Manage</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+    const columns = [
+        {
+            header: "User",
+            width: "35%",
+            cell: (row) => (
+                <div className="flex items-center">
+                    <img 
+                        src={row.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} 
+                        alt="" 
+                        className="h-10 w-10 rounded-xl bg-slate-50 ring-1 ring-slate-100 object-cover mr-3 shadow-sm" 
+                    />
+                    <div className="min-w-0">
+                        <p className="font-bold text-slate-900 text-[13px] truncate">{row.name}</p>
+                        <p className="text-[11px] text-slate-500 truncate font-medium">{row.email || row.phone}</p>
+                    </div>
                 </div>
-            </Card>
+            )
+        },
+        {
+            header: "Orders",
+            accessor: "totalOrders",
+            width: "15%",
+            align: "center",
+            cell: (row) => (
+                <span className="font-bold text-slate-700 text-xs bg-slate-100 px-2 py-1 rounded-lg">
+                    {row.totalOrders || 0}
+                </span>
+            )
+        },
+        {
+            header: "Spent",
+            width: "15%",
+            cell: (row) => (
+                <span className="font-bold text-brand-600 text-xs">
+                    ₹{(row.totalSpent || 0).toLocaleString()}
+                </span>
+            )
+        },
+        {
+            header: "Status",
+            width: "15%",
+            align: "center",
+            cell: (row) => (
+                <Badge variant={row.status === 'active' ? 'success' : 'gray'} className="text-[10px] uppercase tracking-wider font-bold">
+                    {row.status}
+                </Badge>
+            )
+        },
+        {
+            header: "Actions",
+            width: "20%",
+            align: "right",
+            cell: (row) => (
+                <button 
+                    onClick={() => navigate(`/admin/customers/${row._id || row.id}`)}
+                    className="p-2 hover:bg-slate-100 text-slate-400 hover:text-primary transition-all rounded-xl ring-1 ring-slate-100 shadow-sm"
+                >
+                    <HiOutlineEye className="h-4 w-4" />
+                </button>
+            )
+        }
+    ];
+
+    return (
+        <div className="ds-section-spacing animate-in fade-in slide-in-from-bottom-2 duration-700">
+            <PageHeader
+                title="Customer Management"
+                description="Manage all registered customers on the platform, view their order history and spending patterns."
+                action={
+                    <button className="ds-button-primary">
+                        <HiOutlineUserAdd className="mr-2 h-4 w-4" />
+                        Add New Customer
+                    </button>
+                }
+            />
+
+            <DynamicDataTable
+                endpoint="/admin/users"
+                columns={columns}
+                searchPlaceholder="Search by name, email or phone..."
+            />
         </div>
     );
 };
