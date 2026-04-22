@@ -63,6 +63,24 @@ const ProductManagement = () => {
   const [modalTab, setModalTab] = useState("general");
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // --- Filter & pagination state (consumed by UI & DDT defaultParams) ---
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [sortBy, setSortBy] = useState("newest");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [isLoading, setIsLoading] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [total, setTotal] = useState(0);
+  const filterDropdownRef = React.useRef(null);
+
+  // fetchProducts is referenced in the Pagination callbacks
+  const fetchProducts = async (p = 1) => {
+    setPage(p);
+  };
+
   const refreshTable = () => setRefreshKey(prev => prev + 1);
 
   const makeSku = (name, index = 1) => {
@@ -115,9 +133,7 @@ const ProductManagement = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isFilterOpen]);
 
-  React.useEffect(() => {
-    fetchProducts(1);
-  }, [searchTerm, filterCategory, filterStatus, sortBy, pageSize]);
+
 
   const [formData, setFormData] = useState({
     name: "",
@@ -164,7 +180,7 @@ const ProductManagement = () => {
 
       const matchesSearch =
         !term ||
-        p.name.toLowerCase().includes(term) ||
+        (p?.name || '').toLowerCase().includes(term) ||
         (!!skuCandidate && skuCandidate.includes(term));
       const matchesCategory =
         filterCategory === "all" ||
@@ -193,9 +209,9 @@ const ProductManagement = () => {
   const stats = useMemo(
     () => ({
       total: safeProducts.length,
-      lowStock: safeProducts.filter((p) => p.stock > 0 && p.stock <= 10).length,
-      outOfStock: safeProducts.filter((p) => p.stock === 0).length,
-      active: safeProducts.filter((p) => p.status === "active").length,
+      lowStock: safeProducts.filter((p) => (p?.stock || 0) > 0 && (p?.stock || 0) <= 10).length,
+      outOfStock: safeProducts.filter((p) => (p?.stock || 0) === 0).length,
+      active: safeProducts.filter((p) => (p?.status || '') === "active").length,
     }),
     [safeProducts],
   );
@@ -508,7 +524,14 @@ const ProductManagement = () => {
         apiService={sellerApi}
         refreshSelected={refreshKey}
         endpoint="/products/seller/me"
-        searchPlaceholder="Search products by name or SKU..."
+        defaultParams={{
+          search: searchTerm,
+          category: filterCategory !== "all" ? filterCategory : undefined,
+          status: filterStatus !== "All" ? filterStatus.toLowerCase().replace(" ", "-") : undefined,
+          sort: sortBy,
+          priceMin: priceMin || undefined,
+          priceMax: priceMax || undefined,
+        }}
         columns={[
           {
             header: "Product",
@@ -693,21 +716,7 @@ const ProductManagement = () => {
         </div>
       )}
 
-      <div className="mt-4">
-        <Pagination
-          page={page}
-          totalPages={Math.ceil(total / pageSize) || 1}
-          total={total}
-          pageSize={pageSize}
-          onPageChange={(p) => fetchProducts(p)}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize);
-            setPage(1);
-            fetchProducts(1);
-          }}
-          loading={isLoading}
-        />
-      </div>
+
 
       {/* Edit Modal (Copy from Admin) */}
       <AnimatePresence>

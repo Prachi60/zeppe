@@ -48,6 +48,8 @@ const Orders = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const { showToast } = useToast();
     const [refreshKey, setRefreshKey] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
 
     const refreshOrders = () => setRefreshKey(prev => prev + 1);
 
@@ -55,10 +57,15 @@ const Orders = () => {
     // For now, let's keep stats simple by fetching a small batch.
     useEffect(() => {
         const fetchStats = async () => {
+            setLoading(true);
             try {
                 const res = await sellerApi.getOrders({ limit: 100 });
                 setOrders(res.data.result?.items || []);
-            } catch (err) {}
+            } catch (err) {
+                console.error("Error fetching order stats:", err);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchStats();
     }, []);
@@ -73,10 +80,10 @@ const Orders = () => {
 
     const filteredOrders = useMemo(() => {
         return safeOrders.filter(order => {
-            const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                order.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = (order?.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (order?.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
             const statusToMatch = activeTab === 'Out for Delivery' ? 'out_for_delivery' : activeTab.toLowerCase();
-            const matchesTab = activeTab === 'All' || order.status.toLowerCase() === statusToMatch;
+            const matchesTab = activeTab === 'All' || (order?.status || '').toLowerCase() === statusToMatch;
             return matchesSearch && matchesTab;
         });
     }, [safeOrders, searchTerm, activeTab]);
@@ -91,21 +98,21 @@ const Orders = () => {
         },
         {
             label: 'Pending',
-            value: safeOrders.filter(o => o.status.toLowerCase() === 'pending').length,
+            value: safeOrders.filter(o => (o?.status || '').toLowerCase() === 'pending').length,
             icon: HiOutlineClock,
             color: 'text-amber-600',
             bg: 'bg-amber-50'
         },
         {
             label: 'Confirmed',
-            value: safeOrders.filter(o => o.status.toLowerCase() === 'confirmed').length,
+            value: safeOrders.filter(o => (o?.status || '').toLowerCase() === 'confirmed').length,
             icon: HiOutlineCheck,
             color: 'text-blue-600',
             bg: 'bg-blue-50'
         },
         {
             label: 'Delivered',
-            value: safeOrders.filter(o => o.status.toLowerCase() === 'delivered').length,
+            value: safeOrders.filter(o => (o?.status || '').toLowerCase() === 'delivered').length,
             icon: HiOutlineCheck,
             color: 'text-brand-600',
             bg: 'bg-brand-50'
@@ -360,6 +367,7 @@ const Orders = () => {
             defaultParams={{
               startDate,
               endDate,
+              search: searchTerm,
               status: activeTab === 'All' ? '' : (activeTab === 'Out for Delivery' ? 'out_for_delivery' : activeTab.toLowerCase())
             }}
             columns={[

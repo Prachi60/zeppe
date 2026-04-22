@@ -217,8 +217,7 @@ const StockManagement = () => {
                             {/* Dynamic Stock Table */}
                             <DynamicDataTable
                                 apiService={sellerApi}
-                                endpoint="/products"
-                                searchKey="name"
+                                endpoint="/products/seller/me"
                                 refreshSelected={refreshKey}
                                 defaultParams={{
                                     stockStatus: filterStatus === 'In Stock' ? 'in' : (filterStatus === 'Out of Stock' ? 'out' : (filterStatus === 'Low Stock' ? 'low' : '')),
