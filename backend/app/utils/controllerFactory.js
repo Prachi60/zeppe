@@ -8,7 +8,13 @@ export const createAdminController = (Model, options = {}) => {
     const { 
         populateFields = [], 
         searchFields = ['name'],
-        defaultSort = { createdAt: -1 }
+        defaultSort = { createdAt: -1 },
+        beforeCreate,
+        afterCreate,
+        beforeUpdate,
+        afterUpdate,
+        beforeDelete,
+        afterDelete
     } = options;
 
     return {
@@ -27,9 +33,10 @@ export const createAdminController = (Model, options = {}) => {
                     });
                 }
 
-                const [items, total] = await Promise.all([
+                const [items, total, stats] = await Promise.all([
                     dbQuery,
-                    Model.countDocuments(query)
+                    Model.countDocuments(query),
+                    options.getStats ? options.getStats(query) : Promise.resolve(null)
                 ]);
 
                 return handleResponse(res, 200, `${Model.modelName}s fetched successfully`, {
@@ -37,7 +44,8 @@ export const createAdminController = (Model, options = {}) => {
                     page,
                     limit,
                     total,
-                    totalPages: Math.ceil(total / limit) || 1
+                    totalPages: Math.ceil(total / limit) || 1,
+                    stats
                 });
             } catch (error) {
                 return handleResponse(res, 500, error.message);
@@ -67,7 +75,13 @@ export const createAdminController = (Model, options = {}) => {
         // CREATE
         create: async (req, res) => {
             try {
-                const item = await Model.create(req.body);
+                let data = req.body;
+                if (beforeCreate) data = await beforeCreate(req, data) || data;
+
+                const item = await Model.create(data);
+                
+                if (afterCreate) await afterCreate(req, item);
+
                 return handleResponse(res, 201, `${Model.modelName} created successfully`, item);
             } catch (error) {
                 if (error.code === 11000) {
@@ -80,13 +94,18 @@ export const createAdminController = (Model, options = {}) => {
         // UPDATE
         update: async (req, res) => {
             try {
+                let data = req.body;
+                if (beforeUpdate) data = await beforeUpdate(req, data) || data;
+
                 const item = await Model.findByIdAndUpdate(
                     req.params.id, 
-                    { $set: req.body }, 
+                    { $set: data }, 
                     { new: true, runValidators: true }
                 );
                 if (!item) return handleResponse(res, 404, `${Model.modelName} not found`);
                 
+                if (afterUpdate) await afterUpdate(req, item);
+
                 return handleResponse(res, 200, `${Model.modelName} updated successfully`, item);
             } catch (error) {
                 return handleResponse(res, 500, error.message);
@@ -96,9 +115,13 @@ export const createAdminController = (Model, options = {}) => {
         // DELETE
         delete: async (req, res) => {
             try {
+                if (beforeDelete) await beforeDelete(req);
+
                 const item = await Model.findByIdAndDelete(req.params.id);
                 if (!item) return handleResponse(res, 404, `${Model.modelName} not found`);
                 
+                if (afterDelete) await afterDelete(req, item);
+
                 return handleResponse(res, 200, `${Model.modelName} deleted successfully`);
             } catch (error) {
                 return handleResponse(res, 500, error.message);
