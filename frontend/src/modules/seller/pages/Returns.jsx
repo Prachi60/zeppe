@@ -27,10 +27,11 @@ const Returns = () => {
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
     const [rejectReason, setRejectReason] = useState("");
-    const [submittingReject, setSubmittingReject] = useState(false);
-    const [assigningPickup, setAssigningPickup] = useState(false);
-    const [activeOtps, setActiveOtps] = useState({}); // { orderId: { otp, expiresAt } }
+    const [refreshKey, setRefreshKey] = useState(0);
+    const [searchTerm, setSearchTerm] = useState("");
     const canManageReturns = true;
+
+    const refreshTable = () => setRefreshKey(prev => prev + 1);
 
     const tabs = [
         "All",
@@ -91,27 +92,18 @@ const Returns = () => {
         }
     };
 
-    const fetchReturns = async () => {
-        try {
-            setLoading(true);
-            const res = await sellerApi.getReturns();
-            const payload = res.data.result || {};
-            const items = Array.isArray(payload.items)
-                ? payload.items
-                : res.data.results || [];
-            setReturns(items || []);
-        } catch (error) {
-            console.error("Failed to fetch returns", error);
-            showToast("Failed to fetch return requests", "error");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        fetchReturns();
+        const fetchStats = async () => {
+            try {
+                const res = await sellerApi.getReturns({ limit: 100 });
+                const payload = res.data.result || {};
+                const items = Array.isArray(payload.items) ? payload.items : (res.data.results || []);
+                setReturns(items || []);
+            } catch (error) {}
+        };
+        fetchStats();
         
-        // Listen for return drop OTPs (when rider arrives at seller)
+        // Listen for return drop OTPs
         const getToken = () => localStorage.getItem("auth_seller");
         const unsubscribe = onReturnDropOtp(getToken, (payload) => {
             const { orderId, otp, expiresAt } = payload;
@@ -125,16 +117,8 @@ const Returns = () => {
         return () => {
             if (typeof unsubscribe === "function") unsubscribe();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [refreshKey]);
 
-    const filteredReturns = useMemo(() => {
-        if (activeTab === "All") return returns;
-        return returns.filter((r) => {
-            const label = mapReturnStatusLabel(r.returnStatus);
-            return label === activeTab;
-        });
-    }, [returns, activeTab]);
 
     const openDetails = (ret) => {
         setSelectedReturn(ret);
@@ -145,7 +129,7 @@ const Returns = () => {
         try {
             await sellerApi.approveReturn(orderId, {});
             showToast("Return approved", "success");
-            await fetchReturns();
+            refreshTable();
         } catch (error) {
             console.error("Failed to approve return", error);
             showToast(
@@ -164,7 +148,7 @@ const Returns = () => {
             setIsRejectModalOpen(false);
             setRejectReason("");
             setIsDetailsOpen(false);
-            await fetchReturns();
+            refreshTable();
         } catch (error) {
             console.error("Failed to reject return", error);
             showToast(
@@ -182,7 +166,7 @@ const Returns = () => {
             await sellerApi.assignReturnDelivery(orderId, {});
             showToast("Riders notified for return pickup", "success");
             setIsDetailsOpen(false);
-            await fetchReturns();
+            refreshTable();
         } catch (error) {
             console.error("Failed to assign pickup", error);
             showToast(
@@ -268,106 +252,98 @@ const Returns = () => {
 
                     <BlurFade delay={0.2}>
                         <Card className="border-none shadow-xl ring-1 ring-slate-100 rounded-lg bg-white overflow-hidden">
-                            <div className="border-b border-slate-100 bg-slate-50/30 overflow-x-auto scrollbar-hide">
-                                <div className="flex px-3 sm:px-6 items-center min-w-max">
-                                    {tabs.map((tab) => (
+                            <div className="border-b border-slate-100 bg-slate-50/30 flex flex-col md:flex-row gap-3 items-center justify-between p-3 sm:p-4">
+                                <div className="flex px-3 items-center min-w-max bg-slate-100 rounded-xl p-1">
+                                    {tabs.filter(t => ["All", "Requested", "Approved", "Completed"].includes(t)).map((tab) => (
                                         <button
                                             key={tab}
                                             onClick={() => setActiveTab(tab)}
                                             className={cn(
-                                                "relative py-3 sm:py-4 px-2.5 sm:px-4 text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-300",
+                                                "px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300",
                                                 activeTab === tab
-                                                    ? "text-primary scale-105"
-                                                    : "text-slate-600 hover:text-slate-700"
+                                                    ? "bg-white text-slate-900 shadow-sm"
+                                                    : "text-slate-500 hover:text-slate-700 font-semibold"
                                             )}
                                         >
                                             {tab}
-                                            {activeTab === tab && (
-                                                <motion.div
-                                                    layoutId="returns-tab-underline"
-                                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full mx-2 sm:mx-4"
-                                                />
-                                            )}
                                         </button>
                                     ))}
                                 </div>
+                                <div className="relative w-full md:w-64">
+                                    <HiOutlineEye className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                    <input 
+                                        type="text"
+                                        placeholder="Search Return ID..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-9 pr-4 py-2 bg-slate-50 border-none rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary/10 transition-all"
+                                    />
+                                </div>
                             </div>
 
-                            <div className="p-3 sm:p-4">
-                                {filteredReturns.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-16 px-4">
-                                        <div className="h-14 w-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mb-3">
-                                            <HiOutlineInboxStack className="h-7 w-7" />
-                                        </div>
-                                        <h3 className="text-sm font-bold text-slate-900">
-                                            No return requests found
-                                        </h3>
-                                        <p className="text-xs text-slate-600 font-medium text-center mt-1">
-                                            You will see customer return requests here.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {filteredReturns.map((ret) => (
-                                            <div
-                                                key={ret._id}
-                                                className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:bg-slate-50/40 transition-colors flex items-start justify-between gap-3"
-                                            >
-                                                <div
-                                                    className="min-w-0 flex-1 cursor-pointer"
-                                                    onClick={() => openDetails(ret)}
-                                                >
-                                                    <p className="text-xs font-black text-slate-900 truncate">
-                                                        #{ret.orderId}
-                                                    </p>
-                                                    <p className="text-xs font-semibold text-slate-600 mt-0.5 flex items-center gap-1">
-                                                        <HiOutlineCalendarDays className="h-3 w-3 shrink-0" />
-                                                        {ret.returnRequestedAt
-                                                            ? new Date(
-                                                                  ret.returnRequestedAt
-                                                              ).toLocaleString("en-IN", {
-                                                                  day: "2-digit",
-                                                                  month: "short",
-                                                                  hour: "2-digit",
-                                                                  minute: "2-digit",
-                                                              })
-                                                            : "N/A"}
-                                                    </p>
-                                                    <p className="text-xs font-bold text-slate-800 mt-1">
-                                                        {ret.customer?.name || "Customer"}
-                                                    </p>
-                                                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                                                        {ret.returnReason ||
-                                                            "No reason provided"}
-                                                    </p>
-                                                </div>
-                                                <div className="flex flex-col items-end gap-2 shrink-0">
-                                                    <Badge
-                                                        variant={getStatusVariant(
-                                                            ret.returnStatus
-                                                        )}
-                                                        className="text-[10px] font-black uppercase px-2 py-0"
-                                                    >
-                                                        {mapReturnStatusLabel(ret.returnStatus)}
-                                                    </Badge>
-                                                    <p className="text-xs font-black text-slate-900">
-                                                        ₹
-                                                        {ret.returnRefundAmount ||
-                                                            ret.pricing?.subtotal ||
-                                                            0}
-                                                    </p>
-                                                    <button
-                                                        onClick={() => openDetails(ret)}
-                                                        className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"
-                                                    >
-                                                        <HiOutlineEye className="h-4 w-4" />
-                                                    </button>
-                                                </div>
+                            <DynamicDataTable
+                                apiService={sellerApi}
+                                endpoint="/orders/seller-returns"
+                                refreshSelected={refreshKey}
+                                defaultParams={{
+                                    status: activeTab === 'Requested' ? 'return_requested' : (activeTab === 'Approved' ? 'return_approved' : (activeTab === 'Completed' ? 'returned' : '')),
+                                    search: searchTerm
+                                }}
+                                columns={[
+                                    {
+                                        header: "Return Details",
+                                        cell: (r) => (
+                                            <div className="cursor-pointer" onClick={() => openDetails(r)}>
+                                                <p className="text-sm font-black text-slate-900 hover:text-primary transition-colors">#{r.orderId}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1 mt-1">
+                                                    <HiOutlineCalendarDays className="h-3 w-3" />
+                                                    {r.returnRequestedAt ? new Date(r.returnRequestedAt).toLocaleDateString() : 'N/A'}
+                                                </p>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                                        )
+                                    },
+                                    {
+                                        header: "Customer",
+                                        cell: (r) => (
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-900">{r.customer?.name || 'Customer'}</p>
+                                                <p className="text-[10px] text-slate-500">{r.customer?.phone || ''}</p>
+                                            </div>
+                                        )
+                                    },
+                                    {
+                                        header: "Refund Amount",
+                                        cell: (r) => (
+                                            <p className="text-sm font-black text-slate-900">₹{r.returnRefundAmount || r.pricing?.subtotal || 0}</p>
+                                        )
+                                    },
+                                    {
+                                        header: "Status",
+                                        cell: (r) => (
+                                            <Badge
+                                                variant={getStatusVariant(r.returnStatus)}
+                                                className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full"
+                                            >
+                                                {mapReturnStatusLabel(r.returnStatus)}
+                                            </Badge>
+                                        )
+                                    },
+                                    {
+                                        header: "Actions",
+                                        align: "right",
+                                        cell: (r) => (
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => openDetails(r)}
+                                                    className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
+                                                >
+                                                    <HiOutlineEye className="h-5 w-5" />
+                                                </button>
+                                            </div>
+                                        )
+                                    }
+                                ]}
+                            />
                         </Card>
                     </BlurFade>
                 </>

@@ -23,7 +23,8 @@ import { BlurFade } from "@/components/ui/blur-fade";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
 import { useSellerEarnings } from "../context/SellerEarningsContext";
-import Pagination from "@shared/components/ui/Pagination";
+import DynamicDataTable from "@shared/components/ui/DynamicDataTable";
+
 
 const Withdrawals = () => {
     const { earningsData: data, earningsLoading: loading, refreshEarnings } = useSellerEarnings();
@@ -31,9 +32,8 @@ const Withdrawals = () => {
     const [amount, setAmount] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
     const [profile, setProfile] = useState(null);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -48,34 +48,8 @@ const Withdrawals = () => {
     const ledger = Array.isArray(data?.ledger) ? data.ledger : [];
     const withdrawalHistory = ledger.filter((t) => (t.type || '').toString() === 'Withdrawal');
 
-    const filteredHistory = useMemo(() => {
-        const term = searchTerm.toLowerCase();
-        const result = withdrawalHistory.filter((item) => {
-            const id = (item.id ?? item.ref ?? '').toString().toLowerCase();
-            const status = (item.status ?? '').toString().toLowerCase();
-            const method = (item.method ?? item.customer ?? '').toString().toLowerCase();
-            const amount = Math.abs(Number(item.amount ?? 0)).toString();
-            return (
-                !term ||
-                id.includes(term) ||
-                status.includes(term) ||
-                method.includes(term) ||
-                amount.includes(term)
-            );
-        });
-        // Reset page if out of range
-        const totalPages = Math.max(1, Math.ceil(result.length / pageSize));
-        if (page > totalPages) {
-            setPage(1);
-        }
-        return result;
-    }, [withdrawalHistory, searchTerm, page, pageSize]);
+    // Stats calculations remain the same for now using context data
 
-    const paginatedHistory = useMemo(() => {
-        const start = (page - 1) * pageSize;
-        const end = start + pageSize;
-        return filteredHistory.slice(start, end);
-    }, [filteredHistory, page, pageSize]);
 
     const handleDownloadReceipt = (item) => {
         const id = item.id || item.ref || item.reference || 'withdrawal';
@@ -216,74 +190,66 @@ const Withdrawals = () => {
                             />
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left min-w-[640px]">
-                            <thead>
-                                <tr className="bg-slate-50/50">
-                                    <th className="px-8 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">Request Details</th>
-                                    <th className="px-8 py-4 text-xs font-black text-slate-600 uppercase tracking-widest">Amount</th>
-                                    <th className="px-8 py-4 text-xs font-black text-slate-600 uppercase tracking-widest text-center">Status</th>
-                                    <th className="px-8 py-4 text-xs font-black text-slate-600 uppercase tracking-widest text-right">Method</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filteredHistory.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={4} className="px-8 py-12 text-center text-slate-600 text-sm font-medium">
-                                            {withdrawalHistory.length === 0 ? "No withdrawal requests yet." : "No matches for your search."}
-                                        </td>
-                                    </tr>
-                                ) : paginatedHistory.map((item, idx) => (
-                                    <tr key={item.id || item.ref || item.reference || `wd-${idx}`} className="group hover:bg-slate-50/50 transition-all">
-                                        <td className="px-8 py-5">
-                                            <p className="text-sm font-black text-slate-900">{item.id}</p>
-                                            <p className="text-xs font-bold text-slate-600 mt-0.5 uppercase tracking-tighter">{item.date} • {item.time}</p>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <p className="text-sm font-black text-slate-900">₹{Math.abs(item.amount).toLocaleString()}</p>
-                                        </td>
-                                        <td className="px-8 py-5 text-center">
-                                            <Badge
-                                                variant={item.status === 'Settled' ? 'success' : (item.status === 'Pending' || item.status === 'Processing') ? 'warning' : 'danger'}
-                                                className="text-[8px] font-black px-2.5 py-0.5 uppercase tracking-widest rounded-lg"
-                                            >
-                                                {item.status === 'Settled' ? <CheckCircle2 className="h-3 w-3 mr-1" /> : (item.status === 'Pending' || item.status === 'Processing') ? <Clock className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-                                                {item.status}
-                                            </Badge>
-                                            {item.reason && <p className="text-[9px] text-rose-500 font-bold mt-1 uppercase italic">{item.reason}</p>}
-                                        </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <p className="text-xs font-bold text-slate-600">{item.customer}</p>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDownloadReceipt(item)}
-                                                className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 mt-1 uppercase tracking-widest flex items-center gap-1 justify-end ml-auto"
-                                            >
-                                                Receipt <Download className="h-3 w-3" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {filteredHistory.length > 0 && (
-                        <div className="p-4 sm:p-5 border-t border-slate-50 bg-slate-50/40">
-                            <Pagination
-                                page={page}
-                                totalPages={Math.max(1, Math.ceil(filteredHistory.length / pageSize))}
-                                total={filteredHistory.length}
-                                pageSize={pageSize}
-                                onPageChange={(newPage) => setPage(newPage)}
-                                onPageSizeChange={(newSize) => {
-                                    setPageSize(newSize);
-                                    setPage(1);
-                                }}
-                                loading={loading}
-                            />
-                        </div>
-                    )}
+                    <DynamicDataTable
+                        apiService={sellerApi}
+                        endpoint="/seller/ledger"
+                        refreshSelected={refreshKey}
+                        defaultParams={{
+                            type: 'Withdrawal',
+                            search: searchTerm
+                        }}
+                        columns={[
+                            {
+                                header: "Request Details",
+                                cell: (item) => (
+                                    <div className="py-1">
+                                        <p className="text-sm font-black text-slate-900">{item.id || item.ref || 'Withdrawal'}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-tighter">
+                                            {(item.createdAt || item.date) ? new Date(item.createdAt || item.date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                                        </p>
+                                    </div>
+                                )
+                            },
+                            {
+                                header: "Amount",
+                                cell: (item) => (
+                                    <p className="text-sm font-black text-slate-900">₹{Math.abs(item.amount || 0).toLocaleString()}</p>
+                                )
+                            },
+                            {
+                                header: "Status",
+                                align: "center",
+                                cell: (item) => (
+                                    <div className="flex flex-col items-center">
+                                        <Badge
+                                            variant={item.status?.toLowerCase() === 'settled' ? 'success' : (['pending', 'processing'].includes(item.status?.toLowerCase())) ? 'warning' : 'danger'}
+                                            className="text-[8px] font-black px-2.5 py-0.5 uppercase tracking-widest rounded-lg flex items-center gap-1"
+                                        >
+                                            {item.status?.toLowerCase() === 'settled' ? <CheckCircle2 className="h-3 w-3" /> : (['pending', 'processing'].includes(item.status?.toLowerCase())) ? <Clock className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                                            {item.status}
+                                        </Badge>
+                                        {item.reason && <p className="text-[9px] text-rose-500 font-bold mt-1 uppercase italic">{item.reason}</p>}
+                                    </div>
+                                )
+                            },
+                            {
+                                header: "Method & Actions",
+                                align: "right",
+                                cell: (item) => (
+                                    <div className="flex flex-col items-end gap-1">
+                                        <p className="text-xs font-bold text-slate-600">{item.customer || item.method || 'Bank Transfer'}</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDownloadReceipt(item)}
+                                            className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest flex items-center gap-1"
+                                        >
+                                            Receipt <Download className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                )
+                            }
+                        ]}
+                    />
                 </Card>
             </BlurFade>
 
