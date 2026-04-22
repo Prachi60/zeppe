@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { adminApi } from '../services/adminApi';
 import { toast } from 'sonner';
+import DynamicDataTable from '@shared/components/ui/DynamicDataTable';
 
 const CategoryManagement = () => {
     const [categories, setCategories] = useState([]);
@@ -516,87 +517,87 @@ const CategoryManagement = () => {
                         </div>
                     ) : (
                         <div className="bg-white/40 backdrop-blur-md rounded-xl p-0 ring-1 ring-slate-100 min-h-[500px] shadow-xl shadow-slate-200/40 overflow-hidden relative">
-                            {isLoading && (
-                                <div className="absolute inset-0 z-10 bg-white/50 backdrop-blur-sm flex items-center justify-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                                </div>
-                            )}
                             <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
-                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subcategory Management</h3>
+                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subcategory Intelligence</h3>
                                 <button
                                     onClick={() => openModal('subcategory')}
                                     className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest flex items-center gap-2"
                                 >
                                     <Plus className="h-3 w-3" />
-                                    Quick Register
+                                    Dynamic Entry
                                 </button>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="border-b border-slate-50">
-                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subcategory</th>
-                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Parent Category</th>
-                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {filteredSubcategories.map((sub) => {
-                                            const id = sub._id || sub.id;
-                                            return (
-                                                <tr key={id} className="hover:bg-slate-50/50 transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            {sub.image ? (
-                                                                <div className="h-10 w-10 bg-white rounded-xl shadow-sm ring-1 ring-slate-100 overflow-hidden">
-                                                                    <img src={sub.image} alt="" className="h-full w-full object-cover" />
-                                                                </div>
-                                                            ) : (
-                                                                <div className="h-8 w-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
-                                                                    <Tag className="h-4 w-4" />
-                                                                </div>
-                                                            )}
-                                                            <div className="flex flex-col">
-                                                                <span className="text-xs font-bold text-slate-700">{sub.name}</span>
-                                                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{sub.slug}</span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <Badge variant="outline" className="text-[9px] font-bold bg-indigo-50/50 text-indigo-600 border-indigo-100">
-                                                            {sub.parentCategory || 'Unknown'}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <Badge variant={sub.status === 'active' ? 'emerald' : 'gray'} className="text-[9px] font-black uppercase tracking-widest">
-                                                            {sub.status}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={() => openModal('subcategory', sub.parentId, sub)}
-                                                                className="p-1.5 hover:bg-white text-slate-400 hover:text-indigo-600 rounded-lg transition-all shadow-sm ring-1 ring-slate-100 bg-white/50"
-                                                            >
-                                                                <Edit className="h-3.5 w-3.5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => { setDeleteTarget(sub); setIsDeleteModalOpen(true); }}
-                                                                className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all shadow-sm ring-1 ring-slate-100 bg-white/50"
-                                                            >
-                                                                <Trash2 className="h-3.5 w-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
+                            
+                            <DynamicDataTable
+                                endpoint="/admin/categories?type=subcategory"
+                                columns={[
+                                    {
+                                        header: "Subcategory",
+                                        width: "40%",
+                                        cell: (row) => (
+                                            <div className="flex items-center gap-3">
+                                                {row.image ? (
+                                                    <div className="h-10 w-10 bg-white rounded-xl shadow-sm ring-1 ring-slate-100 overflow-hidden">
+                                                        <img src={row.image} alt="" className="h-full w-full object-cover" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="h-8 w-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600">
+                                                        <Tag className="h-4 w-4" />
+                                                    </div>
+                                                )}
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-slate-700">{row.name}</span>
+                                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{row.slug}</span>
+                                                </div>
+                                            </div>
+                                        )
+                                    },
+                                    {
+                                        header: "Direct Parent",
+                                        width: "25%",
+                                        cell: (row) => (
+                                            <Badge variant="outline" className="text-[9px] font-bold bg-indigo-50/50 text-indigo-600 border-indigo-100">
+                                                {row.parentId?.name || 'Top Level'}
+                                            </Badge>
+                                        )
+                                    },
+                                    {
+                                        header: "Status",
+                                        width: "20%",
+                                        cell: (row) => (
+                                            <Badge variant={row.status === 'active' ? 'emerald' : 'gray'} className="text-[9px] font-black uppercase tracking-widest">
+                                                {row.status}
+                                            </Badge>
+                                        )
+                                    },
+                                    {
+                                        header: "Actions",
+                                        width: "15%",
+                                        align: "right",
+                                        cell: (row) => (
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => openModal('subcategory', row.parentId?._id, row)}
+                                                    className="p-1.5 hover:bg-white text-slate-400 hover:text-indigo-600 rounded-lg transition-all shadow-sm ring-1 ring-slate-100 bg-white/50"
+                                                >
+                                                    <Edit className="h-3.5 w-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => { setDeleteTarget(row); setIsDeleteModalOpen(true); }}
+                                                    className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all shadow-sm ring-1 ring-slate-100 bg-white/50"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        )
+                                    }
+                                ]}
+                                searchPlaceholder="Search subcategories..."
+                                hideHeader={true} // Since we have a custom header above
+                            />
                         </div>
-                    )}
+                    )
+}
                 </div>
 
                 <div className="xl:col-span-4 space-y-6">

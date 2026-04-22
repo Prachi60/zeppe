@@ -1,12 +1,20 @@
 import Ticket from "../models/ticket.js";
 import handleResponse from "../utils/helper.js";
-import getPagination from "../utils/pagination.js";
+import { createAdminController } from "../utils/controllerFactory.js";
+
+const { getAll: listTickets, getById, update: updateT, delete: deleteT } = createAdminController(Ticket, {
+    searchFields: ["subject", "description"],
+    populate: [{ path: "userId", select: "name email avatar" }]
+});
+
+// Rename for exported consistency if needed
+export const getAllTickets = listTickets;
 
 // Create a new ticket (Customer/Seller/Rider)
 export const createTicket = async (req, res) => {
     try {
         const { subject, description, priority, userType } = req.body;
-        const userId = req.user.id; // From verifyToken middleware
+        const userId = req.user.id;
 
         const newTicket = new Ticket({
             userId,
@@ -42,28 +50,6 @@ export const getMyTickets = async (req, res) => {
     }
 };
 
-// Admin: Get all tickets
-export const getAllTickets = async (req, res) => {
-    try {
-        const { page, limit, skip } = getPagination(req, { defaultLimit: 25, maxLimit: 200 });
-
-        const [tickets, total] = await Promise.all([
-            Ticket.find().populate("userId", "name email").sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-            Ticket.countDocuments()
-        ]);
-
-        return handleResponse(res, 200, "All tickets fetched successfully", {
-            items: tickets,
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit) || 1,
-        });
-    } catch (error) {
-        return handleResponse(res, 500, error.message);
-    }
-};
-
 // Admin/User: Reply to a ticket
 export const replyToTicket = async (req, res) => {
     try {
@@ -74,7 +60,7 @@ export const replyToTicket = async (req, res) => {
         if (!ticket) return handleResponse(res, 404, "Ticket not found");
 
         const newMessage = {
-            sender: isAdmin ? "Admin" : (req.user.name || "User"),
+            sender: isAdmin ? "Admin Support" : (req.user.name || "User"),
             senderId: req.user.id,
             senderType: isAdmin ? "Admin" : "User",
             text,
