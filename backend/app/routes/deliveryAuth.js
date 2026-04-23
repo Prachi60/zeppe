@@ -14,9 +14,11 @@ import {
   getMyDeliveryOrders,
   requestWithdrawal,
   updateDeliveryLocation,
-  generateDeliveryOtp,
-  validateDeliveryOtp,
 } from "../controller/deliveryController.js";
+import {
+  requestDeliveryOtp,
+  verifyDeliveryOtp
+} from "../controller/orderWorkflowController.js";
 import { getRiderWalletSummaryController } from "../controller/adminFinanceController.js";
 
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
@@ -53,7 +55,7 @@ router.post(
   "/orders/:orderId/generate-otp",
   verifyToken,
   allowRoles("delivery", "admin"),
-  generateDeliveryOtp
+  requestDeliveryOtp
 );
 
 // OTP validation for delivery completion
@@ -61,7 +63,7 @@ router.post(
   "/orders/:orderId/validate-otp",
   verifyToken,
   allowRoles("delivery", "admin"),
-  validateDeliveryOtp
+  verifyDeliveryOtp
 );
 
 export default router;

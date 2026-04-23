@@ -63,7 +63,23 @@ export const advanceDeliveryRiderUi = async (req, res) => {
 export const requestDeliveryOtp = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { lat, lng } = req.body || {};
+    let { lat, lng, location } = req.body || {};
+    
+    if (location && typeof location === 'object') {
+      if (lat === undefined) lat = location.lat;
+      if (lng === undefined) lng = location.lng;
+    }
+
+    if (lat === undefined || lng === undefined) {
+      // Fallback to delivery partner's last location
+      const Delivery = (await import("../models/delivery.js")).default;
+      const delivery = await Delivery.findById(req.user.id).select("location");
+      if (delivery?.location?.coordinates) {
+        lng = delivery.location.coordinates[0];
+        lat = delivery.location.coordinates[1];
+      }
+    }
+
     const result = await requestHandoffOtpAtomic(req.user.id, orderId, lat, lng);
     return handleResponse(res, 200, result.message || "OTP sent", result);
   } catch (e) {
@@ -74,8 +90,8 @@ export const requestDeliveryOtp = async (req, res) => {
 export const verifyDeliveryOtp = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { code } = req.body || {};
-    const result = await verifyHandoffOtpAndDeliver(req.user.id, orderId, code);
+    const { code, otp } = req.body || {};
+    const result = await verifyHandoffOtpAndDeliver(req.user.id, orderId, code || otp);
     return handleResponse(res, 200, "Order delivered", result);
   } catch (e) {
     return handleResponse(res, e.statusCode || 500, e.message);

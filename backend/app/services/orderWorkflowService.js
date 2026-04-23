@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 import Order from "../models/order.js";
 import DeliveryAssignment from "../models/deliveryAssignment.js";
 import OrderOtp from "../models/orderOtp.js";
@@ -949,18 +950,20 @@ export async function requestHandoffOtpAtomic(deliveryId, orderId, lat, lng) {
     }
   }
 
-  const code = String(Math.floor(1000 + Math.random() * 9000));
+  const code = String(crypto.randomInt(1000, 10000));
   const codeHash = OrderOtp.hashCode(code);
 
-  await OrderOtp.deleteMany({
+  await OrderOtp.updateMany({
     orderId,
+    type: 'delivery',
     consumedAt: null,
-  });
+  }, { consumedAt: new Date() });
 
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS());
   await OrderOtp.create({
     orderId,
     orderMongoId: order._id,
+    type: 'delivery',
     codeHash,
     expiresAt,
     lastGeneratedAt: new Date(),
@@ -1002,6 +1005,7 @@ export async function verifyHandoffOtpAndDeliver(deliveryId, orderId, code) {
 
   const otp = await OrderOtp.findOne({
     orderId,
+    type: 'delivery',
     consumedAt: null,
   }).sort({ createdAt: -1 });
 
