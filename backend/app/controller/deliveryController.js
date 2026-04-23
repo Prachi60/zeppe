@@ -53,29 +53,46 @@ export const getDeliveryStats = async (req, res) => {
         const deliveryBoyId = new mongoose.Types.ObjectId(req.user.id);
         console.log(`[Stats] Fetching for Partner: ${deliveryBoyId}`);
 
-        const orders = await Order.find({ deliveryBoy: deliveryBoyId, status: 'delivered' });
-        const totalDeliveries = orders.length;
+        const totalDeliveries = await Order.countDocuments({
+            deliveryBoy: deliveryBoyId,
+            status: 'delivered',
+            $or: [
+                { returnStatus: 'none' },
+                { returnStatus: { $exists: false } },
+                { returnStatus: { $in: ['return_rejected', 'refund_completed'] } }
+            ]
+        });
         console.log(`[Stats] Delivered Orders found: ${totalDeliveries}`);
 
         // Today's earnings - Using a more robust date check
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
 
-        const allTransactions = await Transaction.find({
-            user: deliveryBoyId,
-            userModel: 'Delivery',
-            createdAt: { $gte: startOfToday }
-        });
+        const [earningResult] = await Transaction.aggregate([
+            {
+                $match: {
+                    user: deliveryBoyId,
+                    userModel: 'Delivery',
+                    status: 'Settled',
+                    type: { $in: ['Delivery Earning', 'Incentive', 'Bonus'] },
+                    createdAt: { $gte: startOfToday }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    todayEarnings: { $sum: '$amount' },
+                    incentives: {
+                        $sum: {
+                            $cond: [{ $in: ['$type', ['Incentive', 'Bonus']] }, '$amount', 0]
+                        }
+                    }
+                }
+            }
+        ]);
 
-        console.log(`Found ${allTransactions.length} transactions for today for user ${deliveryBoyId}`);
-
-        const todayEarnings = allTransactions
-            .filter(t => t.status === 'Settled' && (t.type === 'Delivery Earning' || t.type === 'Incentive' || t.type === 'Bonus'))
-            .reduce((acc, t) => acc + t.amount, 0);
-
-        const incentives = allTransactions
-            .filter(t => t.status === 'Settled' && (t.type === 'Incentive' || t.type === 'Bonus'))
-            .reduce((acc, t) => acc + t.amount, 0);
+        const todayEarnings = earningResult?.todayEarnings || 0;
+        const incentives = earningResult?.incentives || 0;
 
         const wallet = await Wallet.findOne({
             ownerType: "DELIVERY_PARTNER",
@@ -342,6 +359,7 @@ export const submitDeliveryCodCashToAdmin = async (req, res) => {
         const settledOrders = [];
         let totalSubmitted = 0;
         let remaining = amountToSubmit;
+        const sessionRef = Date.now();
 
         for (const order of orders) {
             const amount = roundCurrency(order?.paymentBreakdown?.codPendingAmount || 0);
@@ -377,18 +395,24 @@ export const submitDeliveryCodCashToAdmin = async (req, res) => {
             );
         }
 
-        await Transaction.create({
-            user: deliveryBoyId,
-            userModel: "Delivery",
-            type: "Cash Settlement",
-            amount: -Math.abs(totalSubmitted),
-            status: "Settled",
-            reference: `CSH-SET-${deliveryBoyId}-${Date.now()}`,
-            meta: {
-                source: "delivery_cod_cash_page",
-                orders: settledOrders.map((item) => item.orderId),
+        await Transaction.findOneAndUpdate(
+            { reference: `CSH-SET-${deliveryBoyId}-${sessionRef}` },
+            {
+                $setOnInsert: {
+                    user: deliveryBoyId,
+                    userModel: "Delivery",
+                    type: "Cash Settlement",
+                    amount: -Math.abs(totalSubmitted),
+                    status: "Settled",
+                    reference: `CSH-SET-${deliveryBoyId}-${sessionRef}`,
+                    meta: {
+                        source: "delivery_cod_cash_page",
+                        orders: settledOrders.map((item) => item.orderId),
+                    },
+                },
             },
-        });
+            { upsert: true, new: true }
+        );
 
         const wallet = await Wallet.findOne({
             ownerType: "DELIVERY_PARTNER",
@@ -485,14 +509,28 @@ export const getMyDeliveryOrders = async (req, res) => {
             query = assignedToPartner;
         }
 
-        const orders = await Order.find(query)
-            .sort({ createdAt: -1 })
-            .limit(100)
-            .populate("seller", "shopName address")
-            .populate("customer", "name phone")
-            .lean();
+        const page = Math.max(parseInt(req.query.page || '1', 10), 1);
+        const limit = Math.min(parseInt(req.query.limit || '20', 10), 100);
+        const skip = (page - 1) * limit;
 
-        return handleResponse(res, 200, "Delivery orders fetched", orders);
+        const [orders, total] = await Promise.all([
+            Order.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate("seller", "shopName address")
+                .populate("customer", "name phone")
+                .lean(),
+            Order.countDocuments(query),
+        ]);
+
+        return handleResponse(res, 200, "Delivery orders fetched", {
+            items: orders,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+        });
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }
@@ -505,9 +543,18 @@ export const requestWithdrawal = async (req, res) => {
     try {
         const deliveryBoyId = req.user.id;
         const { amount } = req.body;
+        const idempotencyKey = req.headers['idempotency-key'];
 
         if (!amount || amount <= 0) {
             return handleResponse(res, 400, "Please enter a valid amount");
+        }
+
+        // Idempotency via Redis (if available) 
+        const redis = getRedisClient();
+        if (redis && idempotencyKey) {
+            const cacheKey = `withdrawal:idem:${deliveryBoyId}:${idempotencyKey}`;
+            const hit = await redis.get(cacheKey);
+            if (hit) return handleResponse(res, 200, 'Duplicate request', JSON.parse(hit));
         }
 
         // 1. Calculate current available balance
@@ -534,8 +581,13 @@ export const requestWithdrawal = async (req, res) => {
             type: "Withdrawal",
             amount: -Math.abs(amount),
             status: "Pending",
-            reference: `WDR-DL-${Date.now()}`
+            reference: `WDR-DL-${deliveryBoyId}-${Date.now()}` // Include deliveryBoyId for uniqueness
         });
+
+        if (redis && idempotencyKey) {
+            await redis.set(`withdrawal:idem:${deliveryBoyId}:${idempotencyKey}`,
+                JSON.stringify(withdrawal), 'EX', 86400);
+        }
 
         return handleResponse(res, 201, "Withdrawal request submitted successfully", withdrawal);
     } catch (error) {

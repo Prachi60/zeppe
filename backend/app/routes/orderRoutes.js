@@ -263,7 +263,6 @@ router.get(
   "/workflow/:orderId/route",
   verifyToken,
   allowRoles("customer", "user", "delivery", "seller", "admin"),
-  requireApprovedSeller,
   getOrderRoute,
 );
 
