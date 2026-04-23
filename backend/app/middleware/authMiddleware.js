@@ -1,11 +1,12 @@
 import jwt from "jsonwebtoken";
 import handleResponse from "../utils/helper.js";
 import Seller from "../models/seller.js";
+import User from "../models/customer.js";
 
 /* ===============================
    Verify Token
 ================================ */
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
   try {
     let token;
 
@@ -22,9 +23,22 @@ export const verifyToken = (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    // C-6 FIX: Verify user is still active in DB
+    // Use select('isActive') for minimal overhead
+    const user = await User.findById(decoded.id).select("isActive").lean();
+    if (!user) {
+      return handleResponse(res, 401, "User account not found");
+    }
+    if (user.isActive === false) {
+      return handleResponse(res, 403, "Account suspended. Please contact support.");
+    }
+
     req.user = decoded; // { id, role }
     next();
   } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return handleResponse(res, 401, "Token expired");
+    }
     return handleResponse(res, 401, "Invalid or expired token");
   }
 };

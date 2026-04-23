@@ -170,10 +170,13 @@ export async function issueCustomerOtp({
   customer.otpSessionVersion = (customer.otpSessionVersion || 0) + 1;
 
   // Backward compatibility with legacy fields; raw OTP is intentionally not stored.
-  customer.otp = undefined;
-  customer.otpExpiry = undefined;
-
   await customer.save();
+
+  // L-1 FIX: Use $unset to physically remove legacy fields from DB
+  await Customer.updateOne(
+    { _id: customer._id },
+    { $unset: { otp: "", otpExpiry: "" } },
+  );
 
   if (useRealSMS()) {
     await dispatchCustomerOtpSms({ phone, otp });
@@ -269,11 +272,15 @@ export async function verifyCustomerOtpCode({
   customer.otpFailedAttempts = 0;
   customer.otpLockedUntil = undefined;
   customer.otpSessionVersion = (customer.otpSessionVersion || 0) + 1;
-  customer.otp = undefined;
-  customer.otpExpiry = undefined;
   customer.lastLogin = now;
 
   await customer.save();
+
+  // L-1 FIX: Use $unset to physically remove legacy fields from DB
+  await Customer.updateOne(
+    { _id: customer._id },
+    { $unset: { otp: "", otpExpiry: "" } },
+  );
 
   otpAuditLog("customer_otp_verify_success", {
     phone: maskPhone(phone),

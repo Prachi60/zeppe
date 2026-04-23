@@ -96,7 +96,15 @@ export const getCustomerProfile = async (req, res) => {
         if (!customer) {
             return handleResponse(res, 404, "Customer not found");
         }
-        return handleResponse(res, 200, "Profile fetched successfully", customer);
+
+        // L-5 FIX: Update lastLogin on profile fetch (debounced to once per hour)
+        const now = new Date();
+        const lastLoginAt = customer.lastLogin ? new Date(customer.lastLogin).getTime() : 0;
+        if (now.getTime() - lastLoginAt > 3600000) {
+            Customer.updateOne({ _id: customer._id }, { lastLogin: now }).exec();
+        }
+
+        return handleResponse(res, 200, "Profile fetched successfully", sanitizeCustomer(customer));
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }
@@ -120,7 +128,7 @@ export const updateCustomerProfile = async (req, res) => {
 
         await customer.save();
 
-        return handleResponse(res, 200, "Profile updated successfully", customer);
+        return handleResponse(res, 200, "Profile updated successfully", sanitizeCustomer(customer));
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }

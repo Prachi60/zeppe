@@ -150,7 +150,7 @@ const OrderDetailPage = () => {
   const returnWindowMinutes =
     Number.isFinite(parsedReturnWindowMinutes) && parsedReturnWindowMinutes > 0
       ? parsedReturnWindowMinutes
-      : 2;
+      : 10080; // M-5 FIX: Production default 7 days (10080 mins)
   const routeOriginRef = useRef(null);
   const routeRequestRef = useRef({ phase: "", startedAt: 0 });
   const [returnCountdown, setReturnCountdown] = useState(null);
@@ -616,6 +616,9 @@ const OrderDetailPage = () => {
       const response = await customerApi.createPaymentOrder({
         orderRef: paymentRef,
         orderId: order.orderId
+      }, {
+        // M-7 FIX: Pass idempotency key to prevent double charging on retry
+        headers: { "idempotency-key": `pay-retry-${order.orderId}` }
       });
       if (response.data.success && response.data.result?.redirectUrl) {
         window.location.href = response.data.result.redirectUrl;
@@ -751,10 +754,16 @@ const OrderDetailPage = () => {
                 <p className="text-xs text-white/90 mt-0.5">On the way to you</p>
               </div>
               <div className="flex items-center gap-2">
-                <button className="h-11 w-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors border border-white/30">
+                <button 
+                  onClick={() => window.open(`sms:${order.deliveryBoy?.phone}`)}
+                  className="h-11 w-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors border border-white/30"
+                >
                   <MessageSquare size={20} className="text-white" />
                 </button>
-                <button className="h-11 w-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors border border-white/30">
+                <button 
+                  onClick={() => window.open(`tel:${order.deliveryBoy?.phone}`)}
+                  className="h-11 w-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors border border-white/30"
+                >
                   <Phone size={20} className="text-white" />
                 </button>
               </div>
@@ -777,9 +786,11 @@ const OrderDetailPage = () => {
               <div className="flex items-center gap-2 mb-1">
                 <p className="text-xs font-bold text-orange-600 uppercase tracking-wider">Pickup Location</p>
               </div>
-              <h4 className="font-bold text-slate-900 text-base mb-1">Store Location</h4>
+              <h4 className="font-bold text-slate-900 text-base mb-1">
+                {order.seller?.shopName || "Store Location"}
+              </h4>
               <p className="text-sm text-slate-500 leading-relaxed">
-                {order.address?.address || "Address not available"}
+                {order.seller?.address || "Address not available"}
               </p>
             </div>
             <button 

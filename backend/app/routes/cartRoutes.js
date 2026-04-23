@@ -7,10 +7,11 @@ import {
     clearCart
 } from "../controller/cartController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
+import { cartRouteRateLimiter } from "../middleware/securityMiddlewares.js";
 
 const router = express.Router();
 
-router.use(verifyToken); // All cart routes require auth
+router.use(verifyToken, cartRouteRateLimiter); // All cart routes require auth + rate limiting
 
 router.get("/", getCart);
 router.post("/add", addToCart);

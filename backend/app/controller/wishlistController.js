@@ -124,7 +124,10 @@ export const toggleWishlist = async (req, res) => {
       wishlist = new Wishlist({ customerId, products: [] });
     }
 
-    const index = wishlist.products.indexOf(productId);
+    // H-3 FIX: Use findIndex and toString() for reliable ObjectId comparison
+    const index = wishlist.products.findIndex(
+        (id) => id.toString() === productId.toString()
+    );
     let message = "";
 
     if (index > -1) {
@@ -144,4 +147,17 @@ export const toggleWishlist = async (req, res) => {
   } catch (error) {
     return handleResponse(res, 500, error.message);
   }
+};
+
+/* ===============================
+   CLEAR WISHLIST
+================================ */
+export const clearWishlist = async (req, res) => {
+    try {
+        const customerId = req.user.id;
+        await Wishlist.updateOne({ customerId }, { $set: { products: [] } });
+        return handleResponse(res, 200, "Wishlist cleared successfully", { products: [] });
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
 };

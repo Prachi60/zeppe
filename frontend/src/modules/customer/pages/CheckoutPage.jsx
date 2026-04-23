@@ -134,30 +134,8 @@ const CheckoutPage = () => {
   });
   const [savedRecipient, setSavedRecipient] = useState(null);
 
-  // Mock data for recommendations
-  const recommendedProducts = [
-    {
-      id: 101,
-      name: "Uncle Chips",
-      price: 20,
-      image:
-        "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=200",
-    },
-    {
-      id: 102,
-      name: "Lay's Chips",
-      price: 20,
-      image:
-        "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=200",
-    },
-    {
-      id: 103,
-      name: "Bread",
-      price: 35,
-      image:
-        "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200",
-    },
-  ];
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
+
 
   const [coupons, setCoupons] = useState([]);
   const [manualCode, setManualCode] = useState("");
@@ -624,6 +602,11 @@ const CheckoutPage = () => {
       }
     };
     fetchCoupons();
+
+    // M-2 FIX: Fetch real recommendations
+    customerApi.getProducts({ limit: 6, sort: "popular" })
+      .then(r => setRecommendedProducts(r.data.result?.items || []))
+      .catch(() => {});
 
     // M-8 FIX: Auto-populate default address from profile
     if (isAuthenticated) {

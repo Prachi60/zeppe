@@ -25,6 +25,11 @@ const ADMIN_BOOTSTRAP_RATE_LIMIT_WINDOW_MS = () =>
 const ADMIN_BOOTSTRAP_RATE_LIMIT_MAX = () =>
   parseInt(process.env.ADMIN_BOOTSTRAP_RATE_LIMIT_MAX || "10", 10);
 
+const CART_RATE_LIMIT_WINDOW_MS = () =>
+  parseInt(process.env.CART_RATE_LIMIT_WINDOW_MS || "60000", 10);
+const CART_RATE_LIMIT_MAX = () =>
+  parseInt(process.env.CART_RATE_LIMIT_MAX || "60", 10);
+
 export const globalApiRateLimiter = createRateLimiter({
   namespace: "global",
   windowMs: GLOBAL_RATE_LIMIT_WINDOW_MS(),
@@ -63,6 +68,14 @@ export const adminBootstrapRateLimiter = createRateLimiter({
   max: ADMIN_BOOTSTRAP_RATE_LIMIT_MAX(),
   keyGenerator: byIp,
   message: "Too many admin bootstrap attempts. Please wait before retrying.",
+});
+
+export const cartRouteRateLimiter = createRateLimiter({
+  namespace: "cart",
+  windowMs: CART_RATE_LIMIT_WINDOW_MS(),
+  max: CART_RATE_LIMIT_MAX(),
+  keyGenerator: byUserOrIp,
+  message: "Too many cart requests. Please wait before retrying.",
 });
 
 export function createContentLengthGuard(maxBytes, message = "Payload too large") {

@@ -88,7 +88,31 @@ export const CartProvider = ({ children }) => {
   // Fetch cart from backend on mount or authentication change
   useEffect(() => {
     if (isAuthenticated) {
-      fetchCart();
+      const mergeAndFetch = async () => {
+        try {
+          setLoading(true);
+          const savedCart = JSON.parse(localStorage.getItem("cart") || "[]");
+          if (savedCart.length > 0) {
+            // C-5 FIX: Merge guest cart items into backend
+            await Promise.allSettled(
+              savedCart.map((item) =>
+                customerApi.addToCart({
+                  productId: item.id || item._id,
+                  variantSku: item.variantSku || "",
+                  quantity: item.quantity || 1,
+                }),
+              ),
+            );
+            localStorage.removeItem("cart");
+          }
+          await fetchCart();
+        } catch (error) {
+          console.error("Cart merge/fetch failed", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      mergeAndFetch();
     } else {
       // Clear cart state and load from local storage for guests
       try {
@@ -121,7 +145,7 @@ export const CartProvider = ({ children }) => {
       if (existingItem) {
         return prev.map((item) =>
           `${item.id || item._id}::${String(item.variantSku || "").trim()}` === key
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + (product.quantity || 1) }
             : item,
         );
       }
@@ -135,7 +159,7 @@ export const CartProvider = ({ children }) => {
           variantName,
           price,
           salePrice,
-          quantity: 1,
+          quantity: product.quantity || 1,
           image: product.image || product.mainImage,
         },
       ];
@@ -147,12 +171,12 @@ export const CartProvider = ({ children }) => {
         const response = await customerApi.addToCart({
           productId: id,
           variantSku,
-          quantity: 1,
+          quantity: product.quantity || 1,
         });
-        pendingRequestsRef.current -= 1;
+        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
         await syncCart(response.data.result.items);
       } catch (error) {
-        pendingRequestsRef.current -= 1;
+        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
         console.error("Error adding to cart on backend", error);
         // Re-fetch entire cart to ensure consistency on error
         if (pendingRequestsRef.current === 0) {
@@ -182,10 +206,10 @@ export const CartProvider = ({ children }) => {
           productId,
           normalizedVariantSku,
         );
-        pendingRequestsRef.current -= 1;
+        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
         await syncCart(response.data.result.items);
       } catch (error) {
-        pendingRequestsRef.current -= 1;
+        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
         console.error("Error removing from cart on backend", error);
         if (pendingRequestsRef.current === 0) {
           await fetchCart();
@@ -231,10 +255,10 @@ export const CartProvider = ({ children }) => {
           quantity: newQty,
           variantSku: normalizedVariantSku,
         });
-        pendingRequestsRef.current -= 1;
+        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
         await syncCart(response.data.result.items);
       } catch (error) {
-        pendingRequestsRef.current -= 1;
+        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
         console.error("Error updating quantity on backend", error);
         if (pendingRequestsRef.current === 0) {
           await fetchCart();

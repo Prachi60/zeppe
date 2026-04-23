@@ -14,6 +14,7 @@ router.use(verifyToken); // All wishlist routes require auth
 router.get("/", getWishlist);
 router.post("/add", addToWishlist);
 router.post("/toggle", toggleWishlist);
+router.delete("/clear", clearWishlist);
 router.delete("/remove/:productId", removeFromWishlist);
 
 export default router;
