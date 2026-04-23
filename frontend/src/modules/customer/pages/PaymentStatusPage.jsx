@@ -5,11 +5,13 @@ import { Check, X, Loader2, AlertTriangle, ArrowRight, RefreshCcw } from "lucide
 import { customerApi } from "../services/customerApi";
 import { useToast } from "@shared/components/ui/Toast";
 import Button from "@shared/components/ui/Button";
+import { useCart } from "../context/CartContext";
 
 const PaymentStatusPage = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { showToast } = useToast();
+    const { clearCart } = useCart();
     
     const merchantOrderId = searchParams.get("merchantOrderId");
     const [status, setStatus] = useState("verifying"); // verifying, success, failure, timeout
@@ -35,6 +37,7 @@ const PaymentStatusPage = () => {
 
                 if (paymentStatus === "CAPTURED") {
                     setStatus("success");
+                    clearCart(); // C-4 FIX: Clear cart only AFTER payment is confirmed
                     if (pollInterval.current) clearInterval(pollInterval.current);
                     
                     // Auto redirect after 3 seconds

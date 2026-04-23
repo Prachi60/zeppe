@@ -152,6 +152,15 @@ const orderSchema = new mongoose.Schema(
         default: "DIRECT_ITEMS",
       },
     },
+    // C-2 FIX: Track applied coupon to enforce per-user usage limits
+    appliedCoupon: {
+      code: String,
+      couponId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Coupon",
+      },
+      discountAmount: Number,
+    },
     orderStatus: {
       type: String,
       default: "pending",

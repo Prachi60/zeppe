@@ -12,6 +12,7 @@ import {
   generateUniquePublicOrderId,
 } from "./orderIdService.js";
 import { afterPlaceOrderV2 } from "./orderWorkflowService.js";
+import { incrementCouponUsage } from "./couponService.js";
 import {
   computeStockReservationWindow,
   reserveStockForItems,
@@ -311,6 +312,8 @@ export async function placeOrderAtomic({
       orderItems: orderItemsInput,
       address: normalizedAddress,
       tipAmount,
+      couponCode: normalizedPayload.couponCode || normalizedPayload.code,
+      customerId,
       session,
     });
 
@@ -337,6 +340,7 @@ export async function placeOrderAtomic({
       metadata: {
         timeSlot: normalizedPayload.timeSlot || "now",
         tipAmount,
+        appliedCoupon: pricingSnapshot.aggregateBreakdown?.appliedCoupon || undefined,
       },
     });
     await checkoutGroup.save({ session });
@@ -405,6 +409,7 @@ export async function placeOrderAtomic({
           idempotencyKeyExpiry,
           createdFrom: resolvedSource || source,
         },
+        appliedCoupon: pricingSnapshot.aggregateBreakdown?.appliedCoupon || undefined,
         settlementStatus: {
           overall: "PENDING",
           sellerPayout: "PENDING",
@@ -447,6 +452,11 @@ export async function placeOrderAtomic({
         reference: `WLT-CHOUT-${checkoutGroupId}`,
         meta: { checkoutGroupId }
       }, { session });
+    }
+
+    // Increment coupon usage count if used
+    if (pricingSnapshot.aggregateBreakdown?.appliedCoupon?.couponId) {
+      await incrementCouponUsage(pricingSnapshot.aggregateBreakdown.appliedCoupon.couponId, { session });
     }
 
     const transactionRows = orders.map((order) => ({

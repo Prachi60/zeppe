@@ -108,20 +108,20 @@ const CheckoutPage = () => {
   const postOrderNavigateRef = useRef(null);
   const [currentAddress, setCurrentAddress] = useState({
     type: "Home",
-    name: "Harshvardhan Panchal",
-    address: "81 Pipliyahana Road, Near 214",
+    name: user?.name || "",
+    address: currentLocation?.name || "",
     landmark: "",
-    city: "Indore - 452018",
-    phone: "6268423925",
+    city: [currentLocation?.city, currentLocation?.state].filter(Boolean).join(", "),
+    phone: user?.phone || "",
   });
   const [isEditAddressOpen, setIsEditAddressOpen] = useState(false);
   const [editAddressForm, setEditAddressForm] = useState({
     type: "Home",
-    name: "Harshvardhan Panchal",
-    address: "81 Pipliyahana Road, Near 214",
+    name: user?.name || "",
+    address: currentLocation?.name || "",
     landmark: "",
-    city: "Indore - 452018",
-    phone: "6268423925",
+    city: [currentLocation?.city, currentLocation?.state].filter(Boolean).join(", "),
+    phone: user?.phone || "",
   });
   const [showRecipientForm, setShowRecipientForm] = useState(false);
   const [recipientData, setRecipientData] = useState({
@@ -215,14 +215,15 @@ const CheckoutPage = () => {
     : 0;
   const totalAmount = pricingPreview?.grandTotal || 0;
 
-  const displayCartItems = showAllCartItems ? cart : cart;
+  const CART_PREVIEW_LIMIT = 3;
+  const displayCartItems = showAllCartItems ? cart : cart.slice(0, CART_PREVIEW_LIMIT);
 
   const RECIPIENT_STORAGE_KEY = "appzeto_checkout_recipient_v1";
 
   // Derived display values for primary delivery card
-  const displayName = savedRecipient?.name || currentAddress.name;
+  const displayName = savedRecipient?.name || currentAddress.name || user?.name || "";
   const displayPhone =
-    savedRecipient?.phone || currentAddress.phone || "6268423925";
+    savedRecipient?.phone || currentAddress.phone || user?.phone || "";
   const displayAddress = savedRecipient
     ? `${savedRecipient.completeAddress}${savedRecipient.landmark ? `, ${savedRecipient.landmark}` : ""}${savedRecipient.pincode ? ` - ${savedRecipient.pincode}` : ""}`
     : `${currentAddress.address}${currentAddress.landmark ? `, ${currentAddress.landmark}` : ""}, ${currentAddress.city}`;
@@ -623,7 +624,26 @@ const CheckoutPage = () => {
       }
     };
     fetchCoupons();
-  }, []);
+
+    // M-8 FIX: Auto-populate default address from profile
+    if (isAuthenticated) {
+      customerApi.getProfile().then(r => {
+        const profile = r.data.result;
+        if (profile?.addresses?.length > 0) {
+          const defaultAddr = profile.addresses.find(a => a.isDefault) || profile.addresses[0];
+          setCurrentAddress({
+            type: defaultAddr.label || "Home",
+            name: profile.name,
+            address: defaultAddr.fullAddress || defaultAddr.address,
+            landmark: defaultAddr.landmark || "",
+            city: [defaultAddr.city, defaultAddr.state].filter(Boolean).join(", "),
+            phone: profile.phone,
+            location: defaultAddr.location,
+          });
+        }
+      }).catch(() => {});
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated || cart.length === 0) {
@@ -722,7 +742,9 @@ const CheckoutPage = () => {
             });
             
             if (paymentRes.data.success && paymentRes.data.result?.redirectUrl) {
-              clearCart();
+              // C-4 FIX: DO NOT clearCart here. If redirect fails or user cancels, 
+              // the items must still be in the cart for recovery.
+              // clearCart is handled in PaymentStatusPage after status verified as PAID.
               window.location.href = paymentRes.data.result.redirectUrl;
               return; // End function here as we are redirecting
             } else {

@@ -7,6 +7,7 @@ import {
   generateOrderPaymentBreakdown,
   hydrateOrderItems,
 } from "./finance/pricingService.js";
+import { validateAndComputeCoupon } from "./couponService.js";
 
 function normalizeLocation(location = null) {
   const lat = Number(location?.lat);
@@ -249,6 +250,8 @@ export async function buildCheckoutPricingSnapshot({
   orderItems = [],
   address = {},
   tipAmount = 0,
+  couponCode = null,
+  customerId = null,
   session = null,
 }) {
   const hydratedItems = await hydrateOrderItems(orderItems, {
@@ -264,6 +267,22 @@ export async function buildCheckoutPricingSnapshot({
   const itemsBySeller = groupHydratedItemsBySeller(hydratedItems);
   const sellerIds = Array.from(itemsBySeller.keys()).sort((a, b) => a.localeCompare(b));
   const sellerBreakdownEntries = [];
+
+  // H-7 FIX: Validate coupon server-side during pricing preview
+  let couponResult = null;
+  if (couponCode) {
+    try {
+      couponResult = await validateAndComputeCoupon({
+        code: couponCode,
+        cartTotal: hydratedItems.reduce((sum, i) => sum + (i.price * i.quantity), 0),
+        customerId,
+        session,
+      });
+    } catch (e) {
+      // If coupon is invalid, we proceed without it but log it
+      console.warn(`[buildCheckoutPricingSnapshot] Coupon validation failed: ${e.message}`);
+    }
+  }
 
   const globalHandling = await computeGlobalHandlingFeeForCheckout(hydratedItems, { session });
 
@@ -298,6 +317,17 @@ export async function buildCheckoutPricingSnapshot({
   const aggregateBreakdown = buildAggregateBreakdown(
     sellerBreakdownEntries.map((entry) => entry.breakdown),
   );
+
+  // Apply coupon discount to aggregate if available
+  if (couponResult) {
+    aggregateBreakdown.discountTotal = Number(couponResult.discountAmount || 0);
+    aggregateBreakdown.grandTotal = round2(aggregateBreakdown.grandTotal - aggregateBreakdown.discountTotal);
+    aggregateBreakdown.appliedCoupon = {
+      code: couponResult.code,
+      couponId: couponResult.couponId,
+      discountAmount: couponResult.discountAmount,
+    };
+  }
 
   return {
     hydratedItems,
