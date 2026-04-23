@@ -232,6 +232,12 @@ export const getOrderRoute = async (req, res) => {
 export const requestReturnPickupOtp = async (req, res) => {
   try {
     const { orderId } = req.params;
+    
+    // Fetch order BEFORE calling service
+    const orderKey = orderMatchQueryFromRouteParam(orderId);
+    const order = await Order.findOne(orderKey).populate('customer', 'name phone').lean();
+    if (!order) return handleResponse(res, 404, 'Order not found');
+
     const result = await generateReturnPickupOtp(orderId);
     if (!result.success) {
       return handleResponse(res, 400, result.error);
@@ -239,7 +245,7 @@ export const requestReturnPickupOtp = async (req, res) => {
 
     // ── Emit OTP to customer via Socket.IO/SMS ──────────────────────────────────
     try {
-      const customerId = order.customer?.toString();
+      const customerId = order.customer?._id?.toString() || order.customer?.toString();
       if (customerId) {
         emitToCustomer(customerId, {
           event: "return:pickup:otp",

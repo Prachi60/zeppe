@@ -23,9 +23,7 @@ const orderOtpSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    code: {
-      type: String,
-    },
+
     expiresAt: {
       type: Date,
       required: true,

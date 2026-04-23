@@ -572,6 +572,22 @@ export async function handleCodOrderFinance(
 }
 
 export async function settleDeliveredOrder(orderOrId, { actorId = null } = {}) {
+  const query = toOrderIdQuery(orderOrId);
+  if (!query) throw new Error("Order not found");
+
+  // Atomic gate: only proceed if not yet applied
+  const gated = await Order.findOneAndUpdate(
+    { ...query, 'financeFlags.deliveredSettlementApplied': { $ne: true } },
+    { $set: { 'financeFlags.deliveredSettlementApplied': true } },
+    { new: false } // returns old doc; null means it was already settled
+  );
+  
+  if (!gated) {
+    // Already settled — return the current order state without any session
+    const order = await Order.findOne(query);
+    return order;
+  }
+
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
@@ -596,10 +612,8 @@ export async function settleDeliveredOrder(orderOrId, { actorId = null } = {}) {
       throw new Error("Cannot settle delivered online order before payment capture");
     }
 
-    if (order.financeFlags?.deliveredSettlementApplied) {
-      await session.commitTransaction();
-      return order;
-    }
+    // The atomic gate above already prevents concurrent execution.
+    // We proceed with the rest of the settlement logic here.
 
     const now = new Date();
     const holdSellerPayout =
@@ -632,6 +646,11 @@ export async function settleDeliveredOrder(orderOrId, { actorId = null } = {}) {
     return order;
   } catch (error) {
     await session.abortTransaction();
+    // Revert the gate flag on failure so the settlement can be retried
+    await Order.updateOne(
+      toOrderIdQuery(orderOrId),
+      { $set: { 'financeFlags.deliveredSettlementApplied': false } }
+    );
     throw error;
   } finally {
     session.endSession();

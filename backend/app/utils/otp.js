@@ -1,4 +1,7 @@
+import crypto from "crypto";
 const MOCK_OTP = "1234";
+
+export const hashOtp = (otp) => crypto.createHash("sha256").update(String(otp)).digest("hex");
 
 export const useRealSMS = () =>
   process.env.USE_REAL_SMS === "true" || process.env.USE_REAL_SMS === "1";

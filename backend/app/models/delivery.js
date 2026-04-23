@@ -75,7 +75,7 @@ const deliverySchema = new mongoose.Schema(
 
         isOnline: {
             type: Boolean,
-            default: true,
+            default: false,
         },
         location: {
             type: {
@@ -119,6 +119,7 @@ const deliverySchema = new mongoose.Schema(
 
 deliverySchema.index({ location: "2dsphere" });
 deliverySchema.index({ isOnline: 1, isVerified: 1 });
+deliverySchema.index({ lastLocationAt: -1 });
 
 deliverySchema.virtual('id').get(function () {
     return this._id.toHexString();

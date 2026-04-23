@@ -247,6 +247,8 @@ const orderSchema = new mongoose.Schema(
       sellerPayoutQueued: { type: Boolean, default: false },
       riderPayoutQueued: { type: Boolean, default: false },
       adminEarningCredited: { type: Boolean, default: false },
+      returnPickupCommissionPaid: { type: Boolean, default: false },
+      sellerPayoutHeld: { type: Boolean, default: false },
     },
     status: {
       type: String,

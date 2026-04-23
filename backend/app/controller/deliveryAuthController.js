@@ -2,7 +2,7 @@ import Delivery from "../models/delivery.js";
 import jwt from "jsonwebtoken";
 import handleResponse from "../utils/helper.js";
 import { sendSmsIndiaHubOtp } from "../services/smsIndiaHubService.js";
-import { generateOTP, useRealSMS } from "../utils/otp.js";
+import { generateOTP, useRealSMS, hashOtp } from "../utils/otp.js";
 
 const generateToken = (delivery) =>
     jwt.sign(
@@ -64,7 +64,7 @@ export const signupDelivery = async (req, res) => {
                 pan: panUrl,
                 drivingLicense: dlUrl,
             },
-            otp,
+            otp: hashOtp(otp),
             otpExpiry: Date.now() + 5 * 60 * 1000,
         };
 
@@ -114,7 +114,7 @@ export const loginDelivery = async (req, res) => {
 
         const otp = generateOTP();
 
-        delivery.otp = otp;
+        delivery.otp = hashOtp(otp);
         delivery.otpExpiry = Date.now() + 5 * 60 * 1000;
         await delivery.save();
 
@@ -151,7 +151,7 @@ export const verifyDeliveryOTP = async (req, res) => {
 
         const delivery = await Delivery.findOne({
             phone,
-            otp,
+            otp: hashOtp(otp),
             otpExpiry: { $gt: Date.now() },
         });
 

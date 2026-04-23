@@ -747,17 +747,9 @@ export const getReturnDetails = async (req, res) => {
       }
     }
 
-    // Fetch active OTP if in pickup assigned status
+    // Plaintext OTP is securely hashed and no longer stored in the DB.
+    // The frontend must rely on the socket event emitted when the rider requests the OTP.
     let activeOtp = null;
-    if (order.returnStatus === "return_pickup_assigned") {
-      const otpDoc = await OrderOtp.findOne({
-        orderId: order.orderId,
-        type: "return_pickup",
-        consumedAt: null,
-        expiresAt: { $gt: new Date() },
-      }).sort({ createdAt: -1 });
-      activeOtp = otpDoc?.code || null;
-    }
 
     const payload = {
       orderId: order.orderId,
