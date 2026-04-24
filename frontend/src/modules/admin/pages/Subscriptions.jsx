@@ -10,20 +10,41 @@ import {
   Clock,
   ExternalLink,
   IndianRupee,
-  Calendar
+  Calendar,
+  Plus,
+  Edit2
 } from "lucide-react";
 import Card from "@shared/components/ui/Card";
 import PageHeader from "@shared/components/ui/PageHeader";
 import Badge from "@shared/components/ui/Badge";
 import Button from "@shared/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
+import { fetchAllPlansAdmin, createPlanAdmin, updatePlanAdmin } from "@core/services/subscriptionService";
+import { toast } from "sonner";
 
 const Subscriptions = () => {
   const [activeTab, setActiveTab] = useState("sellers");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [plans, setPlans] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data for demo
+  // Fetch plans on mount
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const data = await fetchAllPlansAdmin();
+        setPlans(data);
+      } catch (error) {
+        toast.error("Failed to load subscription plans");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadPlans();
+  }, []);
+
+  // Mock data for user subscriptions (since backend API for this is pending)
   const sellers = [
     { id: "S101", name: "Harsh's Hub", shopName: "Harsh's Hub", email: "harsh@appzeto.com", status: "active", plan: "Annual Partner", date: "23 Apr 2024", amount: "₹8399" },
     { id: "S102", name: "Premium Electronics", shopName: "Premium Store", email: "contact@premium.com", status: "pending", plan: "Basic Onboarding", date: "22 Apr 2024", amount: "₹8399" },
@@ -36,12 +57,20 @@ const Subscriptions = () => {
     { id: "D503", name: "Vikas Verma", email: "vikas@zeppe.com", status: "active", plan: "Premium Partner", date: "19 Apr 2024", amount: "₹599" },
   ];
 
-  const data = activeTab === "sellers" ? sellers : deliveryBoys;
+  const getData = () => {
+    if (activeTab === "sellers") return sellers;
+    if (activeTab === "delivery") return deliveryBoys;
+    return plans;
+  };
+
+  const data = getData();
 
   const filteredData = data.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         item.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterStatus === "all" || item.status === filterStatus;
+    const name = item.name || item.shopName || "";
+    const email = item.email || "";
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterStatus === "all" || item.status === filterStatus || (activeTab === "plans" && (filterStatus === "active" ? item.isActive : !item.isActive));
     return matchesSearch && matchesFilter;
   });
 
@@ -95,9 +124,20 @@ const Subscriptions = () => {
           >
             Delivery Partners
           </button>
+          <button 
+            onClick={() => setActiveTab("plans")}
+            className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeTab === "plans" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+          >
+            Plan Management
+          </button>
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
+          {activeTab === "plans" && (
+            <Button className="bg-slate-900 text-white rounded-xl px-4 py-2 text-xs font-black tracking-widest uppercase flex items-center gap-2">
+              <Plus size={16} /> Create Plan
+            </Button>
+          )}
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
@@ -126,10 +166,16 @@ const Subscriptions = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Partner Details</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Plan Type</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  {activeTab === "plans" ? "Plan Name" : "Partner Details"}
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  {activeTab === "plans" ? "Role" : "Plan Type"}
+                </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Amount</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Subscription Date</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  {activeTab === "plans" ? "Duration" : "Subscription Date"}
+                </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">Status</th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Actions</th>
               </tr>
@@ -138,51 +184,76 @@ const Subscriptions = () => {
               <AnimatePresence mode="popLayout">
                 {filteredData.map((item) => (
                   <motion.tr 
-                    key={item.id}
+                    key={item.id || item._id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="hover:bg-slate-50/50 transition-colors"
                   >
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-black text-xs">
-                          {item.name.charAt(0)}
+                      {activeTab === "plans" ? (
+                        <span className="text-sm font-black text-slate-900">{item.name}</span>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-black text-xs">
+                            {item.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-slate-900">{item.name}</p>
+                            <p className="text-xs text-slate-500 font-medium">{item.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-black text-slate-900">{item.name}</p>
-                          <p className="text-xs text-slate-500 font-medium">{item.email}</p>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="outline" className="uppercase text-[9px] font-black tracking-widest">
+                        {activeTab === "plans" ? item.role : item.plan}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-black text-slate-900">
+                        {activeTab === "plans" ? `₹${item.price}` : item.amount}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {activeTab === "plans" ? (
+                        <span className="text-sm font-bold text-slate-700">
+                          {item.duration.value} {item.duration.unit}
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-2 text-slate-500">
+                          <Calendar size={14} />
+                          <span className="text-sm font-medium">{item.date}</span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-700">{item.plan}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-black text-slate-900">{item.amount}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-slate-500">
-                        <Calendar size={14} />
-                        <span className="text-sm font-medium">{item.date}</span>
-                      </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-center">
-                        <Badge variant={item.status === "active" ? "success" : "warning"} className="uppercase text-[10px] font-black tracking-widest">
-                          {item.status}
+                        <Badge 
+                          variant={(item.status === "active" || item.isActive) ? "success" : "warning"} 
+                          className="uppercase text-[10px] font-black tracking-widest"
+                        >
+                          {activeTab === "plans" ? (item.isActive ? "Active" : "Inactive") : item.status}
                         </Badge>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900">
-                          <ExternalLink size={16} />
-                        </Button>
-                        {item.status === "pending" && (
-                          <Button size="sm" className="bg-slate-900 text-white rounded-lg px-4 h-8 text-[10px] font-black tracking-widest uppercase">
-                            Approve
+                        {activeTab === "plans" ? (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900">
+                            <Edit2 size={16} />
                           </Button>
+                        ) : (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900">
+                              <ExternalLink size={16} />
+                            </Button>
+                            {item.status === "pending" && (
+                              <Button size="sm" className="bg-slate-900 text-white rounded-lg px-4 h-8 text-[10px] font-black tracking-widest uppercase">
+                                Approve
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>

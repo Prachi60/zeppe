@@ -3,6 +3,8 @@ import {
   createPaymentOrder,
   verifyPaymentStatus,
   handlePhonePeWebhook,
+  createSubscriptionOrder,
+  verifySubscriptionPayment,
 } from "../controller/paymentController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { paymentRouteRateLimiter } from "../middleware/securityMiddlewares.js";
@@ -39,6 +41,16 @@ paymentRoute.post(
   "/webhook/phonepe",
   express.raw({ type: "application/json" }), // SDK needs raw body for verification
   handlePhonePeWebhook,
+);
+
+/**
+ * Razorpay Subscription Payment Flow
+ */
+paymentRoute.post(
+  "/verify",
+  verifyToken,
+  paymentRouteRateLimiter,
+  verifySubscriptionPayment,
 );
 
 export default paymentRoute;

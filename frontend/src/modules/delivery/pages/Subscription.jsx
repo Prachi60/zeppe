@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Shield, Zap, ArrowRight, Package, Headphones } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Button from '@shared/components/ui/Button';
+import { fetchPlansByRole, createSubscriptionOrder, verifySubscriptionPayment } from '@core/services/subscriptionService';
+import { openRazorpayCheckout } from '@core/services/razorpayService';
+import { toast } from 'sonner';
+import { useAuth } from '@core/context/AuthContext';
 
 const PlanCard = ({ 
   title, 
@@ -80,41 +84,87 @@ const PlanCard = ({
 
 const Subscription = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
+  const { user, login } = useAuth();
 
-  const plans = [
-    {
-      id: 'basic',
-      title: 'Basic Plan',
-      price: '399',
-      label: 'One-time',
-      icon: Shield,
-      features: [
-        'Delivery partner access',
-        'Order handling',
-        'Basic support',
-      ],
-      isRecommended: false,
-    },
-    {
-      id: 'premium',
-      title: 'Premium Plan',
-      price: '599',
-      label: 'Recommended',
-      icon: Zap,
-      features: [
-        'Delivery partner access',
-        'Free bag & dress kit',
-        'Priority support',
-      ],
-      isRecommended: true,
-    },
-  ];
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const data = await fetchPlansByRole('delivery');
+        // Map backend plans to frontend structure
+        const mappedPlans = data.map(p => ({
+          id: p._id,
+          title: p.name,
+          price: p.price,
+          label: p.price > 500 ? 'Recommended' : 'One-time',
+          icon: p.price > 500 ? Zap : Shield,
+          features: p.features,
+          isRecommended: p.price > 500,
+        }));
+        setPlans(mappedPlans);
+        if (mappedPlans.length > 0) {
+          setSelectedPlan(mappedPlans.find(p => p.isRecommended)?.id || mappedPlans[0].id);
+        }
+      } catch (error) {
+        toast.error("Failed to load subscription plans");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadPlans();
+  }, []);
 
-  const handleContinue = () => {
-    if (selectedPlan) {
-      // Logic for payment or redirect
-      navigate('/delivery/dashboard');
+  const handleContinue = async () => {
+    if (!selectedPlan) return;
+
+    setIsProcessing(true);
+    try {
+      // 1. Create Order
+      const orderData = await createSubscriptionOrder(selectedPlan);
+      
+      // 2. Open Razorpay
+      openRazorpayCheckout({
+        orderId: orderData.orderId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Zeppe Delivery Partner",
+        description: `Plan Activation`,
+        prefill: {
+          name: user?.name,
+          email: user?.email,
+          contact: user?.phone,
+        },
+        onSuccess: async (response) => {
+          try {
+            // 3. Verify
+            await verifySubscriptionPayment({
+              ...response,
+              planId: selectedPlan,
+            });
+            
+            // Update local user state
+            const updatedUser = { ...user, subscriptionStatus: 'active' };
+            login(updatedUser);
+            
+            toast.success('Subscription activated! Welcome to the fleet.');
+            navigate('/delivery/dashboard');
+          } catch (err) {
+            toast.error('Payment verification failed');
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+        onError: (err) => {
+          toast.error(err.message || 'Payment failed');
+          setIsProcessing(false);
+        }
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to initiate payment');
+      setIsProcessing(false);
     }
   };
 

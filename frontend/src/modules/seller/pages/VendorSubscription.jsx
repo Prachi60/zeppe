@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@core/context/AuthContext';
 import { 
@@ -16,6 +16,8 @@ import {
 import { motion } from 'framer-motion';
 import Button from '@shared/components/ui/Button';
 import { toast } from 'sonner';
+import { fetchPlansByRole, createSubscriptionOrder, verifySubscriptionPayment } from '@core/services/subscriptionService';
+import { openRazorpayCheckout } from '@core/services/razorpayService';
 
 const AgreementSection = ({ title, children, icon: Icon }) => (
   <div className="mb-8 border-b border-gray-100 pb-8 last:border-0 last:pb-0">
@@ -29,7 +31,7 @@ const AgreementSection = ({ title, children, icon: Icon }) => (
   </div>
 );
 
-const PricingTable = () => (
+const PricingTable = ({ price = 8399 }) => (
   <div className="my-6 overflow-hidden rounded-xl border border-gray-100 bg-emerald-50/30">
     <table className="w-full text-left text-sm">
       <thead className="bg-emerald-50 text-emerald-800">
@@ -41,15 +43,15 @@ const PricingTable = () => (
       <tbody className="divide-y divide-gray-100">
         <tr>
           <td className="px-6 py-4 font-medium text-gray-700">Product Addition Fee</td>
-          <td className="px-6 py-4 text-right font-bold text-gray-900">₹8,000</td>
+          <td className="px-6 py-4 text-right font-bold text-gray-900">₹{Math.floor(price * 0.95)}</td>
         </tr>
         <tr>
           <td className="px-6 py-4 font-medium text-gray-700">Documentation & Banking Charge</td>
-          <td className="px-6 py-4 text-right font-bold text-gray-900">₹399</td>
+          <td className="px-6 py-4 text-right font-bold text-gray-900">₹{price - Math.floor(price * 0.95)}</td>
         </tr>
         <tr className="bg-emerald-600 text-white">
           <td className="px-6 py-4 font-black uppercase tracking-widest">Total Investment</td>
-          <td className="px-6 py-4 text-right text-xl font-black">₹8,399</td>
+          <td className="px-6 py-4 text-right text-xl font-black">₹{price}</td>
         </tr>
       </tbody>
     </table>
@@ -68,29 +70,79 @@ const VendorSubscription = () => {
   const [storeName, setStoreName] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [plan, setPlan] = useState(null);
 
-  const handlePayment = () => {
+  useEffect(() => {
+    const loadPlan = async () => {
+      try {
+        const plans = await fetchPlansByRole('seller');
+        if (plans.length > 0) {
+          setPlan(plans[0]); // Take the first available plan
+        }
+      } catch (error) {
+        console.error("Failed to load subscription plans", error);
+      }
+    };
+    loadPlan();
+  }, []);
+
+  const handlePayment = async () => {
     if (!storeName.trim() || !agreed) {
       toast.error('Please enter store name and agree to the terms.');
       return;
     }
+
+    if (!plan) {
+      toast.error('Subscription plan not found. Please try again later.');
+      return;
+    }
     
     setIsProcessing(true);
-    // Simulate payment process
-    setTimeout(() => {
+    try {
+      // 1. Create Order on Backend
+      const orderData = await createSubscriptionOrder(plan._id);
+      
+      // 2. Open Razorpay Checkout
+      openRazorpayCheckout({
+        orderId: orderData.orderId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Zeppe Seller Partnership",
+        description: `Activation for ${storeName}`,
+        prefill: {
+          name: user?.name,
+          email: user?.email,
+          contact: user?.phone,
+        },
+        onSuccess: async (response) => {
+          try {
+            // 3. Verify Payment on Backend
+            const result = await verifySubscriptionPayment({
+              ...response,
+              planId: plan._id,
+            });
+            
+            // Update local user state
+            const updatedUser = { ...user, subscriptionStatus: 'active' };
+            login(updatedUser);
+            
+            toast.success('Subscription activated successfully!');
+            navigate('/seller');
+          } catch (err) {
+            toast.error('Payment verification failed. Please contact support.');
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+        onError: (err) => {
+          toast.error(err.message || 'Payment failed');
+          setIsProcessing(false);
+        }
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to initiate payment');
       setIsProcessing(false);
-      
-      // Update local subscription status
-      if (user) {
-        const updatedUser = { ...user, subscriptionStatus: 'active' };
-        login(updatedUser);
-        // Persist for demo purposes across refreshes
-        localStorage.setItem('demo_subscription_active', 'true');
-      }
-      
-      toast.success('Payment Successful! Welcome to Zeppe Partner Network.');
-      navigate('/seller'); // Redirect to seller dashboard
-    }, 2000);
+    }
   };
 
   const handleDownloadPDF = () => {
