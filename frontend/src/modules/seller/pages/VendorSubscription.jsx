@@ -66,11 +66,12 @@ const PricingTable = ({ price = 8399 }) => (
 
 const VendorSubscription = () => {
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [storeName, setStoreName] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [plan, setPlan] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadPlan = async () => {
@@ -81,6 +82,8 @@ const VendorSubscription = () => {
         }
       } catch (error) {
         console.error("Failed to load subscription plans", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     loadPlan();
@@ -122,9 +125,8 @@ const VendorSubscription = () => {
               planId: plan._id,
             });
             
-            // Update local user state
-            const updatedUser = { ...user, subscriptionStatus: 'active' };
-            login(updatedUser);
+            // Refresh user profile from backend to get latest subscription status
+            await refreshUser();
             
             toast.success('Subscription activated successfully!');
             navigate('/seller');
@@ -168,12 +170,28 @@ const VendorSubscription = () => {
           </p>
         </div>
 
-        {/* Main Document */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative bg-white shadow-2xl shadow-emerald-900/5 rounded-[2rem] border border-gray-100 overflow-hidden"
-        >
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] shadow-xl border border-gray-100">
+            <div className="h-12 w-12 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin mb-4" />
+            <p className="text-gray-500 font-bold">Loading agreement details...</p>
+          </div>
+        ) : !plan ? (
+          <div className="text-center py-20 bg-white rounded-[2rem] shadow-xl border border-gray-100 px-6">
+            <div className="bg-amber-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Info className="text-amber-600" size={32} />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">No Active Plans Found</h3>
+            <p className="text-gray-500 mb-6">Our team is currently updating the partnership programs. Please check back shortly.</p>
+            <Button onClick={() => navigate('/seller')} variant="ghost">Back to Dashboard</Button>
+          </div>
+        ) : (
+          <>
+            {/* Main Document */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative bg-white shadow-2xl shadow-emerald-900/5 rounded-[2rem] border border-gray-100 overflow-hidden"
+            >
           {/* Document Top Accent */}
           <div className="h-2 bg-linear-to-r from-emerald-500 to-emerald-600" />
           
@@ -196,15 +214,15 @@ const VendorSubscription = () => {
             {/* Section 1: Plan & Fees */}
             <AgreementSection title="1. Service Plan & Fees" icon={IndianRupee}>
               <p>The vendor agrees to pay a one-time non-refundable integration and documentation fee for platform onboarding.</p>
-              <PricingTable />
+              <PricingTable price={plan.price} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                   <h4 className="text-xs font-black text-gray-400 uppercase mb-1">Product Listing Charges</h4>
-                  <p className="text-lg font-bold text-gray-900">₹4,000</p>
+                  <p className="text-lg font-bold text-gray-900">₹{Math.floor(plan.price * 0.48)}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                   <h4 className="text-xs font-black text-gray-400 uppercase mb-1">Platform Setup</h4>
-                  <p className="text-lg font-bold text-gray-900">₹4,000</p>
+                  <p className="text-lg font-bold text-gray-900">₹{plan.price - Math.floor(plan.price * 0.48)}</p>
                 </div>
               </div>
             </AgreementSection>
@@ -291,42 +309,46 @@ const VendorSubscription = () => {
           </div>
         </motion.div>
 
-        {/* Action Button */}
-        <div className="mt-10 flex flex-col items-center">
-          <Button
-            onClick={handlePayment}
-            disabled={!agreed || !storeName.trim() || isProcessing}
-            className={`w-full sm:w-[400px] py-5 rounded-2xl text-lg font-black tracking-widest uppercase shadow-2xl shadow-emerald-600/20 transition-all ${
-              !agreed || !storeName.trim() ? 'opacity-50 grayscale' : 'hover:scale-[1.02] active:scale-[0.98]'
-            }`}
-          >
-            {isProcessing ? (
-              <div className="flex items-center gap-3">
-                <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Processing...
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-3">
-                Proceed to Payment <span className="text-emerald-300">₹8399</span> <ArrowRight size={20} />
-              </div>
-            )}
-          </Button>
-          <p className="mt-4 text-xs text-gray-400 font-bold flex items-center gap-2">
-            <ShieldCheck size={14} className="text-emerald-500" /> Secure Payment Gateway • PCI DSS Compliant
-          </p>
-        </div>
+            {/* Action Button */}
+            <div className="mt-10 flex flex-col items-center">
+              <Button
+                onClick={handlePayment}
+                disabled={!agreed || !storeName.trim() || isProcessing}
+                className={`w-full sm:w-[400px] py-5 rounded-2xl text-lg font-black tracking-widest uppercase shadow-2xl shadow-emerald-600/20 transition-all ${
+                  !agreed || !storeName.trim() ? 'opacity-50 grayscale' : 'hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {isProcessing ? (
+                  <div className="flex items-center gap-3">
+                    <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-3">
+                    Proceed to Payment <span className="text-emerald-300">₹{plan.price}</span> <ArrowRight size={20} />
+                  </div>
+                )}
+              </Button>
+              <p className="mt-4 text-xs text-gray-400 font-bold flex items-center gap-2">
+                <ShieldCheck size={14} className="text-emerald-500" /> Secure Payment Gateway • PCI DSS Compliant
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Sticky Bottom for Mobile */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-gray-100 z-50">
-        <Button
-          onClick={handlePayment}
-          disabled={!agreed || !storeName.trim() || isProcessing}
-          className="w-full py-4 rounded-xl text-sm font-black tracking-widest uppercase"
-        >
-          {isProcessing ? 'Processing...' : 'Pay ₹8399 & Activate'}
-        </Button>
-      </div>
+      {!isLoading && plan && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-gray-100 z-50">
+          <Button
+            onClick={handlePayment}
+            disabled={!agreed || !storeName.trim() || isProcessing}
+            className="w-full py-4 rounded-xl text-sm font-black tracking-widest uppercase"
+          >
+            {isProcessing ? 'Processing...' : `Pay ₹${plan.price} & Activate`}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

@@ -10,6 +10,7 @@ import {
   validateSchema,
 } from "../validation/paymentValidation.js";
 import SubscriptionPlan from "../models/subscriptionPlan.js";
+import Subscription from "../models/subscription.js";
 import UserSubscription from "../models/userSubscription.js";
 import razorpay from "../config/razorpay.js";
 import crypto from "crypto";
@@ -132,9 +133,15 @@ export const createSubscriptionOrder = async (req, res) => {
     const { planId } = req.body;
     if (!planId) return handleResponse(res, 400, "planId is required");
 
-    const plan = await SubscriptionPlan.findById(planId);
+    const plan = await SubscriptionPlan.findOne({ _id: planId, deletedAt: null });
     if (!plan || !plan.isActive) {
       return handleResponse(res, 404, "Active subscription plan not found");
+    }
+
+    const requesterRole = String(req.user?.role || "").toLowerCase();
+    const planRole = String(plan.targetRole || plan.role || "").toLowerCase();
+    if (requesterRole !== planRole) {
+      return handleResponse(res, 403, "This subscription plan is not available for your role");
     }
 
     const options = {
@@ -149,6 +156,17 @@ export const createSubscriptionOrder = async (req, res) => {
     };
 
     const order = await razorpay.orders.create(options);
+
+    await Subscription.create({
+      planId: plan._id,
+      userId: req.user?.id,
+      userModel: planRole === "seller" ? "Seller" : "Delivery",
+      role: planRole,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency || "INR",
+      status: "pending",
+    });
 
     return handleResponse(res, 201, "Razorpay order created for subscription", {
       orderId: order.id,
@@ -190,8 +208,14 @@ export const verifySubscriptionPayment = async (req, res) => {
       return handleResponse(res, 400, "Invalid payment signature");
     }
 
-    const plan = await SubscriptionPlan.findById(planId);
+    const plan = await SubscriptionPlan.findOne({ _id: planId, deletedAt: null });
     if (!plan) return handleResponse(res, 404, "Plan not found");
+
+    const requesterRole = String(req.user?.role || "").toLowerCase();
+    const planRole = String(plan.targetRole || plan.role || "").toLowerCase();
+    if (requesterRole !== planRole) {
+      return handleResponse(res, 403, "This subscription plan is not available for your role");
+    }
 
     // Calculate dates
     const startDate = new Date();
@@ -203,13 +227,28 @@ export const verifySubscriptionPayment = async (req, res) => {
     }
 
     // Determine user model based on role
-    const userModel = plan.role === "seller" ? "Seller" : "Delivery";
+    const userModel = planRole === "seller" ? "Seller" : "Delivery";
+
+    await UserSubscription.updateMany(
+      {
+        userId: req.user.id,
+        role: planRole,
+        status: { $in: ["active", "pending"] },
+      },
+      {
+        $set: {
+          status: "cancelled",
+          cancelledAt: new Date(),
+          cancelledBy: requesterRole || "system",
+        },
+      },
+    );
 
     // Create UserSubscription
     const userSubscription = await UserSubscription.create({
       userId: req.user.id,
       userModel: userModel,
-      role: plan.role,
+      role: planRole,
       subscriptionPlanId: plan._id,
       paymentId: razorpay_payment_id,
       orderId: razorpay_order_id,
@@ -218,15 +257,39 @@ export const verifySubscriptionPayment = async (req, res) => {
       status: "active",
     });
 
+    await Subscription.findOneAndUpdate(
+      { orderId: razorpay_order_id },
+      {
+        $set: {
+          userSubscriptionId: userSubscription._id,
+          paymentId: razorpay_payment_id,
+          status: "active",
+          startsAt: startDate,
+          endsAt: endDate,
+        },
+      },
+      { new: true },
+    );
+
     return handleResponse(res, 200, "Subscription activated successfully", {
       subscription: userSubscription,
       plan: {
         name: plan.name,
-        role: plan.role,
+        role: planRole,
         endDate: userSubscription.endDate,
       }
     });
   } catch (error) {
+    try {
+      if (req.body?.razorpay_order_id) {
+        await Subscription.findOneAndUpdate(
+          { orderId: req.body.razorpay_order_id },
+          { $set: { status: "failed" } },
+        );
+      }
+    } catch (_err) {
+      // Ignore tracking update failures.
+    }
     console.error("[Razorpay] Error verifying subscription payment:", error);
     return handleResponse(res, 500, error.message);
   }

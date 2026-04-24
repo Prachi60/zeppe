@@ -18,8 +18,15 @@ import Card from "@shared/components/ui/Card";
 import PageHeader from "@shared/components/ui/PageHeader";
 import Badge from "@shared/components/ui/Badge";
 import Button from "@shared/components/ui/Button";
+import Modal from "@shared/components/ui/Modal";
+import Input from "@shared/components/ui/Input";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchAllPlansAdmin, createPlanAdmin, updatePlanAdmin } from "@core/services/subscriptionService";
+import { 
+  fetchAllPlansAdmin, 
+  createPlanAdmin, 
+  updatePlanAdmin,
+  fetchUserSubscriptionsAdmin 
+} from "@core/services/subscriptionService";
 import { toast } from "sonner";
 
 const Subscriptions = () => {
@@ -27,39 +34,123 @@ const Subscriptions = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [plans, setPlans] = useState([]);
+  const [userSubscriptions, setUserSubscriptions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    role: "seller",
+    price: "",
+    duration: { value: 1, unit: "months" },
+    features: [""],
+    isActive: true
+  });
 
-  // Fetch plans on mount
+  // Fetch data on mount
   useEffect(() => {
-    const loadPlans = async () => {
+    const loadData = async () => {
       try {
-        const data = await fetchAllPlansAdmin();
-        setPlans(data);
+        const [plansData, subsData] = await Promise.all([
+          fetchAllPlansAdmin(),
+          fetchUserSubscriptionsAdmin()
+        ]);
+        setPlans(plansData);
+        setUserSubscriptions(subsData);
       } catch (error) {
-        toast.error("Failed to load subscription plans");
+        toast.error("Failed to load subscription data");
       } finally {
         setIsLoading(false);
       }
     };
-    loadPlans();
+    loadData();
   }, []);
 
-  // Mock data for user subscriptions (since backend API for this is pending)
-  const sellers = [
-    { id: "S101", name: "Harsh's Hub", shopName: "Harsh's Hub", email: "harsh@appzeto.com", status: "active", plan: "Annual Partner", date: "23 Apr 2024", amount: "₹8399" },
-    { id: "S102", name: "Premium Electronics", shopName: "Premium Store", email: "contact@premium.com", status: "pending", plan: "Basic Onboarding", date: "22 Apr 2024", amount: "₹8399" },
-    { id: "S103", name: "Green Grocers", shopName: "Green Market", email: "green@market.com", status: "active", plan: "Annual Partner", date: "20 Apr 2024", amount: "₹8399" },
-  ];
+  const handleSavePlan = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingPlan) {
+        await updatePlanAdmin(editingPlan._id, formData);
+        toast.success("Plan updated successfully");
+      } else {
+        await createPlanAdmin(formData);
+        toast.success("Plan created successfully");
+      }
+      setIsModalOpen(false);
+      // Reload plans
+      const plansData = await fetchAllPlansAdmin();
+      setPlans(plansData);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to save plan");
+    }
+  };
 
-  const deliveryBoys = [
-    { id: "D501", name: "Rahul Kumar", email: "rahul@zeppe.com", status: "active", plan: "Premium Partner", date: "23 Apr 2024", amount: "₹599" },
-    { id: "D502", name: "Amit Singh", email: "amit@zeppe.com", status: "pending", plan: "Basic Plan", date: "21 Apr 2024", amount: "₹399" },
-    { id: "D503", name: "Vikas Verma", email: "vikas@zeppe.com", status: "active", plan: "Premium Partner", date: "19 Apr 2024", amount: "₹599" },
-  ];
+  const handleEditPlan = (plan) => {
+    setEditingPlan(plan);
+    setFormData({
+      name: plan.name,
+      role: plan.role,
+      price: plan.price,
+      duration: plan.duration,
+      features: plan.features.length > 0 ? plan.features : [""],
+      isActive: plan.isActive
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenModal = () => {
+    setEditingPlan(null);
+    setFormData({
+      name: "",
+      role: "seller",
+      price: "",
+      duration: { value: 1, unit: "months" },
+      features: [""],
+      isActive: true
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleFeatureChange = (index, value) => {
+    const newFeatures = [...formData.features];
+    newFeatures[index] = value;
+    setFormData({ ...formData, features: newFeatures });
+  };
+
+  const addFeature = () => {
+    setFormData({ ...formData, features: [...formData.features, ""] });
+  };
+
+  const removeFeature = (index) => {
+    const newFeatures = formData.features.filter((_, i) => i !== index);
+    setFormData({ ...formData, features: newFeatures });
+  };
 
   const getData = () => {
-    if (activeTab === "sellers") return sellers;
-    if (activeTab === "delivery") return deliveryBoys;
+    if (activeTab === "sellers") {
+      return userSubscriptions.filter(s => s.role === "seller").map(s => ({
+        id: s._id,
+        name: s.userId?.name || "N/A",
+        email: s.userId?.email || "N/A",
+        status: s.status,
+        plan: s.subscriptionPlanId?.name || "N/A",
+        date: new Date(s.startDate).toLocaleDateString(),
+        amount: `₹${s.subscriptionPlanId?.price || 0}`
+      }));
+    }
+    if (activeTab === "delivery") {
+      return userSubscriptions.filter(s => s.role === "delivery").map(s => ({
+        id: s._id,
+        name: s.userId?.name || "N/A",
+        email: s.userId?.email || "N/A",
+        status: s.status,
+        plan: s.subscriptionPlanId?.name || "N/A",
+        date: new Date(s.startDate).toLocaleDateString(),
+        amount: `₹${s.subscriptionPlanId?.price || 0}`
+      }));
+    }
     return plans;
   };
 
@@ -134,7 +225,10 @@ const Subscriptions = () => {
 
         <div className="flex items-center gap-3 w-full md:w-auto">
           {activeTab === "plans" && (
-            <Button className="bg-slate-900 text-white rounded-xl px-4 py-2 text-xs font-black tracking-widest uppercase flex items-center gap-2">
+            <Button 
+              onClick={handleOpenModal}
+              className="bg-slate-900 text-white rounded-xl px-4 py-2 text-xs font-black tracking-widest uppercase flex items-center gap-2"
+            >
               <Plus size={16} /> Create Plan
             </Button>
           )}
@@ -240,7 +334,12 @@ const Subscriptions = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {activeTab === "plans" ? (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900">
+                          <Button 
+                            onClick={() => handleEditPlan(item)}
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-slate-400 hover:text-slate-900"
+                          >
                             <Edit2 size={16} />
                           </Button>
                         ) : (
@@ -272,6 +371,129 @@ const Subscriptions = () => {
           </div>
         )}
       </Card>
+
+      {/* Plan Management Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        title={editingPlan ? "Edit Subscription Plan" : "Create Subscription Plan"}
+      >
+        <form onSubmit={handleSavePlan} className="space-y-4 font-['Outfit']">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Plan Name</label>
+              <Input 
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Premium Seller Plan"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Role</label>
+              <select 
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:bg-white transition-all outline-none"
+              >
+                <option value="seller">Seller</option>
+                <option value="delivery">Delivery Partner</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Price (INR)</label>
+              <Input 
+                type="number"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                placeholder="e.g. 999"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Duration</label>
+              <div className="flex gap-2">
+                <Input 
+                  type="number"
+                  className="w-20"
+                  value={formData.duration.value}
+                  onChange={(e) => setFormData({ ...formData, duration: { ...formData.duration, value: parseInt(e.target.value) } })}
+                  required
+                />
+                <select 
+                  value={formData.duration.unit}
+                  onChange={(e) => setFormData({ ...formData, duration: { ...formData.duration, unit: e.target.value } })}
+                  className="flex-1 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:bg-white transition-all outline-none"
+                >
+                  <option value="days">Days</option>
+                  <option value="months">Months</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Features</label>
+            {formData.features.map((feature, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <Input 
+                  value={feature}
+                  onChange={(e) => handleFeatureChange(index, e.target.value)}
+                  placeholder="e.g. Priority Support"
+                  required
+                />
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => removeFeature(index)}
+                  className="text-rose-500"
+                >
+                  <XCircle size={18} />
+                </Button>
+              </div>
+            ))}
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={addFeature}
+              className="text-slate-900 text-[10px] font-black tracking-widest uppercase flex items-center gap-2"
+            >
+              <Plus size={14} /> Add Feature
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input 
+              type="checkbox"
+              id="isActive"
+              checked={formData.isActive}
+              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              className="w-4 h-4 rounded text-slate-900 focus:ring-slate-900"
+            />
+            <label htmlFor="isActive" className="text-xs font-black text-slate-900 uppercase tracking-widest">Active Plan</label>
+          </div>
+
+          <div className="pt-4 flex gap-3">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => setIsModalOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1 bg-slate-900 text-white"
+            >
+              {editingPlan ? "Update Plan" : "Create Plan"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

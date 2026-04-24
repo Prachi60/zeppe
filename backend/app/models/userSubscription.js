@@ -39,8 +39,18 @@ const userSubscriptionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "expired", "pending", "failed"],
+      enum: ["active", "expired", "pending", "failed", "cancelled"],
       default: "pending",
+      index: true,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    cancelledBy: {
+      type: String,
+      enum: ["admin", "seller", "delivery", "system", null],
+      default: null,
     },
   },
   {
@@ -50,6 +60,7 @@ const userSubscriptionSchema = new mongoose.Schema(
 
 // Index for quick lookup of active subscriptions
 userSubscriptionSchema.index({ userId: 1, status: 1 });
+userSubscriptionSchema.index({ role: 1, status: 1, endDate: 1 });
 
 const UserSubscription = mongoose.model("UserSubscription", userSubscriptionSchema);
 

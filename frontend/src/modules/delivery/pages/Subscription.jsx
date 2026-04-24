@@ -88,7 +88,7 @@ const Subscription = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -145,9 +145,8 @@ const Subscription = () => {
               planId: selectedPlan,
             });
             
-            // Update local user state
-            const updatedUser = { ...user, subscriptionStatus: 'active' };
-            login(updatedUser);
+            // Refresh user profile from backend to get latest subscription status
+            await refreshUser();
             
             toast.success('Subscription activated! Welcome to the fleet.');
             navigate('/delivery/dashboard');
@@ -195,22 +194,37 @@ const Subscription = () => {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:px-12">
-          {plans.map((plan, index) => (
-            <motion.div
-              key={plan.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 * (index + 1) }}
-            >
-              <PlanCard
-                {...plan}
-                isSelected={selectedPlan === plan.id}
-                onSelect={() => setSelectedPlan(plan.id)}
-              />
-            </motion.div>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="h-12 w-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4" />
+            <p className="text-gray-500 font-bold">Fetching available plans...</p>
+          </div>
+        ) : plans.length === 0 ? (
+          <div className="text-center py-20 bg-white/50 backdrop-blur-sm rounded-3xl border border-white/20 shadow-xl px-6">
+            <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="text-indigo-600" size={32} />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 mb-2">No Plans Available</h3>
+            <p className="text-gray-600">We are currently restructuring our delivery partner programs. Please check back later.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:px-12">
+            {plans.map((plan, index) => (
+              <motion.div
+                key={plan.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 * (index + 1) }}
+              >
+                <PlanCard
+                  {...plan}
+                  isSelected={selectedPlan === plan.id}
+                  onSelect={() => setSelectedPlan(plan.id)}
+                />
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-12 text-center">
           <p className="mb-6 text-sm text-gray-500 italic">

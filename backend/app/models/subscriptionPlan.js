@@ -2,10 +2,16 @@ import mongoose from "mongoose";
 
 const subscriptionPlanSchema = new mongoose.Schema(
   {
-    role: {
+    targetRole: {
       type: String,
       enum: ["seller", "delivery"],
       required: true,
+      index: true,
+    },
+    role: {
+      type: String,
+      enum: ["seller", "delivery"],
+      default: undefined,
     },
     name: {
       type: String,
@@ -39,11 +45,31 @@ const subscriptionPlanSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+subscriptionPlanSchema.pre("validate", function normalizePlanRole(next) {
+  if (!this.targetRole && this.role) {
+    this.targetRole = this.role;
+  }
+  if (!this.role && this.targetRole) {
+    this.role = this.targetRole;
+  }
+  if (this.role && this.targetRole && this.role !== this.targetRole) {
+    this.role = this.targetRole;
+  }
+  next();
+});
+
+subscriptionPlanSchema.index({ targetRole: 1, isActive: 1, deletedAt: 1, createdAt: -1 });
 
 const SubscriptionPlan = mongoose.model("SubscriptionPlan", subscriptionPlanSchema);
 
