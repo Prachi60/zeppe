@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
     // Current role based on URL
     const getCurrentRoleFromUrl = () => {
         const path = window.location.pathname;
-        if (path.startsWith('/seller')) return 'seller';
+        if (path.startsWith('/seller') || path.startsWith('/vendor')) return 'seller';
         if (path.startsWith('/admin')) return 'admin';
         if (path.startsWith('/delivery')) return 'delivery';
         return 'customer';
@@ -139,6 +139,7 @@ export const AuthProvider = ({ children }) => {
 
         sessionStorage.removeItem(`push:registered:${currentRole}`);
         localStorage.removeItem(`push:fcm-token:${currentRole}`);
+        localStorage.removeItem('demo_subscription_active');
 
         setAuthData((prev) => ({
             ...prev,
@@ -152,7 +153,7 @@ export const AuthProvider = ({ children }) => {
         // (ProtectedRoute usually handles this, but explicit navigation is safer for some UI edge cases)
         const path = window.location.pathname;
         if (path.startsWith('/admin')) window.location.href = '/admin/auth';
-        else if (path.startsWith('/seller')) window.location.href = '/seller/auth';
+        else if (path.startsWith('/seller') || path.startsWith('/vendor')) window.location.href = '/seller/auth';
         else if (path.startsWith('/delivery')) window.location.href = '/delivery/auth';
         else window.location.href = '/login';
     };

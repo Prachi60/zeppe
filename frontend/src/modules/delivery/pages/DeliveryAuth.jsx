@@ -257,8 +257,8 @@ const DeliveryAuth = () => {
 
       login({ ...delivery, token, role: "delivery" });
 
-      toast.success("Welcome! Redirecting to dashboard...");
-      navigate("/delivery/dashboard");
+      toast.success(mode === "login" ? "Welcome back! Redirecting..." : "Welcome! Complete your subscription to start.");
+      navigate("/delivery/subscription");
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Invalid OTP");

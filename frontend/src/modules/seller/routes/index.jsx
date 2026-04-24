@@ -28,6 +28,10 @@ const Transactions = React.lazy(() => import("../pages/Transactions"));
 const DeliveryTracking = React.lazy(() => import("../pages/DeliveryTracking"));
 const Profile = React.lazy(() => import("../pages/Profile"));
 const Withdrawals = React.lazy(() => import("../pages/Withdrawals"));
+const VendorSubscription = React.lazy(() => import("../pages/VendorSubscription"));
+
+import { useAuth } from "@core/context/AuthContext";
+import { useLocation } from "react-router-dom";
 
 const navItems = [
   { label: "Dashboard", path: "/seller", icon: HiOutlineSquares2X2, end: true },
@@ -60,8 +64,39 @@ const navItems = [
 ];
 
 const SellerRoutes = () => {
+  const { user, isLoading: authLoading } = useAuth();
+  const location = useLocation();
+  
+  // Normalized path check
+  const isSubscriptionPage = location.pathname.includes("/subscription");
+
+  if (authLoading) {
+    return <div className="flex h-screen items-center justify-center font-outfit">Loading...</div>;
+  }
+
+  // Logic: If vendor.subscriptionStatus !== "active" → redirect to "/seller/subscription"
+  // We check for seller role and ensure we don't redirect if already on the subscription page
+  // If subscriptionStatus is missing or not active, we treat it as inactive
+  const isDemoActive = localStorage.getItem('demo_subscription_active') === 'true';
+  const isSubscribed = user?.subscriptionStatus === "active" || isDemoActive;
+  
+  if (user?.role === "seller" && !isSubscribed && !isSubscriptionPage) {
+    return <Navigate to="/seller/subscription" replace />;
+  }
+
+  if (isSubscriptionPage) {
+    return (
+      <React.Suspense fallback={<div>Loading...</div>}>
+        <Routes>
+          <Route path="subscription" element={<VendorSubscription />} />
+          <Route path="*" element={<Navigate to="/seller/subscription" replace />} />
+        </Routes>
+      </React.Suspense>
+    );
+  }
+
   return (
-    <DashboardLayout navItems={navItems} title="Seller Panel">
+    <DashboardLayout navItems={navItems} title="Vendor Panel">
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/products" element={<ProductManagement />} />

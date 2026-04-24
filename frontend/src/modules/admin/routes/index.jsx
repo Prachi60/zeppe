@@ -19,6 +19,7 @@ import {
   Terminal,
   Sparkles,
   User,
+  ShieldCheck,
 } from "lucide-react";
 
 const Dashboard = React.lazy(() => import("../pages/Dashboard"));
@@ -90,6 +91,7 @@ const ShopByStoreManagement = React.lazy(
 const AdminSettings = React.lazy(() => import("../pages/AdminSettings"));
 const EnvSettings = React.lazy(() => import("../pages/EnvSettings"));
 const AdminProfile = React.lazy(() => import("../pages/AdminProfile"));
+const Subscriptions = React.lazy(() => import("../pages/Subscriptions"));
 
 const navItems = [
   {
@@ -98,6 +100,12 @@ const navItems = [
     icon: LayoutDashboard,
     color: "indigo",
     end: true,
+  },
+  {
+    label: "Subscriptions",
+    path: "/admin/subscriptions",
+    icon: ShieldCheck,
+    color: "emerald",
   },
   {
     label: "Categories",
@@ -258,6 +266,7 @@ const AdminRoutes = () => {
         <Route path="/billing" element={<BillingCharges />} />
         <Route path="/settings" element={<AdminSettings />} />
         <Route path="/env" element={<EnvSettings />} />
+        <Route path="/subscriptions" element={<Subscriptions />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </DashboardLayout>

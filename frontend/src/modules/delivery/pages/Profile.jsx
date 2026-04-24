@@ -4,6 +4,7 @@ import {
   User,
   Phone,
   Truck,
+  CheckCircle,
   CreditCard,
   FileText,
   HelpCircle,
@@ -92,6 +93,13 @@ const Profile = () => {
       sub: "Notifications, Language, Theme",
       color: "text-gray-600 bg-gray-50",
       path: "/delivery/profile/settings",
+    },
+    {
+      icon: CheckCircle,
+      label: "Subscription Status",
+      sub: "Valid until 23 April 2027",
+      color: "text-emerald-600 bg-emerald-50",
+      path: "/delivery/profile/subscription",
     },
     {
       icon: HelpCircle,

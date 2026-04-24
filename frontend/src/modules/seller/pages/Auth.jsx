@@ -367,7 +367,12 @@ const Auth = () => {
           role: "seller",
         });
         toast.success("Welcome back, Partner!");
-        navigate("/seller");
+        
+        if (seller.subscriptionStatus === "active") {
+          navigate("/seller");
+        } else {
+          navigate("/seller/subscription");
+        }
       } else {
         setIsLogin(true);
         setSignupStep(1);

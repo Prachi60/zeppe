@@ -723,6 +723,52 @@ const SellerProfile = () => {
               </div>
             </div>
           </Card>
+
+          <Card className="p-8 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[40px] bg-emerald-50 border border-emerald-100">
+            <h4 className="text-[10px] font-black uppercase tracking-[4px] text-emerald-600/60 mb-6">
+              Partnership Subscription
+            </h4>
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-200">
+                  <CheckCircle size={24} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-emerald-800/60">
+                    Plan Status
+                  </p>
+                  <p className="text-base font-black text-emerald-900 uppercase">
+                    {profile?.subscriptionStatus === 'active' || localStorage.getItem('demo_subscription_active') ? "Active Partner" : "Inactive"}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-emerald-100 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800/60 mb-1">
+                    Activated On
+                  </p>
+                  <p className="text-sm font-bold text-emerald-900">
+                    23 April 2026
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800/60 mb-1">
+                    Valid Until
+                  </p>
+                  <p className="text-sm font-bold text-emerald-900">
+                    23 April 2027
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 p-4 bg-white/60 rounded-2xl border border-emerald-200/50">
+                <p className="text-[10px] font-bold text-emerald-800 leading-relaxed italic">
+                  Note: Your partnership is valid for 1 year. Renewal notifications will be sent 30 days before expiry.
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
 
