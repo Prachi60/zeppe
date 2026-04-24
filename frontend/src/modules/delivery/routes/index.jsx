@@ -19,13 +19,16 @@ import SafetyPrivacy from "../pages/profile/SafetyPrivacy";
 import Settings from "../pages/profile/Settings";
 import HelpSupport from "../pages/profile/HelpSupport";
 import Withdrawals from "../pages/profile/Withdrawals";
+import SubscriptionStatus from "../pages/profile/SubscriptionStatus";
 import Notifications from "../pages/Notifications";
+import Subscription from "../pages/Subscription";
 
 const DeliveryRoutes = () => {
   return (
     <Routes>
       <Route element={<DeliveryLayout />}>
         <Route path="splash" element={<Splash />} />
+        <Route path="subscription" element={<Subscription />} />
 
         <Route path="auth" element={<DeliveryAuth />} />
         <Route path="dashboard" element={<Dashboard />} />
@@ -44,8 +47,9 @@ const DeliveryRoutes = () => {
         <Route path="profile/settings" element={<Settings />} />
         <Route path="profile/help-support" element={<HelpSupport />} />
         <Route path="profile/withdrawals" element={<Withdrawals />} />
+        <Route path="profile/subscription" element={<SubscriptionStatus />} />
         <Route path="notifications" element={<Notifications />} />
-        <Route path="/" element={<Navigate to="dashboard" replace />} />
+        <Route path="/" element={<Navigate to="subscription" replace />} />
       </Route>
     </Routes>
   );

@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children }) => {
         if (location.pathname.startsWith('/admin')) {
             return <Navigate to="/admin/auth" state={{ from: location }} replace />;
         }
-        if (location.pathname.startsWith('/seller')) {
+        if (location.pathname.startsWith('/seller') || location.pathname.startsWith('/vendor')) {
             return <Navigate to="/seller/auth" state={{ from: location }} replace />;
         }
         if (location.pathname.startsWith('/delivery')) {
@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children }) => {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    if (location.pathname.startsWith('/seller')) {
+    if (location.pathname.startsWith('/seller') || location.pathname.startsWith('/vendor')) {
         const applicationStatus =
             user?.applicationStatus || (user?.isVerified ? 'approved' : 'pending');
         const isApprovedSeller =
@@ -36,7 +36,9 @@ const ProtectedRoute = ({ children }) => {
             user.isActive === true &&
             applicationStatus === 'approved';
 
-        if (!isApprovedSeller) {
+        const isSubscriptionPage = location.pathname.includes('subscription');
+
+        if (!isApprovedSeller && !isSubscriptionPage) {
             return (
                 <Navigate
                     to="/seller/pending-approval"
