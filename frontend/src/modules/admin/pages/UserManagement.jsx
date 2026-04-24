@@ -2,7 +2,7 @@ import React from 'react';
 import PageHeader from '@shared/components/ui/PageHeader';
 import Badge from '@shared/components/ui/Badge';
 import DynamicDataTable from '@shared/components/ui/DynamicDataTable';
-import { HiOutlineUserAdd, HiOutlineEye } from 'react-icons/hi2';
+import { HiOutlineUserPlus, HiOutlineEye } from 'react-icons/hi2';
 import { useNavigate } from 'react-router-dom';
 
 const UserManagement = () => {
@@ -78,7 +78,7 @@ const UserManagement = () => {
                 description="Manage all registered customers on the platform, view their order history and spending patterns."
                 action={
                     <button className="ds-button-primary">
-                        <HiOutlineUserAdd className="mr-2 h-4 w-4" />
+                        <HiOutlineUserPlus className="mr-2 h-4 w-4" />
                         Add New Customer
                     </button>
                 }
