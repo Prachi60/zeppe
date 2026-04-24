@@ -6,12 +6,19 @@ const defaultEarnings = {
   monthlyChart: [],
 };
 
-const SellerEarningsContext = createContext({
+const defaultSellerEarningsContextValue = {
   earningsData: defaultEarnings,
   earningsLoading: false,
   refreshEarnings: () => {},
-});
+};
+
+export const SellerEarningsContext = createContext(defaultSellerEarningsContextValue);
+
+export const SellerEarningsProvider = ({ children, value = defaultSellerEarningsContextValue }) => (
+  <SellerEarningsContext.Provider value={value}>
+    {children}
+  </SellerEarningsContext.Provider>
+);
 
 export const useSellerEarnings = () => useContext(SellerEarningsContext);
 export { defaultEarnings };
-export default SellerEarningsContext;

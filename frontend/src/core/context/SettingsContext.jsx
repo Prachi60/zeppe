@@ -11,7 +11,7 @@ import { getWithDedupe } from "@core/api/dedupe";
 import { DEFAULT_SETTINGS, applyThemeVariables } from "./SettingsDefaults";
 
 // Create context with null so we can check if it's provided
-const SettingsContext = createContext(null);
+export const SettingsContext = createContext(null);
 
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -68,5 +68,3 @@ export const useSettings = () => {
   }
   return context;
 };
-
-export default SettingsContext;

@@ -10,8 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BellRing, Check, X, Clock, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import SellerOrdersContext from '@/modules/seller/context/SellerOrdersContext';
-import SellerEarningsContext, { defaultEarnings } from '@/modules/seller/context/SellerEarningsContext';
+import { SellerOrdersProvider } from '@/modules/seller/context/SellerOrdersContext';
+import { SellerEarningsProvider, defaultEarnings } from '@/modules/seller/context/SellerEarningsContext';
 import { getOrderSocket, onSellerOrderNew, onReturnDropOtp } from '@/core/services/orderSocket';
 
 const POLL_INTERVAL_MS = 15000;
@@ -273,21 +273,21 @@ const DashboardLayout = ({ children, navItems, title }) => {
                 <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
                 <main className={cn("p-4 md:p-6 min-h-screen", (role === "admin" || role === "seller") ? "pt-20 md:pt-6 pb-24 md:pb-6" : "pt-20")}>
                     <div className="w-full pb-12">
-                        <SellerOrdersContext.Provider
+                        <SellerOrdersProvider
                             value={{
                                 orders: role === 'seller' ? sellerOrders : [],
                                 ordersLoading: role === 'seller' ? ordersLoading : false,
                                 refreshOrders,
                             }}>
-                            <SellerEarningsContext.Provider
+                            <SellerEarningsProvider
                                 value={{
                                     earningsData: role === 'seller' ? sellerEarningsData : defaultEarnings,
                                     earningsLoading: role === 'seller' ? earningsLoading : false,
                                     refreshEarnings,
                                 }}>
                                 {children}
-                            </SellerEarningsContext.Provider>
-                        </SellerOrdersContext.Provider>
+                            </SellerEarningsProvider>
+                        </SellerOrdersProvider>
                     </div>
                 </main>
             </div>
