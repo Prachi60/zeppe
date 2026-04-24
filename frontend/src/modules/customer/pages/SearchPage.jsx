@@ -121,7 +121,7 @@ const SearchPage = () => {
 
     // Manage Recent Searches with LocalStorage
     const [pastSearches, setPastSearches] = useState(() => {
-        const saved = localStorage.getItem('appzeto_recent_searches');
+        const saved = localStorage.getItem('zeppe_recent_searches');
         return saved ? JSON.parse(saved) : [];
     });
 
@@ -246,7 +246,7 @@ const SearchPage = () => {
         if (!term.trim()) return;
         const updated = [term, ...pastSearches.filter(s => s !== term)].slice(0, 10);
         setPastSearches(updated);
-        localStorage.setItem('appzeto_recent_searches', JSON.stringify(updated));
+        localStorage.setItem('zeppe_recent_searches', JSON.stringify(updated));
     };
 
     // Remove specific search term
@@ -254,7 +254,7 @@ const SearchPage = () => {
         e.stopPropagation();
         const updated = pastSearches.filter(s => s !== term);
         setPastSearches(updated);
-        localStorage.setItem('appzeto_recent_searches', JSON.stringify(updated));
+        localStorage.setItem('zeppe_recent_searches', JSON.stringify(updated));
     };
 
     // Trigger save on Enter or clicking a result

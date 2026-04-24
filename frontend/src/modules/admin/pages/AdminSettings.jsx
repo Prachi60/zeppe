@@ -653,6 +653,25 @@ const AdminSettings = () => {
                     )}
                 </div>
             </div>
+
+            {/* Sticky Save Button - always visible */}
+            <div className="fixed bottom-6 right-6 z-50">
+                <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className={cn(
+                        "flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-2xl shadow-blue-200 active:scale-95",
+                        isSaving ? "opacity-70 cursor-wait" : "hover:bg-blue-700 hover:-translate-y-0.5"
+                    )}
+                >
+                    {isSaving ? (
+                        <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                        <Save className="h-4 w-4" />
+                    )}
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+            </div>
         </div>
     );
 };

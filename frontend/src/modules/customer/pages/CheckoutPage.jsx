@@ -196,7 +196,7 @@ const CheckoutPage = () => {
   const CART_PREVIEW_LIMIT = 3;
   const displayCartItems = showAllCartItems ? cart : cart.slice(0, CART_PREVIEW_LIMIT);
 
-  const RECIPIENT_STORAGE_KEY = "appzeto_checkout_recipient_v1";
+  const RECIPIENT_STORAGE_KEY = "zeppe_checkout_recipient_v1";
 
   // Derived display values for primary delivery card
   const displayName = savedRecipient?.name || currentAddress.name || user?.name || "";
