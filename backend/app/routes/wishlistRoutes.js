@@ -3,7 +3,8 @@ import {
     getWishlist,
     addToWishlist,
     removeFromWishlist,
-    toggleWishlist
+    toggleWishlist,
+    clearWishlist
 } from "../controller/wishlistController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 

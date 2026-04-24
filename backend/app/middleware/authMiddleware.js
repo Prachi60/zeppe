@@ -1,45 +1,78 @@
 import jwt from "jsonwebtoken";
 import handleResponse from "../utils/helper.js";
+import Admin from "../models/admin.js";
+import Delivery from "../models/delivery.js";
 import Seller from "../models/seller.js";
 import User from "../models/customer.js";
+
+const AUTH_MODEL_BY_ROLE = {
+  admin: Admin,
+  seller: Seller,
+  delivery: Delivery,
+  customer: User,
+  user: User,
+};
+
+function extractBearerToken(req) {
+  const authHeader = String(req.headers?.authorization || "").trim();
+  if (!authHeader) return "";
+
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || "";
+}
+
+function resolveAuthModel(role) {
+  return AUTH_MODEL_BY_ROLE[String(role || "").toLowerCase()] || null;
+}
+
+function unauthorized(res, message) {
+  return handleResponse(res, 401, message);
+}
 
 /* ===============================
    Verify Token
 ================================ */
 export const verifyToken = async (req, res, next) => {
   try {
-    let token;
-
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    }
+    const token = extractBearerToken(req);
 
     if (!token) {
-      return handleResponse(res, 401, "Unauthorized, token missing");
+      return unauthorized(res, "Unauthorized, token missing");
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const normalizedRole = String(decoded?.role || "").toLowerCase();
+    const AuthModel = resolveAuthModel(normalizedRole);
 
-    // C-6 FIX: Verify user is still active in DB
-    // Use select('isActive') for minimal overhead
-    const user = await User.findById(decoded.id).select("isActive").lean();
-    if (!user) {
-      return handleResponse(res, 401, "User account not found");
+    if (!decoded?.id || !AuthModel) {
+      return unauthorized(res, "Invalid token payload");
     }
-    if (user.isActive === false) {
+
+    const principal = await AuthModel.findById(decoded.id)
+      .select("_id role isActive isVerified")
+      .lean();
+
+    if (!principal) {
+      return unauthorized(res, "User account not found");
+    }
+
+    if (principal.isActive === false) {
       return handleResponse(res, 403, "Account suspended. Please contact support.");
     }
 
-    req.user = decoded; // { id, role }
+    req.user = {
+      ...decoded,
+      id: String(principal._id),
+      role: normalizedRole,
+    };
+    req.authToken = token;
+
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return handleResponse(res, 401, "Token expired");
+      return unauthorized(res, "Token expired");
     }
-    return handleResponse(res, 401, "Invalid or expired token");
+    return unauthorized(res, "Invalid or expired token");
   }
 };
 
@@ -48,19 +81,16 @@ export const verifyToken = async (req, res, next) => {
 ================================ */
 export const optionalVerifyToken = (req, res, next) => {
   try {
-    let token;
-
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    }
+    const token = extractBearerToken(req);
 
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded; // { id, role }
+        req.user = {
+          ...decoded,
+          role: String(decoded?.role || "").toLowerCase(),
+        };
+        req.authToken = token;
       } catch (error) {
         // Token is invalid, but we don't block the request
         req.user = null;
@@ -79,9 +109,16 @@ export const optionalVerifyToken = (req, res, next) => {
 ================================ */
 export const allowRoles = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    const normalizedAllowedRoles = roles.map((role) => String(role).toLowerCase());
+
+    if (!req.user?.role) {
+      return unauthorized(res, "Unauthorized");
+    }
+
+    if (!normalizedAllowedRoles.includes(String(req.user.role).toLowerCase())) {
       return handleResponse(res, 403, "Access denied");
     }
+
     next();
   };
 };
