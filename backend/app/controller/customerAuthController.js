@@ -30,12 +30,12 @@ export const signupCustomer = async (req, res) => {
 
         await issueCustomerOtp({
             name: payload.name,
-            rawPhone: payload.phone,
+            rawEmail: payload.email,
             flow: "signup",
             ipAddress: req.ip,
         });
 
-        return handleResponse(res, 200, "If the number is eligible, OTP has been sent");
+        return handleResponse(res, 200, "If the email is eligible, OTP has been sent");
     } catch (error) {
         return handleResponse(res, error.statusCode || 500, error.message);
     }
@@ -49,12 +49,12 @@ export const loginCustomer = async (req, res) => {
         const payload = validateSchema(sendLoginOtpSchema, req.body || {});
 
         await issueCustomerOtp({
-            rawPhone: payload.phone,
+            rawEmail: payload.email,
             flow: "login",
             ipAddress: req.ip,
         });
 
-        return handleResponse(res, 200, "If the number is eligible, OTP has been sent");
+        return handleResponse(res, 200, "If the email is eligible, OTP has been sent");
     } catch (error) {
         return handleResponse(res, error.statusCode || 500, error.message);
     }
@@ -67,7 +67,7 @@ export const verifyCustomerOTP = async (req, res) => {
     try {
         const payload = validateSchema(verifyOtpSchema, req.body || {});
         const customer = await verifyCustomerOtpCode({
-            rawPhone: payload.phone,
+            rawEmail: payload.email,
             otp: payload.otp,
             ipAddress: req.ip,
         });

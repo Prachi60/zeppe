@@ -10,8 +10,7 @@ const deliverySchema = new mongoose.Schema(
 
         phone: {
             type: String,
-            required: true,
-            unique: true,
+            sparse: true,
         },
 
         vehicleType: {
@@ -22,6 +21,9 @@ const deliverySchema = new mongoose.Schema(
 
         email: {
             type: String,
+            required: true,
+            unique: true,
+            lowercase: true,
             trim: true,
         },
 

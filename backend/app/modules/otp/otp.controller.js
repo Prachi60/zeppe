@@ -1,9 +1,9 @@
 import Joi from "joi";
 import handleResponse from "../../utils/helper.js";
-import { sendSmsOtp, verifySmsOtp } from "./otp.service.js";
+import { sendEmailOtp, verifyEmailOtp } from "./otp.service.js";
 
 const sendOtpSchema = Joi.object({
-  mobile: Joi.string().trim().required(),
+  email: Joi.string().email().trim().required(),
   userType: Joi.string()
     .valid("Admin", "Seller", "Customer", "Delivery")
     .required(),
@@ -13,8 +13,8 @@ const sendOtpSchema = Joi.object({
 });
 
 const verifyOtpSchema = Joi.object({
-  mobile: Joi.string().trim().required(),
-  otp: Joi.string().trim().pattern(/^\d{4}$/).required(),
+  email: Joi.string().email().trim().required(),
+  otp: Joi.string().trim().pattern(/^\d{4,8}$/).required(),
   userType: Joi.string()
     .valid("Admin", "Seller", "Customer", "Delivery")
     .required(),
@@ -42,7 +42,7 @@ function validateSchema(schema, payload) {
 export async function sendOtpController(req, res) {
   try {
     const payload = validateSchema(sendOtpSchema, req.body || {});
-    const result = await sendSmsOtp({
+    const result = await sendEmailOtp({
       ...payload,
       ipAddress: req.ip,
     });
@@ -57,7 +57,7 @@ export async function sendOtpController(req, res) {
 export async function verifyOtpController(req, res) {
   try {
     const payload = validateSchema(verifyOtpSchema, req.body || {});
-    const result = await verifySmsOtp({
+    const result = await verifyEmailOtp({
       ...payload,
       ipAddress: req.ip,
     });

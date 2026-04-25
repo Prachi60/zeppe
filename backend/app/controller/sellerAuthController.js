@@ -143,7 +143,6 @@ export const signupSeller = async (req, res) => {
             phone,
             password,
             emailVerificationToken,
-            phoneVerificationToken,
             shopName,
             category,
             description,
@@ -201,11 +200,6 @@ export const signupSeller = async (req, res) => {
             channel: "email",
             rawValue: email,
             token: emailVerificationToken,
-        });
-        verifySellerVerificationToken({
-            channel: "phone",
-            rawValue: phone,
-            token: phoneVerificationToken,
         });
 
         // Validate coordinates and radius if provided
@@ -288,16 +282,15 @@ export const signupSeller = async (req, res) => {
 
 export const sendSellerSignupOtp = async (req, res) => {
     try {
-        const { channel, email, phone, value } = req.body || {};
-        const targetValue =
-            channel === "email"
-                ? email || value
-                : channel === "phone"
-                    ? phone || value
-                    : value;
+        const { email, value } = req.body || {};
+        const targetValue = email || value;
+
+        if (!targetValue) {
+            return handleResponse(res, 400, "Email address is required");
+        }
 
         const result = await issueSellerVerificationOtp({
-            channel,
+            channel: "email",
             rawValue: targetValue,
             ipAddress: req.ip,
         });
@@ -310,16 +303,15 @@ export const sendSellerSignupOtp = async (req, res) => {
 
 export const verifySellerSignupOtp = async (req, res) => {
     try {
-        const { channel, email, phone, value, otp } = req.body || {};
-        const targetValue =
-            channel === "email"
-                ? email || value
-                : channel === "phone"
-                    ? phone || value
-                    : value;
+        const { email, value, otp } = req.body || {};
+        const targetValue = email || value;
+
+        if (!targetValue || !otp) {
+            return handleResponse(res, 400, "Email and OTP are required");
+        }
 
         const result = await verifySellerOtpCode({
-            channel,
+            channel: "email",
             rawValue: targetValue,
             otp,
             ipAddress: req.ip,

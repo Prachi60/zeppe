@@ -6,15 +6,9 @@ import Seller from "../../models/seller.js";
 import Customer from "../../models/customer.js";
 import Delivery from "../../models/delivery.js";
 import logger from "../../services/logger.js";
-import {
-  __testables as smsIndiaTestables,
-  sendSmsIndiaHubOtp,
-} from "../../services/smsIndiaHubService.js";
-import {
-  generateOTP,
-  getOtpLength,
-  normalizeMobile,
-} from "../../utils/smsHelpers.js";
+import { sendOtpEmail } from "../../services/nodemailerService.js";
+import { generateOTP, useRealEmail } from "../../utils/otp.js";
+import { normalizeEmail, isValidEmail } from "../../utils/emailHelpers.js";
 
 const SUPPORTED_USER_TYPES = ["Admin", "Seller", "Customer", "Delivery"];
 const SUPPORTED_PURPOSES = ["LOGIN", "SIGNUP", "PASSWORD_RESET"];
@@ -29,10 +23,10 @@ function otpHashSecret() {
   return process.env.OTP_HASH_SECRET || process.env.JWT_SECRET || "unsafe-dev-secret";
 }
 
-function hashOtp(mobile, otp, userType, purpose) {
+function hashOtp(email, otp, userType, purpose) {
   return crypto
     .createHmac("sha256", otpHashSecret())
-    .update(`${mobile}:${userType}:${purpose}:${otp}`)
+    .update(`${email}:${userType}:${purpose}:${otp}`)
     .digest("hex");
 }
 
@@ -43,16 +37,6 @@ function safeCompare(left, right) {
     return false;
   }
   return crypto.timingSafeEqual(leftBuffer, rightBuffer);
-}
-
-function isMockOtpEnabled() {
-  if (process.env.USE_MOCK_OTP === "true" || process.env.USE_MOCK_OTP === "1") {
-    return true;
-  }
-  if (process.env.USE_REAL_SMS === "true" || process.env.USE_REAL_SMS === "1") {
-    return false;
-  }
-  return process.env.NODE_ENV !== "production";
 }
 
 function getExpiryMinutes() {
@@ -78,25 +62,19 @@ function assertSupportedEnums({ userType, purpose }) {
   }
 }
 
-function assertValidMobile(mobile) {
-  const normalized = normalizeMobile(mobile);
-  if (!/^\d{10}$/.test(normalized)) {
-    const error = new Error("A valid 10-digit Indian mobile number is required");
+function assertValidEmail(email) {
+  const normalized = normalizeEmail(email);
+  if (!isValidEmail(normalized)) {
+    const error = new Error("A valid email address is required");
     error.statusCode = 400;
     throw error;
   }
   return normalized;
 }
 
-function getPhoneCandidates(mobile) {
-  const normalized = assertValidMobile(mobile);
-  return [...new Set([normalized, `91${normalized}`, `+91${normalized}`])];
-}
-
-async function findAccountByUserType(userType, mobile) {
+async function findAccountByUserType(userType, email) {
   const config = USER_TYPE_CONFIG[userType];
-  const phoneCandidates = getPhoneCandidates(mobile);
-  return config.model.findOne({ phone: { $in: phoneCandidates } });
+  return config.model.findOne({ email });
 }
 
 function assertPurposeEligibility({ purpose, account, userType }) {
@@ -113,10 +91,6 @@ function assertPurposeEligibility({ purpose, account, userType }) {
     error.statusCode = 409;
     throw error;
   }
-}
-
-async function sendSmsViaSmsIndiaHub({ mobile, otp }) {
-  return sendSmsIndiaHubOtp({ phone: mobile, otp });
 }
 
 function buildToken(account, userType) {
@@ -152,39 +126,42 @@ async function markAccountVerified(account, userType) {
   if ("isVerified" in account) {
     account.isVerified = true;
   }
-  if (userType === "Seller" && "phoneVerified" in account) {
-    account.phoneVerified = true;
+  
+  if (userType === "Seller" && "emailVerified" in account) {
+    account.emailVerified = true;
   }
 
   await account.save();
   return account;
 }
 
-export async function sendSmsOtp({ mobile, userType, purpose, ipAddress = "unknown" }) {
+export async function sendEmailOtp({ email, userType, purpose, ipAddress = "unknown" }) {
   assertSupportedEnums({ userType, purpose });
 
-  const normalizedMobile = assertValidMobile(mobile);
-  const account = await findAccountByUserType(userType, normalizedMobile);
+  const normalizedEmail = assertValidEmail(email);
+  const account = await findAccountByUserType(userType, normalizedEmail);
   assertPurposeEligibility({ purpose, account, userType });
 
-  if (process.env.NODE_ENV === "production" && isMockOtpEnabled()) {
-    const error = new Error("Mock OTP mode cannot be enabled in production");
-    error.statusCode = 500;
-    throw error;
-  }
-
-  const otp = generateOTP(getOtpLength());
+  const otp = generateOTP();
   const expiresAt = new Date(Date.now() + getExpiryMinutes() * 60 * 1000);
 
-  await OtpSession.deleteMany({ mobile: normalizedMobile, userType, purpose });
+  await OtpSession.deleteMany({ email: normalizedEmail, userType, purpose });
 
-  const otpHash = hashOtp(normalizedMobile, otp, userType, purpose);
-  const smsResult = isMockOtpEnabled()
-    ? { provider: "mock", providerCode: "MOCK" }
-    : await sendSmsViaSmsIndiaHub({ mobile: normalizedMobile, otp });
+  const otpHash = hashOtp(normalizedEmail, otp, userType, purpose);
+  
+  const emailPurpose = `${userType.toLowerCase()}_${purpose.toLowerCase()}`;
+
+  if (useRealEmail()) {
+    await sendOtpEmail({ 
+      to: normalizedEmail, 
+      otp, 
+      purpose: emailPurpose, 
+      expiresInMinutes: getExpiryMinutes() 
+    });
+  }
 
   await OtpSession.create({
-    mobile: normalizedMobile,
+    email: normalizedEmail,
     userType,
     purpose,
     otpHash,
@@ -193,44 +170,45 @@ export async function sendSmsOtp({ mobile, userType, purpose, ipAddress = "unkno
   });
 
   logger.info("OTP session created", {
-    module: "sms-otp",
+    module: "email-otp",
     userType,
     purpose,
-    mobile: normalizedMobile,
+    email: normalizedEmail,
     ipAddress,
-    provider: smsResult.provider,
+    provider: useRealEmail() ? "nodemailer" : "mock",
   });
 
   const response = {
     sent: true,
-    mobile: normalizedMobile,
+    email: normalizedEmail,
     userType,
     purpose,
     expiresInSeconds: getExpiryMinutes() * 60,
-    provider: smsResult.provider,
+    provider: useRealEmail() ? "nodemailer" : "mock",
   };
 
-  if (isMockOtpEnabled()) {
+  if (!useRealEmail()) {
     response.mockOtp = otp;
   }
 
   return response;
 }
 
-export async function verifySmsOtp({ mobile, otp, userType, purpose, ipAddress = "unknown" }) {
+export async function verifyEmailOtp({ email, otp, userType, purpose, ipAddress = "unknown" }) {
   assertSupportedEnums({ userType, purpose });
 
-  const normalizedMobile = assertValidMobile(mobile);
+  const normalizedEmail = assertValidEmail(email);
   const code = String(otp || "").trim();
-  const otpPattern = new RegExp(`^\\d{${getOtpLength()}}$`);
-  if (!otpPattern.test(code)) {
-    const error = new Error(`OTP must be exactly ${getOtpLength()} digits`);
+  
+  // Use a generic pattern if length is not fixed, or adapt to generateOTP length
+  if (!/^\d{4,8}$/.test(code)) {
+    const error = new Error("Invalid OTP format");
     error.statusCode = 400;
     throw error;
   }
 
   const session = await OtpSession.findOne({
-    mobile: normalizedMobile,
+    email: normalizedEmail,
     userType,
     purpose,
   }).select("+otpHash +expiresAt");
@@ -256,7 +234,7 @@ export async function verifySmsOtp({ mobile, otp, userType, purpose, ipAddress =
     throw error;
   }
 
-  const incomingHash = hashOtp(normalizedMobile, code, userType, purpose);
+  const incomingHash = hashOtp(normalizedEmail, code, userType, purpose);
   if (!safeCompare(session.otpHash, incomingHash)) {
     const nextAttempts = (session.attempts || 0) + 1;
     if (nextAttempts >= (session.maxAttempts || getMaxAttempts())) {
@@ -281,7 +259,7 @@ export async function verifySmsOtp({ mobile, otp, userType, purpose, ipAddress =
   await session.save();
   await OtpSession.deleteOne({ _id: session._id });
 
-  const account = await findAccountByUserType(userType, normalizedMobile);
+  const account = await findAccountByUserType(userType, normalizedEmail);
   let token = null;
   let sanitizedAccount = null;
 
@@ -292,16 +270,16 @@ export async function verifySmsOtp({ mobile, otp, userType, purpose, ipAddress =
   }
 
   logger.info("OTP verified", {
-    module: "sms-otp",
+    module: "email-otp",
     userType,
     purpose,
-    mobile: normalizedMobile,
+    email: normalizedEmail,
     ipAddress,
   });
 
   return {
     verified: true,
-    mobile: normalizedMobile,
+    email: normalizedEmail,
     userType,
     purpose,
     token,
@@ -310,11 +288,7 @@ export async function verifySmsOtp({ mobile, otp, userType, purpose, ipAddress =
 }
 
 export const __testables = {
-  assertValidMobile,
-  getPhoneCandidates,
+  assertValidEmail,
   hashOtp,
-  isMockOtpEnabled,
-  mapSmsIndiaError: smsIndiaTestables.mapSmsIndiaError,
-  parseSmsIndiaResponse: smsIndiaTestables.parseSmsIndiaResponse,
   sanitizeAccount,
 };

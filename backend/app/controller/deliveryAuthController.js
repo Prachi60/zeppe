@@ -2,8 +2,8 @@ import Delivery from "../models/delivery.js";
 import UserSubscription from "../models/userSubscription.js";
 import jwt from "jsonwebtoken";
 import handleResponse from "../utils/helper.js";
-import { sendSmsIndiaHubOtp } from "../services/smsIndiaHubService.js";
-import { generateOTP, useRealSMS, hashOtp } from "../utils/otp.js";
+import { sendOtpEmail } from "../services/nodemailerService.js";
+import { generateOTP, useRealEmail, hashOtp } from "../utils/otp.js";
 
 const generateToken = (delivery) =>
     jwt.sign(
@@ -18,20 +18,20 @@ const generateToken = (delivery) =>
 export const signupDelivery = async (req, res) => {
     try {
         const {
-            name, phone, vehicleType,
-            email, address, vehicleNumber,
+            name, email, vehicleType,
+            phone, address, vehicleNumber,
             drivingLicenseNumber,
             accountHolder, accountNumber, ifsc
         } = req.body;
 
-        if (!name || !phone) {
-            return handleResponse(res, 400, "Name and phone are required");
+        if (!name || !email) {
+            return handleResponse(res, 400, "Name and email are required");
         }
 
-        let delivery = await Delivery.findOne({ phone });
+        let delivery = await Delivery.findOne({ email });
 
         if (delivery && delivery.isVerified) {
-            return handleResponse(res, 400, "Delivery partner already exists");
+            return handleResponse(res, 400, "Delivery partner already exists with this email");
         }
 
         const otp = generateOTP();
@@ -51,9 +51,9 @@ export const signupDelivery = async (req, res) => {
 
         const deliveryData = {
             name,
+            email,
             phone,
             vehicleType,
-            email,
             address,
             vehicleNumber,
             drivingLicenseNumber,
@@ -76,21 +76,21 @@ export const signupDelivery = async (req, res) => {
             await delivery.save();
         }
 
-        if (useRealSMS()) {
-            await sendSmsIndiaHubOtp({ phone, otp });
+        if (useRealEmail()) {
+            await sendOtpEmail({ to: email, otp, purpose: "delivery_signup" });
         }
 
         console.log("-------------------");
         console.log("Delivery Signup Request Received");
-        console.log("Data:", { name, phone, vehicleType, email });
-        if (useRealSMS()) {
-            console.log("OTP dispatched via SMS provider");
+        console.log("Data:", { name, email, vehicleType, phone });
+        if (useRealEmail()) {
+            console.log("OTP dispatched via Email provider");
         } else {
             console.log("OTP (mock mode): use 1234");
         }
         console.log("-------------------");
 
-        return handleResponse(res, 200, "OTP sent successfully");
+        return handleResponse(res, 200, "OTP sent successfully to your email");
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }
@@ -101,13 +101,13 @@ export const signupDelivery = async (req, res) => {
 ================================ */
 export const loginDelivery = async (req, res) => {
     try {
-        const { phone } = req.body;
+        const { email } = req.body;
 
-        if (!phone) {
-            return handleResponse(res, 400, "Phone number is required");
+        if (!email) {
+            return handleResponse(res, 400, "Email is required");
         }
 
-        const delivery = await Delivery.findOne({ phone });
+        const delivery = await Delivery.findOne({ email });
 
         if (!delivery || !delivery.isVerified) {
             return handleResponse(res, 404, "Delivery partner not found");
@@ -119,21 +119,21 @@ export const loginDelivery = async (req, res) => {
         delivery.otpExpiry = Date.now() + 5 * 60 * 1000;
         await delivery.save();
 
-        if (useRealSMS()) {
-            await sendSmsIndiaHubOtp({ phone, otp });
+        if (useRealEmail()) {
+            await sendOtpEmail({ to: email, otp, purpose: "delivery_login" });
         }
 
         console.log("-------------------");
         console.log("Delivery Login Request Received");
-        console.log("Phone:", phone);
-        if (useRealSMS()) {
-            console.log("OTP dispatched via SMS provider");
+        console.log("Email:", email);
+        if (useRealEmail()) {
+            console.log("OTP dispatched via Email provider");
         } else {
             console.log("OTP (mock mode): use 1234");
         }
         console.log("-------------------");
 
-        return handleResponse(res, 200, "OTP sent successfully");
+        return handleResponse(res, 200, "OTP sent successfully to your email");
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }
@@ -144,14 +144,14 @@ export const loginDelivery = async (req, res) => {
 ================================ */
 export const verifyDeliveryOTP = async (req, res) => {
     try {
-        const { phone, otp } = req.body;
+        const { email, otp } = req.body;
 
-        if (!phone || !otp) {
-            return handleResponse(res, 400, "Phone and OTP are required");
+        if (!email || !otp) {
+            return handleResponse(res, 400, "Email and OTP are required");
         }
 
         const delivery = await Delivery.findOne({
-            phone,
+            email,
             otp: hashOtp(otp),
             otpExpiry: { $gt: Date.now() },
         });

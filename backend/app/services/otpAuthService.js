@@ -1,9 +1,9 @@
 import crypto from "crypto";
 import Customer from "../models/customer.js";
-import { sendSmsIndiaHubOtp } from "./smsIndiaHubService.js";
-import { generateOTP, useRealSMS } from "../utils/otp.js";
+import { sendOtpEmail } from "./nodemailerService.js";
+import { generateOTP, useRealEmail } from "../utils/otp.js";
 import { getRedisClient } from "../config/redis.js";
-import { isValidE164Phone, maskPhone, normalizePhoneNumber } from "../utils/phone.js";
+import { isValidEmail, maskEmail, normalizeEmail } from "../utils/emailHelpers.js";
 
 const OTP_EXPIRY_MINUTES = () => parseInt(process.env.OTP_EXPIRY_MINUTES || "5", 10);
 const OTP_RESEND_COOLDOWN_SECONDS = () =>
@@ -20,14 +20,15 @@ const OTP_VERIFY_LIMIT_WINDOW_SECONDS = () =>
   parseInt(process.env.OTP_VERIFY_LIMIT_WINDOW_SECONDS || "900", 10);
 const OTP_VERIFY_LIMIT_PER_WINDOW = () =>
   parseInt(process.env.OTP_VERIFY_LIMIT_PER_WINDOW || "20", 10);
+
 function otpHashSecret() {
   return process.env.OTP_HASH_SECRET || process.env.JWT_SECRET || "unsafe-dev-secret";
 }
 
-function hashOtp(phone, otp) {
+function hashOtp(email, otp) {
   return crypto
     .createHmac("sha256", otpHashSecret())
-    .update(`${phone}:${otp}`)
+    .update(`${email}:${otp}`)
     .digest("hex");
 }
 
@@ -74,31 +75,31 @@ function otpAuditLog(event, meta) {
   );
 }
 
-async function dispatchCustomerOtpSms({ phone, otp }) {
-  return sendSmsIndiaHubOtp({ phone, otp });
+async function dispatchCustomerOtpEmail({ email, otp, flow }) {
+  const purpose = flow === "signup" ? "customer_signup" : "customer_login";
+  return sendOtpEmail({ to: email, otp, purpose, expiresInMinutes: OTP_EXPIRY_MINUTES() });
 }
 
-
-export function normalizeAndValidatePhone(rawPhone) {
-  const phone = normalizePhoneNumber(rawPhone);
-  if (!isValidE164Phone(phone)) {
-    const err = new Error("Invalid phone number format");
+export function normalizeAndValidateEmail(rawEmail) {
+  const email = normalizeEmail(rawEmail);
+  if (!isValidEmail(email)) {
+    const err = new Error("Invalid email address format");
     err.statusCode = 400;
     throw err;
   }
-  return phone;
+  return email;
 }
 
 export async function issueCustomerOtp({
   name = "",
-  rawPhone,
+  rawEmail,
   flow,
   ipAddress = "unknown",
 }) {
-  const phone = normalizeAndValidatePhone(rawPhone);
+  const email = normalizeAndValidateEmail(rawEmail);
   const now = new Date();
 
-  const sendAllowed = await incrementWindowCounter(`otp:send:phone:${phone}`, {
+  const sendAllowed = await incrementWindowCounter(`otp:send:email:${email}`, {
     limit: OTP_SEND_LIMIT_PER_WINDOW(),
     windowSeconds: OTP_SEND_LIMIT_WINDOW_SECONDS(),
   });
@@ -108,25 +109,25 @@ export async function issueCustomerOtp({
     throw err;
   }
 
-  let customer = await Customer.findOne({ phone }).select(
+  let customer = await Customer.findOne({ email }).select(
     "+otpHash +otpExpiresAt +otpFailedAttempts +otpLockedUntil +otpLastSentAt +otpSessionVersion +otp +otpExpiry",
   );
 
   if (flow === "login" && (!customer || !customer.isVerified)) {
-    if (useRealSMS()) {
+    if (useRealEmail()) {
       otpAuditLog("customer_otp_login_generic_response", {
-        phone: maskPhone(phone),
+        email: maskEmail(email),
         ipAddress,
         accountExists: !!customer,
       });
-      return { sent: true, phone };
+      return { sent: true, email };
     }
 
     // In mock/dev mode, allow login OTP issuance so local testing works end-to-end.
     if (!customer) {
       customer = await Customer.create({
         name: name || "Customer",
-        phone,
+        email,
         isVerified: false,
       });
       customer = await Customer.findById(customer._id).select(
@@ -138,7 +139,7 @@ export async function issueCustomerOtp({
   if (!customer) {
     customer = await Customer.create({
       name: name || "Customer",
-      phone,
+      email,
       isVerified: false,
     });
     customer = await Customer.findById(customer._id).select(
@@ -147,7 +148,7 @@ export async function issueCustomerOtp({
   }
 
   if (customer.otpLockedUntil && customer.otpLockedUntil > now) {
-    const err = new Error("OTP verification is temporarily locked for this number");
+    const err = new Error("OTP verification is temporarily locked for this email");
     err.statusCode = 423;
     throw err;
   }
@@ -162,48 +163,47 @@ export async function issueCustomerOtp({
   }
 
   const otp = generateOTP();
-  customer.otpHash = hashOtp(phone, otp);
+  customer.otpHash = hashOtp(email, otp);
   customer.otpExpiresAt = new Date(now.getTime() + OTP_EXPIRY_MINUTES() * 60 * 1000);
   customer.otpFailedAttempts = 0;
   customer.otpLockedUntil = null;
   customer.otpLastSentAt = now;
   customer.otpSessionVersion = (customer.otpSessionVersion || 0) + 1;
 
-  // Backward compatibility with legacy fields; raw OTP is intentionally not stored.
   await customer.save();
 
-  // L-1 FIX: Use $unset to physically remove legacy fields from DB
+  // Ensure legacy fields are removed
   await Customer.updateOne(
     { _id: customer._id },
     { $unset: { otp: "", otpExpiry: "" } },
   );
 
-  if (useRealSMS()) {
-    await dispatchCustomerOtpSms({ phone, otp });
-    otpAuditLog("customer_otp_sms_dispatched", {
-      phone: maskPhone(phone),
+  if (useRealEmail()) {
+    await dispatchCustomerOtpEmail({ email, otp, flow });
+    otpAuditLog("customer_otp_email_dispatched", {
+      email: maskEmail(email),
       flow,
       ipAddress,
       mode: "real",
     });
   } else {
     otpAuditLog("customer_otp_mock_mode", {
-      phone: maskPhone(phone),
+      email: maskEmail(email),
       flow,
       ipAddress,
       mode: "mock",
     });
   }
 
-  return { sent: true, phone };
+  return { sent: true, email };
 }
 
 export async function verifyCustomerOtpCode({
-  rawPhone,
+  rawEmail,
   otp,
   ipAddress = "unknown",
 }) {
-  const phone = normalizeAndValidatePhone(rawPhone);
+  const email = normalizeAndValidateEmail(rawEmail);
   const code = String(otp || "").trim();
   if (!/^\d{4,8}$/.test(code)) {
     const err = new Error("Invalid OTP format");
@@ -211,7 +211,7 @@ export async function verifyCustomerOtpCode({
     throw err;
   }
 
-  const verifyAllowed = await incrementWindowCounter(`otp:verify:phone:${phone}`, {
+  const verifyAllowed = await incrementWindowCounter(`otp:verify:email:${email}`, {
     limit: OTP_VERIFY_LIMIT_PER_WINDOW(),
     windowSeconds: OTP_VERIFY_LIMIT_WINDOW_SECONDS(),
   });
@@ -221,7 +221,7 @@ export async function verifyCustomerOtpCode({
     throw err;
   }
 
-  const customer = await Customer.findOne({ phone }).select(
+  const customer = await Customer.findOne({ email }).select(
     "+otpHash +otpExpiresAt +otpFailedAttempts +otpLockedUntil +otpSessionVersion +otp +otpExpiry",
   );
   if (!customer) {
@@ -243,7 +243,7 @@ export async function verifyCustomerOtpCode({
     throw err;
   }
 
-  const isValid = hashOtp(phone, code) === customer.otpHash;
+  const isValid = hashOtp(email, code) === customer.otpHash;
   if (!isValid) {
     customer.otpFailedAttempts = (customer.otpFailedAttempts || 0) + 1;
 
@@ -255,7 +255,7 @@ export async function verifyCustomerOtpCode({
 
     await customer.save();
     otpAuditLog("customer_otp_verify_failed", {
-      phone: maskPhone(phone),
+      email: maskEmail(email),
       ipAddress,
       failedAttempts: customer.otpFailedAttempts,
       lockedUntil: customer.otpLockedUntil || null,
@@ -276,14 +276,14 @@ export async function verifyCustomerOtpCode({
 
   await customer.save();
 
-  // L-1 FIX: Use $unset to physically remove legacy fields from DB
+  // Ensure legacy fields are removed
   await Customer.updateOne(
     { _id: customer._id },
     { $unset: { otp: "", otpExpiry: "" } },
   );
 
   otpAuditLog("customer_otp_verify_success", {
-    phone: maskPhone(phone),
+    email: maskEmail(email),
     ipAddress,
   });
 

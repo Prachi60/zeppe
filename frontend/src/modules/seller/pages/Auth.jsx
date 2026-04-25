@@ -60,7 +60,6 @@ const Auth = () => {
   const logoUrl = settings?.logoUrl || "";
   const [verifications, setVerifications] = useState({
     email: createInitialVerificationState(),
-    phone: createInitialVerificationState(),
   });
 
   const [formData, setFormData] = useState({
@@ -122,10 +121,7 @@ const Auth = () => {
   };
 
   const getVerificationPayload = (field) => {
-    const channel = field === "email" ? "email" : "phone";
-    return channel === "email"
-      ? { channel, email: formData.email }
-      : { channel, phone: formData.phone };
+    return { channel: "email", email: formData.email };
   };
 
   const handleChange = (e) => {
@@ -144,9 +140,6 @@ const Auth = () => {
     } else if (name === "phone") {
       // Contact number: only digits, max 10 characters
       const digitsOnly = value.replace(/[^0-9]/g, "").slice(0, 10);
-      if (digitsOnly !== formData.phone) {
-        resetVerificationState("phone");
-      }
       setFormData({ ...formData, [name]: digitsOnly });
     } else if (name === "city" || name === "state") {
       // City & State: only alphabets and spaces
@@ -169,18 +162,8 @@ const Auth = () => {
 
   const handleSendVerificationOtp = async (field) => {
     const currentValue = formData[field];
-    const isEmailField = field === "email";
-
-    if (
-      (isEmailField &&
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentValue || "")) ||
-      (!isEmailField && !/^[0-9]{10}$/.test(currentValue || ""))
-    ) {
-      toast.error(
-        isEmailField
-          ? "Enter a valid email before requesting OTP."
-          : "Enter a valid 10-digit phone number before requesting OTP.",
-      );
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentValue || "")) {
+      toast.error("Enter a valid email before requesting OTP.");
       return;
     }
 
@@ -199,11 +182,7 @@ const Auth = () => {
         isOtpVisible: true,
         status: "otp-sent",
       });
-      toast.success(
-        isEmailField
-          ? "Verification OTP sent to your email."
-          : "Verification OTP sent to your phone.",
-      );
+      toast.success("Verification OTP sent to your email.");
     } catch (error) {
       updateVerificationState(field, {
         isSending: false,
@@ -240,11 +219,7 @@ const Auth = () => {
         token: verificationToken,
         verifiedValue: formData[field],
       });
-      toast.success(
-        field === "email"
-          ? "Email verified successfully."
-          : "Phone number verified successfully.",
-      );
+      toast.success("Email verified successfully.");
     } catch (error) {
       updateVerificationState(field, {
         isVerifying: false,
@@ -282,10 +257,6 @@ const Auth = () => {
         }
         if (verifications.email.status !== "verified" || !verifications.email.token) {
           toast.error("Please verify your business email before continuing.");
-          return;
-        }
-        if (verifications.phone.status !== "verified" || !verifications.phone.token) {
-          toast.error("Please verify your contact number before continuing.");
           return;
         }
       }
@@ -343,7 +314,6 @@ const Auth = () => {
             lng: formData.lng,
             radius: formData.radius,
             emailVerificationToken: verifications.email.token,
-            phoneVerificationToken: verifications.phone.token,
           }).forEach(([key, value]) => {
             if (value !== null && value !== undefined && value !== "") {
               signupPayload.append(key, value);
@@ -367,7 +337,7 @@ const Auth = () => {
           role: "seller",
         });
         toast.success("Welcome back, Partner!");
-        
+
         if (seller.subscriptionStatus === "active") {
           navigate("/seller");
         } else {
@@ -383,7 +353,6 @@ const Auth = () => {
         });
         setVerifications({
           email: createInitialVerificationState(),
-          phone: createInitialVerificationState(),
         });
         setFormData((prev) => ({
           ...prev,
@@ -637,77 +606,20 @@ const Auth = () => {
                       </div>
                     )}
 
-                    {!isLogin && (
-                      <>
-                        <div className="relative group">
-                          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
-                            <Phone size={18} />
-                          </div>
-                          <input
-                            type="tel"
-                            name="phone"
-                            required
-                            placeholder="Contact Number"
-                            className="w-full pl-12 pr-28 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
-                            value={formData.phone}
-                            onChange={handleChange}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleSendVerificationOtp("phone")}
-                            disabled={
-                              verifications.phone.isSending ||
-                              verifications.phone.status === "verified" ||
-                              !/^[0-9]{10}$/.test(formData.phone || "")
-                            }
-                            className={`absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${verifications.phone.status === "verified"
-                              ? "bg-brand-100 text-brand-700 cursor-default"
-                              : "bg-slate-900 text-white hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
-                              }`}>
-                            {verifications.phone.isSending ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : verifications.phone.status === "verified" ? (
-                              "Verified"
-                            ) : verifications.phone.isOtpVisible ? (
-                              "Resend"
-                            ) : (
-                              "Verify"
-                            )}
-                          </button>
-                        </div>
-                        {verifications.phone.isOtpVisible && verifications.phone.status !== "verified" && (
-                          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              maxLength={4}
-                              placeholder="Enter phone OTP"
-                              value={verifications.phone.otp}
-                              onChange={(e) =>
-                                updateVerificationState("phone", {
-                                  otp: e.target.value.replace(/\D/g, "").slice(0, 4),
-                                })
-                              }
-                              className="flex-1 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleVerifyOtp("phone")}
-                              disabled={verifications.phone.isVerifying || verifications.phone.otp.length !== 4}
-                              className="rounded-md bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-50"
-                            >
-                              {verifications.phone.isVerifying ? "Checking..." : "Confirm OTP"}
-                            </button>
-                          </div>
-                        )}
-                        {verifications.phone.status === "verified" && (
-                          <div className="flex items-center gap-2 text-[11px] font-bold text-brand-600">
-                            <CheckCircle className="h-4 w-4" />
-                            <span>Phone number verified successfully.</span>
-                          </div>
-                        )}
-                      </>
-                    )}
+                    <div className="relative group">
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                        <Phone size={18} />
+                      </div>
+                      <input
+                        type="tel"
+                        name="phone"
+                        required
+                        placeholder="Contact Number"
+                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                        value={formData.phone}
+                        onChange={handleChange}
+                      />
+                    </div>
 
                     <div className="relative group">
                       <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">

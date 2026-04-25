@@ -2,11 +2,12 @@ import mongoose from "mongoose";
 
 const otpSessionSchema = new mongoose.Schema(
   {
-    mobile: {
+    email: {
       type: String,
       required: true,
       trim: true,
       index: true,
+      lowercase: true,
     },
     userType: {
       type: String,
@@ -51,8 +52,8 @@ const otpSessionSchema = new mongoose.Schema(
 );
 
 otpSessionSchema.index(
-  { mobile: 1, userType: 1, purpose: 1 },
-  { unique: true, name: "mobile_userType_purpose_unique" },
+  { email: 1, userType: 1, purpose: 1 },
+  { unique: true, name: "email_userType_purpose_unique" },
 );
 otpSessionSchema.index(
   { expiresAt: 1 },
