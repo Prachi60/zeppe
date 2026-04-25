@@ -18,7 +18,7 @@ import {
   validateReturnDropOtp,
 } from "../services/deliveryOtpService.js";
 import { emitToCustomer, emitToSeller } from "../services/orderSocketEmitter.js";
-import { sendSmsIndiaHubOtp } from "../services/smsIndiaHubService.js";
+import { sendOtpEmail } from "../services/nodemailerService.js";
 import { creditWallet } from "../services/finance/walletService.js";
 import { emitNotificationEvent } from "../modules/notifications/notification.emitter.js";
 import { NOTIFICATION_EVENTS } from "../modules/notifications/notification.constants.js";
@@ -235,7 +235,7 @@ export const requestReturnPickupOtp = async (req, res) => {
     
     // Fetch order BEFORE calling service
     const orderKey = orderMatchQueryFromRouteParam(orderId);
-    const order = await Order.findOne(orderKey).populate('customer', 'name phone').lean();
+    const order = await Order.findOne(orderKey).populate('customer', 'name phone email').lean();
     if (!order) return handleResponse(res, 404, 'Order not found');
 
     const result = await generateReturnPickupOtp(orderId);
@@ -257,20 +257,21 @@ export const requestReturnPickupOtp = async (req, res) => {
           },
         });
 
-        // ── Send SMS to customer (BACKGROUND) ──
+        // ── Send Email to customer (BACKGROUND) ──
         setImmediate(async () => {
           try {
             const customerObj = await Customer.findById(customerId).lean();
-            const phone = customerObj?.phone || order.address?.phone;
-            if (phone) {
-              await sendSmsIndiaHubOtp({
-                phone,
+            const email = customerObj?.email;
+            if (email) {
+              await sendOtpEmail({
+                to: email,
                 otp: result.otp,
-                message: `Your return pickup OTP for order #${orderId} is ${result.otp}. Noyo-kart.`,
+                purpose: "return_pickup",
+                expiresInMinutes: 10,
               });
             }
-          } catch (smsErr) {
-            console.warn("[requestReturnPickupOtp] SMS failed:", smsErr.message);
+          } catch (emailErr) {
+            console.warn("[requestReturnPickupOtp] Email failed:", emailErr.message);
           }
         });
       }
@@ -375,7 +376,7 @@ export const requestReturnDropOtp = async (req, res) => {
     const { id: userId } = req.user;
 
     const orderKey = orderMatchQueryFromRouteParam(orderId);
-    const order = await Order.findOne(orderKey).populate("seller", "name phone").lean();
+    const order = await Order.findOne(orderKey).populate("seller", "name phone email").lean();
     if (!order) return handleResponse(res, 404, "Order not found");
 
     if (order.returnDeliveryBoy?.toString() !== userId) {
@@ -410,19 +411,20 @@ export const requestReturnDropOtp = async (req, res) => {
           },
         });
 
-        // ── Send SMS to seller (BACKGROUND) ──
+        // ── Send Email to seller (BACKGROUND) ──
         setImmediate(async () => {
           try {
-            const sellerPhone = order.seller?.phone;
-            if (sellerPhone) {
-              await sendSmsIndiaHubOtp({
-                phone: sellerPhone,
+            const sellerEmail = order.seller?.email;
+            if (sellerEmail) {
+              await sendOtpEmail({
+                to: sellerEmail,
                 otp: result.otp,
-                message: `Return drop OTP for order #${orderId} is ${result.otp}. Noyo-kart.`,
+                purpose: "return_drop",
+                expiresInMinutes: 10,
               });
             }
-          } catch (smsErr) {
-            console.warn("[requestReturnDropOtp] SMS failed:", smsErr.message);
+          } catch (emailErr) {
+            console.warn("[requestReturnDropOtp] Email failed:", emailErr.message);
           }
         });
       }

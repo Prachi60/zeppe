@@ -44,7 +44,7 @@ const DeliveryAuth = () => {
   const [step, setStep] = useState("form"); // "form" | "otp"
 
   // Login state
-  const [loginPhone, setLoginPhone] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
 
   // Signup state
   const [signupStep, setSignupStep] = useState(1);
@@ -206,15 +206,15 @@ const DeliveryAuth = () => {
     try {
       setLoading(true);
       if (mode === "login") {
-        if (!loginPhone || loginPhone.length < 10) {
-          toast.error("Please enter a valid 10-digit phone number");
+        if (!loginEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) {
+          toast.error("Please enter a valid email address");
           return;
         }
-        const res = await deliveryApi.sendLoginOtp({ phone: loginPhone });
-        toast.success(res.data?.message || "OTP sent!");
+        const res = await deliveryApi.sendLoginOtp({ email: loginEmail });
+        toast.success(res.data?.message || "OTP sent to your email!");
       } else {
         if (!signupName.trim()) { toast.error("Please enter your name"); return; }
-        if (!signupPhone || signupPhone.length < 10) { toast.error("Please enter a valid 10-digit phone number"); return; }
+        if (!signupEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail)) { toast.error("Please enter a valid email address"); return; }
 
         const formData = new FormData();
         formData.append("name", signupName.trim());
@@ -250,9 +250,9 @@ const DeliveryAuth = () => {
     if (otp.some((d) => d === "") || !agreed) return;
     setLoading(true);
     try {
-      const phone = mode === "login" ? loginPhone : signupPhone;
+      const email = mode === "login" ? loginEmail : signupEmail;
       const otpString = otp.join("");
-      const response = await deliveryApi.verifyOtp({ phone, otp: otpString });
+      const response = await deliveryApi.verifyOtp({ email, otp: otpString });
       const { token, delivery } = response.data.result;
 
       login({ ...delivery, token, role: "delivery" });
@@ -287,7 +287,7 @@ const DeliveryAuth = () => {
     setMode(newMode);
     setStep("form");
     setOtp(["", "", "", ""]);
-    setLoginPhone("");
+    setLoginEmail("");
     setSignupStep(1);
     setSignupName("");
     setSignupPhone("");
@@ -363,9 +363,9 @@ const DeliveryAuth = () => {
                 </h1>
                 <p className="text-gray-500 text-sm mt-1 max-w-[240px] mx-auto">
                   {step === "otp"
-                    ? `Enter the 4-digit code sent to +91 ${mode === "login" ? loginPhone : signupPhone}`
+                    ? `Enter the 4-digit code sent to ${mode === "login" ? loginEmail : signupEmail}`
                     : mode === "login"
-                      ? "Login with your registered phone number"
+                      ? "Login with your registered email address"
                       : `Step ${signupStep} of 4: ${signupStep === 1 ? "Personal Info" : signupStep === 2 ? "Vehicle Info" : signupStep === 3 ? "Bank Info" : "Documents"}`}
                 </p>
               </motion.div>
@@ -886,23 +886,18 @@ const DeliveryAuth = () => {
                       {/* Phone */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">
-                          Phone Number
+                          Email Address
                         </label>
                         <div className="relative">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
-                          <span className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm border-r border-gray-200 pr-2.5">
-                            +91
-                          </span>
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 w-4 h-4" />
                           <input
-                            type="tel"
-                            value={loginPhone}
+                            type="email"
+                            value={loginEmail}
                             onChange={(e) => {
-                              const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                              setLoginPhone(val);
+                              setLoginEmail(e.target.value);
                             }}
-                            maxLength={10}
-                            className="w-full pl-24 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all placeholder:text-gray-300"
-                            placeholder="00000 00000"
+                            className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all placeholder:text-gray-300"
+                            placeholder="example@gmail.com"
                           />
                         </div>
                       </div>
@@ -980,7 +975,7 @@ const DeliveryAuth = () => {
                       className="mt-0.5 h-4 w-4 accent-indigo-600 cursor-pointer"
                     />
                     <label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
-                      I confirm my phone number is correct and I agree to the{" "}
+                      I confirm my email is correct and I agree to the{" "}
                       <span className="text-indigo-600 font-bold">Terms of Service</span> &amp;{" "}
                       <span className="text-indigo-600 font-bold">Privacy Policy</span>.
                     </label>
@@ -1000,12 +995,12 @@ const DeliveryAuth = () => {
                   </button>
 
                   {/* Back */}
-                  <button
-                    onClick={() => { setStep("form"); setOtp(["", "", "", ""]); }}
-                    className="w-full flex items-center justify-center gap-1.5 text-gray-400 hover:text-gray-600 text-sm font-bold transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" /> Edit Phone Number
-                  </button>
+                    <button
+                      onClick={() => { setStep("form"); setOtp(["", "", "", ""]); }}
+                      className="w-full flex items-center justify-center gap-1.5 text-gray-400 hover:text-gray-600 text-sm font-bold transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" /> Edit Email Address
+                    </button>
                 </motion.div>
               )}
             </AnimatePresence>

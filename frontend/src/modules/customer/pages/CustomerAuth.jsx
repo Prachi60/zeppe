@@ -106,7 +106,7 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
   const [showOtp, setShowOtp] = useState(false);
   const [timer, setTimer] = useState(0);
   const [formData, setFormData] = useState({
-    phone: "",
+    email: "",
     otp: "",
     name: "",
   });
@@ -198,8 +198,9 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
   };
 
   const sendOtpRequest = async () => {
-    if (formData.phone.length !== 10) {
-      toast.error("Enter valid 10-digit mobile number");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error("Enter a valid email address");
       return;
     }
 
@@ -213,11 +214,11 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
       if (isSignupMode) {
         await customerApi.sendSignupOtp({
           name: formData.name.trim(),
-          phone: formData.phone,
+          email: formData.email,
         });
       } else {
         try {
-          await customerApi.sendLoginOtp({ phone: formData.phone });
+          await customerApi.sendLoginOtp({ email: formData.email });
         } catch (error) {
           const apiMessage = String(
             error?.response?.data?.message || error?.message || "",
@@ -235,7 +236,7 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
 
       setShowOtp(true);
       setTimer(30);
-      toast.success("OTP sent successfully");
+      toast.success("OTP sent to your email");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to send OTP");
     } finally {
@@ -246,15 +247,15 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
   const handleVerifyOtp = async (event) => {
     event.preventDefault();
 
-    if (formData.otp.length !== 4) {
-      toast.error("Enter the 4-digit OTP");
+    if (formData.otp.length < 4) {
+      toast.error("Enter the valid OTP");
       return;
     }
 
     setIsLoading(true);
     try {
       const response = await customerApi.verifyOtp({
-        phone: formData.phone,
+        email: formData.email,
         otp: formData.otp,
       });
       const { token, customer } = response.data.result;
@@ -360,17 +361,13 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
                 )}
 
                 <div className="flex overflow-hidden rounded-xl border border-[#d9dde5] bg-white">
-                  <div className="flex w-[62px] items-center justify-center border-r border-[#d9dde5] text-sm font-semibold text-slate-700">
-                    +91
-                  </div>
                   <input
-                    type="tel"
-                    inputMode="numeric"
-                    value={formData.phone}
+                    type="email"
+                    value={formData.email}
                     onChange={(event) =>
-                      updateFormField("phone", event.target.value.replace(/\D/g, "").slice(0, 10))
+                      updateFormField("email", event.target.value)
                     }
-                    placeholder="Enter mobile number"
+                    placeholder="Enter your email address"
                     className="h-12 w-full border-0 bg-transparent px-4 text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
                   />
                 </div>
@@ -426,15 +423,15 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
                   className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-500"
                 >
                   <ChevronLeft size={16} />
-                  Change number
+                  Change email
                 </button>
 
                 <div className="mb-5 text-center md:mb-3">
                   <h2 className="text-xl font-black tracking-tight text-[#111827] md:text-lg">
-                    Verify your mobile number
+                    Verify your email address
                   </h2>
                   <p className="mt-1 text-sm font-medium text-slate-500 md:text-xs">
-                    OTP sent to +91 {formData.phone}
+                    OTP sent to {formData.email}
                   </p>
                 </div>
 

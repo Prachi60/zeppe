@@ -3,8 +3,9 @@ import jwt from "jsonwebtoken";
 import Seller from "../models/seller.js";
 import OtpVerification from "../models/otpVerification.js";
 import { getRedisClient } from "../config/redis.js";
-import { sendSmsIndiaHubOtp } from "./smsIndiaHubService.js";
-import { MOCK_OTP, useRealSMS } from "../utils/otp.js";
+import { sendOtpEmail } from "./nodemailerService.js";
+import { generateOTP, useRealEmail, MOCK_OTP } from "../utils/otp.js";
+import { maskEmail, normalizeEmail, isValidEmail } from "../utils/emailHelpers.js";
 
 const SELLER_SIGNUP_PURPOSE = "seller_signup";
 const OTP_EXPIRY_MINUTES = () =>
@@ -42,41 +43,24 @@ function verificationSecret() {
   );
 }
 
-function isDevelopmentEmailMode() {
-  return (
-    process.env.USE_REAL_EMAIL_OTP === "true" ||
-    process.env.USE_REAL_EMAIL_OTP === "1"
-  );
-}
-
-function randomOtp(length) {
-  const min = Math.pow(10, length - 1);
-  const max = Math.pow(10, length) - 1;
-  return String(Math.floor(min + Math.random() * (max - min + 1)));
-}
-
-function generateSellerOtp(channel) {
+function generateSellerOtp() {
   const production = process.env.NODE_ENV === "production";
-  const useRealDelivery =
-    channel === "email" ? isDevelopmentEmailMode() : useRealSMS();
+  const useRealDelivery = useRealEmail();
 
   if (production && !useRealDelivery) {
-    const error = new Error(
-      channel === "email"
-        ? "Email OTP delivery is not configured in production"
-        : "SMS OTP delivery is not configured in production",
-    );
+    const error = new Error("Email OTP delivery is not configured in production");
     error.statusCode = 500;
     throw error;
   }
 
-  return useRealDelivery ? randomOtp(OTP_LENGTH()) : MOCK_OTP;
+  // Note: We use generateOTP() from utils/otp.js to be consistent with other modules
+  return generateOTP();
 }
 
-function hashOtp(channel, target, otp) {
+function hashOtp(target, otp) {
   return crypto
     .createHmac("sha256", verificationSecret())
-    .update(`${SELLER_SIGNUP_PURPOSE}:${channel}:${target}:${otp}`)
+    .update(`${SELLER_SIGNUP_PURPOSE}:email:${target}:${otp}`)
     .digest("hex");
 }
 
@@ -115,29 +99,15 @@ async function incrementWindowCounter(redisKey, { limit, windowSeconds }) {
   return entry.count <= limit;
 }
 
-function maskEmail(email) {
-  const value = String(email || "").trim().toLowerCase();
-  const [local, domain] = value.split("@");
-  if (!local || !domain) {
-    return "***";
+function normalizeTarget(channel, rawValue) {
+  if (channel !== "email") {
+    const error = new Error("Only email verification is supported for sellers");
+    error.statusCode = 400;
+    throw error;
   }
-
-  const visibleLocal = local.length <= 2 ? `${local[0] || "*"}*` : `${local.slice(0, 2)}***`;
-  return `${visibleLocal}@${domain}`;
-}
-
-function maskPhone(phone) {
-  const value = String(phone || "").trim();
-  if (value.length <= 4) {
-    return "***";
-  }
-
-  return `${value.slice(0, 2)}******${value.slice(-2)}`;
-}
-
-function normalizeEmail(value) {
-  const email = String(value || "").trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  
+  const email = normalizeEmail(rawValue);
+  if (!isValidEmail(email)) {
     const error = new Error("Please enter a valid email address");
     error.statusCode = 400;
     throw error;
@@ -145,99 +115,24 @@ function normalizeEmail(value) {
   return email;
 }
 
-function normalizePhone(value) {
-  const phone = String(value || "").replace(/\D/g, "").slice(0, 10);
-  if (!/^\d{10}$/.test(phone)) {
-    const error = new Error("Please enter a valid 10-digit phone number");
-    error.statusCode = 400;
-    throw error;
-  }
-  return phone;
-}
-
-function normalizeTarget(channel, rawValue) {
-  if (channel === "email") {
-    return normalizeEmail(rawValue);
-  }
-
-  if (channel === "phone") {
-    return normalizePhone(rawValue);
-  }
-
-  const error = new Error("Unsupported verification channel");
-  error.statusCode = 400;
-  throw error;
-}
-
-async function ensureTargetAvailable(channel, target) {
-  const query = channel === "email" ? { email: target } : { phone: target };
-  const existingSeller = await Seller.findOne(query).select("_id").lean();
+async function ensureTargetAvailable(target) {
+  const existingSeller = await Seller.findOne({ email: target }).select("_id").lean();
   if (existingSeller) {
-    const error = new Error(
-      channel === "email"
-        ? "A seller with this email already exists"
-        : "A seller with this phone number already exists",
-    );
+    const error = new Error("A seller with this email already exists");
     error.statusCode = 400;
     throw error;
   }
 }
 
 async function dispatchEmailOtp({ email, otp }) {
-  if (!isDevelopmentEmailMode()) {
-    console.log(`[SellerEmailOTP][mock] ${email} -> ${otp}`);
-    return;
-  }
-
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL || process.env.MAIL_FROM;
-
-  if (!apiKey || !from) {
-    throw new Error("Email OTP provider is not configured");
-  }
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: [email],
-      subject: "Verify your seller signup email",
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #0f172a;">
-          <p>Your seller signup verification code is:</p>
-          <p style="font-size: 28px; font-weight: 700; letter-spacing: 6px;">${otp}</p>
-          <p>This code expires in ${OTP_EXPIRY_MINUTES()} minutes.</p>
-        </div>
-      `,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    const error = new Error(`Failed to send email OTP: ${errorBody}`);
-    error.statusCode = 502;
-    throw error;
-  }
+  await sendOtpEmail({ to: email, otp, purpose: SELLER_SIGNUP_PURPOSE, expiresInMinutes: OTP_EXPIRY_MINUTES() });
 }
 
-async function dispatchPhoneOtp({ phone, otp }) {
-  if (useRealSMS()) {
-    await sendSmsIndiaHubOtp({ phone, otp });
-    return;
-  }
-
-  console.log(`[SellerPhoneOTP][mock] ${phone} -> ${otp}`);
-}
-
-function signVerificationToken({ channel, target }) {
+function signVerificationToken({ target }) {
   return jwt.sign(
     {
       purpose: SELLER_SIGNUP_PURPOSE,
-      channel,
+      channel: "email",
       target,
       verified: true,
     },
@@ -250,14 +145,16 @@ function signVerificationToken({ channel, target }) {
 
 export function verifySellerVerificationToken({ channel, rawValue, token }) {
   const normalizedChannel = String(channel || "").trim().toLowerCase();
-  const normalizedTarget = normalizeTarget(normalizedChannel, rawValue);
+  if (normalizedChannel !== "email") {
+    const error = new Error("Only email verification is supported");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedTarget = normalizeTarget("email", rawValue);
 
   if (!token) {
-    const error = new Error(
-      normalizedChannel === "email"
-        ? "Email verification is required before signup"
-        : "Phone verification is required before signup",
-    );
+    const error = new Error("Email verification is required before signup");
     error.statusCode = 400;
     throw error;
   }
@@ -273,7 +170,7 @@ export function verifySellerVerificationToken({ channel, rawValue, token }) {
 
   if (
     payload?.purpose !== SELLER_SIGNUP_PURPOSE ||
-    payload?.channel !== normalizedChannel ||
+    payload?.channel !== "email" ||
     payload?.target !== normalizedTarget ||
     payload?.verified !== true
   ) {
@@ -283,7 +180,7 @@ export function verifySellerVerificationToken({ channel, rawValue, token }) {
   }
 
   return {
-    channel: normalizedChannel,
+    channel: "email",
     target: normalizedTarget,
   };
 }
@@ -294,12 +191,17 @@ export async function issueSellerVerificationOtp({
   ipAddress = "unknown",
 }) {
   const normalizedChannel = String(channel || "").trim().toLowerCase();
-  const target = normalizeTarget(normalizedChannel, rawValue);
+  if (normalizedChannel !== "email") {
+    const error = new Error("Only email verification is supported");
+    error.statusCode = 400;
+    throw error;
+  }
 
-  await ensureTargetAvailable(normalizedChannel, target);
+  const target = normalizeTarget("email", rawValue);
+  await ensureTargetAvailable(target);
 
   const sendAllowed = await incrementWindowCounter(
-    `seller:otp:send:${normalizedChannel}:${target}`,
+    `seller:otp:send:email:${target}`,
     {
       limit: OTP_SEND_LIMIT_PER_WINDOW(),
       windowSeconds: OTP_SEND_LIMIT_WINDOW_SECONDS(),
@@ -314,7 +216,7 @@ export async function issueSellerVerificationOtp({
   const now = new Date();
   let session = await OtpVerification.findOne({
     purpose: SELLER_SIGNUP_PURPOSE,
-    channel: normalizedChannel,
+    channel: "email",
     target,
   }).select("+otpHash +expiresAt");
 
@@ -329,22 +231,22 @@ export async function issueSellerVerificationOtp({
     }
   }
 
-  const otp = generateSellerOtp(normalizedChannel);
+  const otp = generateSellerOtp();
   const expiresAt = new Date(now.getTime() + OTP_EXPIRY_MINUTES() * 60 * 1000);
 
   if (!session) {
     session = new OtpVerification({
       purpose: SELLER_SIGNUP_PURPOSE,
-      channel: normalizedChannel,
+      channel: "email",
       target,
-      otpHash: hashOtp(normalizedChannel, target, otp),
+      otpHash: hashOtp(target, otp),
       expiresAt,
       verifiedAt: null,
       failedAttempts: 0,
       lastSentAt: now,
     });
   } else {
-    session.otpHash = hashOtp(normalizedChannel, target, otp);
+    session.otpHash = hashOtp(target, otp);
     session.expiresAt = expiresAt;
     session.verifiedAt = null;
     session.failedAttempts = 0;
@@ -352,37 +254,24 @@ export async function issueSellerVerificationOtp({
   }
 
   await session.save();
-
-  if (normalizedChannel === "email") {
-    await dispatchEmailOtp({ email: target, otp });
-  } else {
-    await dispatchPhoneOtp({ phone: target, otp });
-  }
+  await dispatchEmailOtp({ email: target, otp });
 
   console.log(
     JSON.stringify({
       level: "info",
       ts: new Date().toISOString(),
       event: "seller_signup_otp_issued",
-      channel: normalizedChannel,
-      target: normalizedChannel === "email" ? maskEmail(target) : maskPhone(target),
+      channel: "email",
+      target: maskEmail(target),
       ipAddress,
-      mode:
-        normalizedChannel === "email"
-          ? isDevelopmentEmailMode()
-            ? "real"
-            : "mock"
-          : useRealSMS()
-            ? "real"
-            : "mock",
+      mode: useRealEmail() ? "real" : "mock",
     }),
   );
 
   return {
     sent: true,
-    channel: normalizedChannel,
-    maskedTarget:
-      normalizedChannel === "email" ? maskEmail(target) : maskPhone(target),
+    channel: "email",
+    maskedTarget: maskEmail(target),
     expiresInSeconds: OTP_EXPIRY_MINUTES() * 60,
   };
 }
@@ -394,7 +283,13 @@ export async function verifySellerOtpCode({
   ipAddress = "unknown",
 }) {
   const normalizedChannel = String(channel || "").trim().toLowerCase();
-  const target = normalizeTarget(normalizedChannel, rawValue);
+  if (normalizedChannel !== "email") {
+    const error = new Error("Only email verification is supported");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const target = normalizeTarget("email", rawValue);
   const code = String(otp || "").trim();
 
   if (!/^\d{4}$/.test(code)) {
@@ -404,7 +299,7 @@ export async function verifySellerOtpCode({
   }
 
   const verifyAllowed = await incrementWindowCounter(
-    `seller:otp:verify:${normalizedChannel}:${target}`,
+    `seller:otp:verify:email:${target}`,
     {
       limit: OTP_VERIFY_LIMIT_PER_WINDOW(),
       windowSeconds: OTP_VERIFY_LIMIT_WINDOW_SECONDS(),
@@ -418,7 +313,7 @@ export async function verifySellerOtpCode({
 
   const session = await OtpVerification.findOne({
     purpose: SELLER_SIGNUP_PURPOSE,
-    channel: normalizedChannel,
+    channel: "email",
     target,
   }).select("+otpHash +expiresAt");
 
@@ -428,7 +323,7 @@ export async function verifySellerOtpCode({
     throw error;
   }
 
-  const isValid = hashOtp(normalizedChannel, target, code) === session.otpHash;
+  const isValid = hashOtp(target, code) === session.otpHash;
   if (!isValid) {
     session.failedAttempts = (session.failedAttempts || 0) + 1;
     await session.save();
@@ -451,18 +346,15 @@ export async function verifySellerOtpCode({
       level: "info",
       ts: new Date().toISOString(),
       event: "seller_signup_otp_verified",
-      channel: normalizedChannel,
-      target: normalizedChannel === "email" ? maskEmail(target) : maskPhone(target),
+      channel: "email",
+      target: maskEmail(target),
       ipAddress,
     }),
   );
 
   return {
     verified: true,
-    channel: normalizedChannel,
-    verificationToken: signVerificationToken({
-      channel: normalizedChannel,
-      target,
-    }),
+    channel: "email",
+    verificationToken: signVerificationToken({ target }),
   };
 }

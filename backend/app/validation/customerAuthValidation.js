@@ -2,15 +2,15 @@ import Joi from "joi";
 
 export const sendSignupOtpSchema = Joi.object({
   name: Joi.string().trim().min(2).max(80).required(),
-  phone: Joi.string().trim().min(7).max(24).required(),
+  email: Joi.string().email().trim().required(),
 });
 
 export const sendLoginOtpSchema = Joi.object({
-  phone: Joi.string().trim().min(7).max(24).required(),
+  email: Joi.string().email().trim().required(),
 });
 
 export const verifyOtpSchema = Joi.object({
-  phone: Joi.string().trim().min(7).max(24).required(),
+  email: Joi.string().email().trim().required(),
   otp: Joi.string().trim().pattern(/^\d{4,8}$/).required(),
 });
 

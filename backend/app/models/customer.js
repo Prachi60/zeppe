@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { normalizePhoneNumber } from "../utils/phone.js";
+
 
 const addressSchema = new mongoose.Schema({
     label: {
@@ -34,13 +34,13 @@ const userSchema = new mongoose.Schema(
             type: String,
             lowercase: true,
             unique: true,
-            sparse: true, // phone login users ke liye
+            required: true,
+            trim: true
         },
 
         phone: {
             type: String,
-            required: true,
-            unique: true,
+            sparse: true,
             trim: true,
         },
 
@@ -123,11 +123,6 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ role: 1, isActive: 1 });
 
-userSchema.pre("validate", function(next) {
-    if (this.phone) {
-        this.phone = normalizePhoneNumber(this.phone);
-    }
-    next();
-});
+
 
 export default mongoose.model("User", userSchema);

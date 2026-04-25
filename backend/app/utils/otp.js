@@ -1,8 +1,18 @@
 import crypto from "crypto";
-const MOCK_OTP = "1234";
+import { MOCK_OTP } from "../services/nodemailerService.js";
 
 export const hashOtp = (otp) => crypto.createHash("sha256").update(String(otp)).digest("hex");
 
+/**
+ * Check if real email should be used
+ * @returns {boolean}
+ */
+export const useRealEmail = () =>
+  process.env.USE_REAL_EMAIL === "true" || process.env.USE_REAL_EMAIL === "1";
+
+/**
+ * @deprecated Use useRealEmail instead. Kept for Phase 1 compatibility.
+ */
 export const useRealSMS = () =>
   process.env.USE_REAL_SMS === "true" || process.env.USE_REAL_SMS === "1";
 
@@ -16,12 +26,17 @@ function randomOtp(length) {
 
 export const generateOTP = () => {
   const production = process.env.NODE_ENV === "production";
-  if (production && !useRealSMS()) {
+  
+  // In Phase 1, we allow either SMS or Email to be "real" to avoid breaking current flows.
+  const isRealMode = useRealSMS() || useRealEmail();
+
+  if (production && !isRealMode) {
     const err = new Error("Mock OTP mode is disabled in production");
     err.statusCode = 500;
     throw err;
   }
-  return useRealSMS() ? randomOtp(OTP_LENGTH) : MOCK_OTP;
+  
+  return isRealMode ? randomOtp(OTP_LENGTH) : MOCK_OTP;
 };
 
 export { MOCK_OTP };
