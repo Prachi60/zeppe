@@ -14,6 +14,8 @@ import Subscription from "../models/subscription.js";
 import UserSubscription from "../models/userSubscription.js";
 import razorpay from "../config/razorpay.js";
 import crypto from "crypto";
+import Seller from "../models/seller.js";
+import Delivery from "../models/delivery.js";
 
 export const createPaymentOrder = async (req, res) => {
   try {
@@ -270,6 +272,12 @@ export const verifySubscriptionPayment = async (req, res) => {
       },
       { new: true },
     );
+
+    // Update user model with active status
+    const UserModel = userModel === "Seller" ? Seller : Delivery;
+    await UserModel.findByIdAndUpdate(req.user.id, {
+      $set: { subscriptionStatus: "active" },
+    });
 
     return handleResponse(res, 200, "Subscription activated successfully", {
       subscription: userSubscription,

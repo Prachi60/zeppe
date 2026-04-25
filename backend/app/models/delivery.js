@@ -103,6 +103,11 @@ const deliverySchema = new mongoose.Schema(
             select: false,
         },
 
+        subscriptionStatus: {
+            type: String,
+            enum: ["active", "inactive", "expired"],
+            default: "inactive",
+        },
         lastLogin: Date,
 
         /** Last GPS fix from POST /delivery/location (for radius matching). */

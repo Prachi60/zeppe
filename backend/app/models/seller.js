@@ -151,6 +151,11 @@ const sellerSchema = new mongoose.Schema(
       bankName: { type: String, trim: true },
       branchName: { type: String, trim: true },
     },
+    subscriptionStatus: {
+      type: String,
+      enum: ["active", "inactive", "expired"],
+      default: "inactive",
+    },
     lastLogin: Date,
   },
   { timestamps: true },

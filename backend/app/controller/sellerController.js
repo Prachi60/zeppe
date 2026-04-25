@@ -1,5 +1,6 @@
 import Seller from "../models/seller.js";
 import Transaction from "../models/transaction.js";
+import UserSubscription from "../models/userSubscription.js";
 import { handleResponse, calculateDistance } from "../utils/helper.js";
 import mongoose from "mongoose";
 
@@ -136,11 +137,22 @@ export const getSellerProfile = async (req, res) => {
     if (!seller) {
       return handleResponse(res, 404, "Seller not found");
     }
+    // Verify subscription status dynamically
+    const activeSub = await UserSubscription.findOne({
+      userId: req.user.id,
+      role: "seller",
+      status: "active",
+      endDate: { $gt: new Date() }
+    });
+
+    const sellerObj = seller.toObject();
+    sellerObj.subscriptionStatus = activeSub ? "active" : "inactive";
+
     return handleResponse(
       res,
       200,
       "Seller profile fetched successfully",
-      seller,
+      sellerObj,
     );
   } catch (error) {
     return handleResponse(res, 500, error.message);

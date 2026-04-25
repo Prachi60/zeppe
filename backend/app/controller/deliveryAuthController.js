@@ -1,4 +1,5 @@
 import Delivery from "../models/delivery.js";
+import UserSubscription from "../models/userSubscription.js";
 import jwt from "jsonwebtoken";
 import handleResponse from "../utils/helper.js";
 import { sendSmsIndiaHubOtp } from "../services/smsIndiaHubService.js";
@@ -187,7 +188,18 @@ export const getDeliveryProfile = async (req, res) => {
         if (!delivery) {
             return handleResponse(res, 404, "Delivery partner not found");
         }
-        return handleResponse(res, 200, "Profile fetched successfully", delivery);
+        // Verify subscription status dynamically
+        const activeSub = await UserSubscription.findOne({
+            userId: req.user.id,
+            role: "delivery",
+            status: "active",
+            endDate: { $gt: new Date() }
+        });
+
+        const deliveryObj = delivery.toObject();
+        deliveryObj.subscriptionStatus = activeSub ? "active" : "inactive";
+
+        return handleResponse(res, 200, "Profile fetched successfully", deliveryObj);
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }
