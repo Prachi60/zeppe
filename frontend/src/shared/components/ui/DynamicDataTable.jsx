@@ -19,12 +19,14 @@ import { toast } from 'sonner';
  * @param {Function} props.onRowClick - Callback when a row is clicked
  * @param {Object} props.apiService - API service to use for fetching (defaults to adminApi)
  */
+const EMPTY_OBJ = {};
+
 const DynamicDataTable = ({ 
     endpoint, 
     columns, 
     filters = [], 
     searchPlaceholder = "Search...",
-    defaultParams = {},
+    defaultParams = EMPTY_OBJ,
     onRowClick,
     refreshSelected = 0,
     apiService = adminApi
@@ -38,6 +40,12 @@ const DynamicDataTable = ({
     const [sortBy, setSortBy] = useState('newest');
     const [activeFilters, setActiveFilters] = useState({});
 
+    // Memoize the merged params to ensure stability
+    const effectiveParams = React.useMemo(() => ({
+        ...activeFilters,
+        ...defaultParams
+    }), [activeFilters, defaultParams]);
+
     const fetchData = useCallback(async (requestedPage = 1) => {
         setIsLoading(true);
         try {
@@ -49,8 +57,7 @@ const DynamicDataTable = ({
                 limit: pageSize,
                 sort: sortBy,
                 search: searchTerm,
-                ...activeFilters,
-                ...defaultParams
+                ...effectiveParams
             };
 
             const response = await apiService.fetchData(normalizedEndpoint, params);
@@ -68,7 +75,7 @@ const DynamicDataTable = ({
         } finally {
             setIsLoading(false);
         }
-    }, [endpoint, pageSize, sortBy, searchTerm, activeFilters, defaultParams]);
+    }, [endpoint, pageSize, sortBy, searchTerm, effectiveParams, apiService]);
 
     useEffect(() => {
         const timer = setTimeout(() => {

@@ -75,9 +75,12 @@ export function buildSearchBarBackgroundColor(baseHeaderColor) {
 /**
  * Same gradient as the main location header (category-driven).
  */
-export function buildHeaderGradient(baseHeaderColor) {
+export function buildHeaderGradient(baseHeaderColor, isTop = false) {
   const base = baseHeaderColor || DEFAULT_BASE;
-  return `linear-gradient(180deg, ${base} 0%, ${base} 100%)`;
+  if (!isTop) return `linear-gradient(180deg, ${base} 0%, ${base} 100%)`;
+  
+  const top = mixHexWithWhite(base, 0.35); // 35% white highlight
+  return `linear-gradient(180deg, ${top} 0%, ${base} 100%)`;
 }
 
 /** Solid fill for floating cart pill: header mid tone, slightly darker. */
@@ -95,4 +98,3 @@ export function buildMiniCartGradient(baseHeaderColor) {
   const deep = shiftHex(mid, -32);
   return `linear-gradient(135deg, ${top} 0%, ${mid} 48%, ${deep} 100%)`;
 }
-

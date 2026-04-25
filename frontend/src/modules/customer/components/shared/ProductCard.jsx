@@ -22,6 +22,7 @@ const ProductCard = React.memo(
     microCompact = false,
     neutralBg = false,
     storeWide = false,
+    quickComm = false,
   }) => {
     const { toggleWishlist: toggleWishlistGlobal, isInWishlist } =
       useWishlist();
@@ -162,11 +163,105 @@ const ProductCard = React.memo(
       ],
     );
 
+    if (quickComm) {
+      return (
+        <motion.div
+          whileTap={{ scale: 0.98 }}
+          className={cn(
+            "group flex flex-col w-full h-full bg-white rounded-xl overflow-hidden transition-all duration-200",
+            className
+          )}
+          onClick={handleProductClick}
+        >
+          {/* Top Section: Image + Wishlist + Floating ADD */}
+          <div className="relative aspect-[1/1.1] w-full p-1.5 sm:p-2 bg-gray-50/50 rounded-xl">
+            {/* Discount Badge */}
+            {product.originalPrice > product.price && (
+              <div className="absolute top-0 left-0 z-10 bg-[#2563eb] text-white text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm">
+                {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+              </div>
+            )}
+
+            {/* Wishlist Heart */}
+            <button
+              onClick={toggleWishlist}
+              className="absolute top-1 right-1 z-10 p-1 rounded-full bg-white/80 shadow-sm active:scale-90"
+            >
+              <Heart
+                size={12}
+                className={cn(isWishlisted ? "text-red-500 fill-current" : "text-gray-400")}
+              />
+            </button>
+
+            {/* Product Image */}
+            <div className="w-full h-full flex items-center justify-center mix-blend-multiply">
+              <img
+                ref={imageRef}
+                src={product.image}
+                alt={product.name}
+                className="w-full h-full object-contain drop-shadow-sm transition-transform group-hover:scale-105"
+              />
+            </div>
+
+            {/* Floating ADD Button - Overlapping Image Bottom Right */}
+            <div className="absolute -bottom-1 -right-1 z-20">
+              {quantity > 0 ? (
+                <div className="flex items-center bg-white border border-gray-200 rounded-lg h-7 min-w-[60px] shadow-md overflow-hidden">
+                  <button onClick={handleDecrement} className="px-1.5 py-1 text-gray-500 hover:bg-gray-50"><Minus size={10} strokeWidth={3} /></button>
+                  <span className="text-[11px] font-bold text-gray-800 flex-1 text-center">{quantity}</span>
+                  <button onClick={handleIncrement} className="px-1.5 py-1 text-gray-500 hover:bg-gray-50"><Plus size={10} strokeWidth={3} /></button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  className="bg-white text-black border border-gray-200 text-[10px] font-bold px-3 h-7 rounded-lg shadow-md hover:bg-gray-50 active:scale-95 transition-all"
+                >
+                  ADD
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Info Section */}
+          <div className="flex flex-col flex-1 p-1.5 sm:p-2 gap-0.5">
+            {/* Weight/Unit */}
+            <div className="flex items-center gap-1">
+              <div className="h-2 w-2 border border-gray-300 rounded-full flex items-center justify-center">
+                <div className="h-1 w-1 bg-gray-400 rounded-full" />
+              </div>
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tight">
+                {product.weight || "1 unit"}
+              </span>
+            </div>
+
+            {/* Product Name */}
+            <h4 className="text-[11px] sm:text-[12px] font-bold text-gray-800 leading-[1.2] line-clamp-2 min-h-[1.5rem] sm:min-h-[1.8rem]">
+              {product.name}
+            </h4>
+
+            {/* Price Block */}
+            <div className="mt-auto pt-1">
+              <div className="flex items-baseline gap-1 flex-wrap">
+                <span className="text-[13px] sm:text-[14px] font-[900] text-gray-900">₹{product.price}</span>
+                {product.originalPrice > product.price && (
+                  <span className="text-[10px] font-medium text-gray-400 line-through">₹{product.originalPrice}</span>
+                )}
+              </div>
+              {/* Optional: Delivery Time in tiny text */}
+              <div className="flex items-center gap-1 text-[8px] text-gray-400 font-medium">
+                <Clock size={8} /> <span>{product.deliveryTime || "8-12 mins"}</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
+
     return (
       <motion.div
         whileTap={{ scale: 0.97 }}
         className={cn(
-          "group flex h-full w-full flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-100/60 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:border-[#9edcf3] hover:bg-[#f7fcff] hover:shadow-[0_10px_26px_rgba(69,176,226,0.14)] focus-within:border-[#74c8ea] focus-within:bg-[#f7fcff]",
+          "group flex h-full w-full flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-100/60 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:border-[#9edcf3] hover:bg-[#f7fcff] hover:shadow-[0_10px_26_rgba(69,176,226,0.14)] focus-within:border-[#74c8ea] focus-within:bg-[#f7fcff]",
           className,
         )}
         onClick={handleProductClick}>
@@ -384,10 +479,10 @@ const ProductCard = React.memo(
                     "bg-black text-white rounded-full font-bold transition-all",
                     storeWide
                       ? "px-4 py-1.5 text-[10px]"
-                      : 
-                    compact
-                      ? "px-4 py-1.5 text-[10px]"
-                      : "px-6 py-2 text-xs",
+                      :
+                      compact
+                        ? "px-4 py-1.5 text-[10px]"
+                        : "px-6 py-2 text-xs",
                   )}>
                   ADD
                 </motion.button>

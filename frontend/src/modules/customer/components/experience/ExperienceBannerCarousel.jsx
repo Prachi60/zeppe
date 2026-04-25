@@ -43,7 +43,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
   }, [isResetting]);
 
   return (
-    <div className={cn("overflow-hidden", fullWidth && "w-full px-3 sm:px-4")}>
+    <div className={cn("overflow-hidden", fullWidth && "w-full")}>
       <div
         className={cn("flex ease-out", isResetting ? "transition-none" : "transition-transform duration-500")}
         style={{
@@ -56,15 +56,15 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
           <div
             key={idx}
             className={cn(
-              "relative shrink-0 overflow-hidden bg-slate-100 flex items-center justify-center box-border",
-              fullWidth ? "h-auto px-0 py-0.5" : "h-[220px] px-4 md:px-8"
+              "relative shrink-0 overflow-hidden flex items-center justify-center box-border",
+              fullWidth ? "h-auto px-0 py-0" : "h-[220px] px-4 md:px-8"
             )}
             style={{
               width: `${stepPercent}%`,
             }}
           >
             {fullWidth ? (
-              <div className="mx-auto h-[184px] w-full max-w-[286px] overflow-hidden rounded-[18px] bg-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.12)] sm:h-[220px] sm:max-w-[520px] sm:rounded-[22px] md:h-[250px] md:max-w-none">
+              <div className="mx-auto h-[184px] w-full overflow-hidden bg-slate-100 sm:h-[220px] md:h-[250px]">
                 <img
                   src={banner.imageUrl}
                   alt={banner.title || section?.title || "Banner"}

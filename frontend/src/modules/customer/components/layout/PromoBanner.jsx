@@ -19,7 +19,7 @@ const PromoBanner = ({ activeCategory }) => {
     // Use backend promo fields if available, else fallback to defaults
     const bannerTitle = activeCategory?.promoBannerTitle || (isAllCategory ? 'Sugar' : categoryName);
     const bannerPrimaryText = activeCategory?.promoBannerSubtitle || (isAllCategory ? 'Rs. 1 per Kg*' : `${categoryName} Deals`);
-    const bannerSecondaryText = activeCategory?.promoBannerDescription || (isAllCategory ? 'On Order above 399' : 'Top picks for you');
+    const bannerSecondaryText = activeCategory?.promoBannerDescription || (isAllCategory ? 'On Order above 399' : '');
     const bannerImage = activeCategory?.promoBannerImage ||
         (isAllCategory
             ? '/FortuneSugarPack.png'
@@ -28,7 +28,7 @@ const PromoBanner = ({ activeCategory }) => {
 
     // Color: if admin set headerColor use it, else "All" defaults to black, others use their headerColor
     const bannerBackground = (isAllCategory && !activeCategory?.headerColor)
-        ? '#000000'
+        ? '#FFE100'
         : buildHeaderGradient(gradientColor);
 
     return (
@@ -41,40 +41,46 @@ const PromoBanner = ({ activeCategory }) => {
         >
             <Link
                 to={bannerLocation}
-                className="mx-auto block w-full max-w-341.25 overflow-hidden"
+                className="block w-full overflow-hidden"
             >
                 <div
-                    className="grid w-full grid-cols-[1.15fr_auto_1.35fr] items-center px-3 py-2 sm:px-4 sm:py-2.5 md:min-h-52 md:px-10 md:py-4"
+                    className="grid w-full grid-cols-[1fr_auto_1fr] items-center py-4 sm:py-6 md:min-h-52 md:px-6 md:py-8"
                     style={{ background: bannerBackground }}
                 >
-                    <div className="pr-2 text-white">
+                    {/* Left Column: Title */}
+                    <div className="flex items-center justify-center pr-2 text-black">
                         <h2
-                            className="text-[28px] font-black leading-none sm:text-[40px] md:text-[86px]"
-                            style={{ fontFamily: 'Georgia, Times New Roman, serif' }}
+                            className="text-[26px] font-extrabold italic leading-none sm:text-[38px] md:text-[64px] tracking-tight"
+                            style={{ fontFamily: "'Playfair Display', serif" }}
                         >
                             {bannerTitle}
                         </h2>
                     </div>
 
-                    <div className="flex items-center justify-center px-1 sm:px-2 md:px-6">
-                        <img
+                    {/* Center Column: Image */}
+                    <div className="flex items-center justify-center">
+                        <motion.img
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
                             src={bannerImage}
                             alt={bannerImageAlt}
-                            className="h-20.5 w-auto object-contain sm:h-27.5 md:h-72.5"
+                            className="h-24 w-auto object-contain sm:h-36 md:h-80 drop-shadow-2xl"
                             loading="eager"
                         />
                     </div>
 
-                    <div className="pl-2 text-white">
+                    {/* Right Column: Subtitle & Description */}
+                    <div className="flex flex-col items-center justify-center pl-2 text-black">
                         <p
-                            className="text-right text-[14px] font-black leading-none sm:text-[24px] md:text-[62px]"
-                            style={{ fontFamily: 'Georgia, Times New Roman, serif' }}
+                            className="text-center text-[18px] font-extrabold italic leading-none sm:text-[28px] md:text-[48px] tracking-tighter"
+                            style={{ fontFamily: "'Playfair Display', serif" }}
                         >
                             {bannerPrimaryText}
                         </p>
                         <p
-                            className="mt-1 text-right text-[9px] font-bold leading-tight sm:text-[13px] md:mt-2 md:text-[34px]"
-                            style={{ fontFamily: 'Georgia, Times New Roman, serif' }}
+                            className="mt-1 text-center text-[9px] font-semibold italic leading-tight sm:text-[13px] md:mt-3 md:text-[24px]"
+                            style={{ fontFamily: "'Playfair Display', serif" }}
                         >
                             {bannerSecondaryText}
                         </p>

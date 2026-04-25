@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react"; // Triggering rebuild for icon resolution
 import { useNavigate } from "react-router-dom";
 import {
   Star,
@@ -35,6 +35,7 @@ import DiamondIcon from "@mui/icons-material/Diamond";
 import ColorLensIcon from "@mui/icons-material/ColorLens";
 import BuildIcon from "@mui/icons-material/Build";
 import LuggageIcon from "@mui/icons-material/Luggage";
+import CustomHomeIcon from "@/assets/home.png";
 
 import SearchIcon from "@mui/icons-material/Search";
 import MicIcon from "@mui/icons-material/Mic";
@@ -175,13 +176,25 @@ const ALL_CATEGORY = {
   id: "all",
   _id: "all",
   name: "All",
-  icon: LayoutGrid,
-  image: VISUAL_IMAGES.all,
+  image: CustomHomeIcon,
   headerVisualKey: "all",
   theme: DEFAULT_CATEGORY_THEME,
   banner: {
     title: "HOUSEFULL",
     subtitle: "SALE",
+    floatingElements: "sparkles",
+    textColor: "text-white",
+  },
+};
+
+const CATEGORIES_ANCHOR = {
+  id: "categories-anchor",
+  _id: "categories-anchor",
+  name: "Categories",
+  theme: DEFAULT_CATEGORY_THEME,
+  banner: {
+    title: "EXPLORE",
+    subtitle: "CATEGORIES",
     floatingElements: "sparkles",
     textColor: "text-white",
   },
@@ -336,6 +349,9 @@ const ICON_COMPONENTS = {
   luggage: LuggageIcon,
   art: ColorLensIcon,
   grocery: LocalGroceryStoreIcon,
+  categories: LayoutGrid,
+  gifts: CardGiftcardIcon,
+  kitchen: KitchenIcon,
 };
 
 const bestsellerCategories = [
@@ -492,7 +508,7 @@ const buildShowcaseProductImage = ({
 }) => {
   const palette =
     SHOWCASE_PRODUCT_PALETTES[
-      paletteIndex % SHOWCASE_PRODUCT_PALETTES.length
+    paletteIndex % SHOWCASE_PRODUCT_PALETTES.length
     ];
 
   const artMarkup = {
@@ -1041,6 +1057,8 @@ const Home = () => {
     [normalizedActiveHeaderCategory],
   );
 
+  const isCategoriesAnchorActive = activeCategory?.id === "categories-anchor";
+
   const scrollQuickCats = (direction) => {
     if (quickCatsRef.current) {
       const scrollAmount = direction === "left" ? -300 : 300;
@@ -1051,10 +1069,10 @@ const Home = () => {
   // Group categories by type/section
   const groupedCategoryBanners = useMemo(() => {
     if (!quickCategories || quickCategories.length === 0) return [];
-    
+
     const banners = [];
     const categoryGroups = {};
-    
+
     // Group categories by first category or create logical groups
     quickCategories.forEach((cat) => {
       const section = cat.section || cat.parentSection || cat.name?.split(',')[0] || 'Other';
@@ -1063,7 +1081,7 @@ const Home = () => {
       }
       categoryGroups[section].push(cat);
     });
-    
+
     // Convert to banner format
     Object.entries(categoryGroups).forEach(([sectionName, cats]) => {
       if (cats.length > 0) {
@@ -1074,15 +1092,21 @@ const Home = () => {
         });
       }
     });
-    
+
     // Limit to 7 banners
     return banners.length > 0 ? banners.slice(0, 7) : [];
   }, [quickCategories]);
 
-  const scrollableBannerCategories = useMemo(
-    () => categories.filter((category) => category.id !== "all"),
-    [categories],
-  );
+  const scrollableBannerCategories = useMemo(() => {
+    if (heroConfig?.categoryIds?.length > 0) {
+      // Filter the existing categories list by the IDs configured in admin
+      return heroConfig.categoryIds
+        .map((id) => categories.find((cat) => (cat._id || cat.id) === id))
+        .filter(Boolean);
+    }
+    // Fallback to showing all header categories (excluding 'all')
+    return categories.filter((category) => category.id !== "all");
+  }, [categories, heroConfig]);
 
   // Auto-slide carousel (only for All category)
   useEffect(() => {
@@ -1286,15 +1310,14 @@ const Home = () => {
           ? {
             ...ALL_CATEGORY,
             headerColor: allHeaderFromAdmin.headerColor || ALL_CATEGORY.headerColor,
-            icon: allHeaderFromAdmin.icon || ALL_CATEGORY.icon,
-            image: allHeaderFromAdmin.image || ALL_CATEGORY.image,
+            image: CustomHomeIcon, // FORCE user's requested home icon
             headerVisualKey: allHeaderFromAdmin.headerVisualKey || ALL_CATEGORY.headerVisualKey || "",
             promoBannerTitle: allHeaderFromAdmin.promoBannerTitle || "",
             promoBannerSubtitle: allHeaderFromAdmin.promoBannerSubtitle || "",
             promoBannerDescription: allHeaderFromAdmin.promoBannerDescription || "",
             promoBannerImage: allHeaderFromAdmin.promoBannerImage || "",
           }
-          : ALL_CATEGORY;
+          : { ...ALL_CATEGORY, image: CustomHomeIcon };
 
         const headersWithoutAll = formattedHeaders.filter(
           (h) =>
@@ -1304,7 +1327,51 @@ const Home = () => {
             ),
         );
 
-        setCategories([mergedAllCategory, ...headersWithoutAll]);
+        const preferredOrder = [
+          "grocery",
+          "fashion",
+          "pharmacy",
+          "electronics",
+          "beauty",
+          "beauty & personal care",
+          "health & beauty",
+          "kids",
+          "gifts",
+          "pet care",
+          "pet supplies",
+          "sports",
+          "wedding",
+          "flower",
+          "stationary",
+          "stationery",
+          "furniture",
+          "food",
+        ];
+
+        const sortedHeaders = [...headersWithoutAll].sort((a, b) => {
+          const aName = (a.name || "").toLowerCase();
+          const bName = (b.name || "").toLowerCase();
+
+          const getOrderIndex = (name) => {
+            for (let i = 0; i < preferredOrder.length; i++) {
+              if (name.includes(preferredOrder[i]) || preferredOrder[i].includes(name)) {
+                return i;
+              }
+            }
+            return 999;
+          };
+
+          const aIdx = getOrderIndex(aName);
+          const bIdx = getOrderIndex(bName);
+
+          return aIdx - bIdx;
+        });
+
+        setCategories([
+          mergedAllCategory,
+          CATEGORIES_ANCHOR,
+          ...sortedHeaders,
+        ]);
 
         // If active category is "All", keep it in sync with admin color updates
         setActiveCategory((prev) =>
@@ -1541,7 +1608,7 @@ const Home = () => {
 
   // Filtered sections based on Active Header Category
   const filteredCategorizedSections = useMemo(() => {
-    if (!activeCategory || activeCategory._id === "all") return categorizedSections;
+    if (!activeCategory || activeCategory._id === "all" || activeCategory?.id === "categories-anchor") return categorizedSections;
     return categorizedSections.filter((section) => {
       const pId = section.parentId?._id || section.parentId;
       return pId === activeCategory._id;
@@ -1606,195 +1673,42 @@ const Home = () => {
     return entries;
   }, [effectiveQuickCategories, filteredCategorizedSections]);
 
-  const mobileHomeTiles = useMemo(() => {
-    const seenIds = new Set();
-    const subcategoryTiles = filteredCategorizedSections
-      .flatMap((section) =>
-        (section.subcategories || []).map((sub) => ({
-          id: sub._id,
-          name: sub.name,
-          image:
-            sub.image ||
-            getCategoryImage(sub.name) ||
-            "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
-          targetPath: `/category/${section._id}`,
-          targetState: { activeSubcategoryId: sub._id },
-        })),
-      )
-      .filter((tile) => {
-        if (!tile.id || seenIds.has(tile.id)) return false;
-        seenIds.add(tile.id);
-        return true;
+  // Filtered mobile discovery sections now strictly follow Level 2 -> Level 3 hierarchy
+  const mobileDiscoverySections = useMemo(() => {
+    // Map all backend-driven hierarchical sections (already filtered by activeCategory)
+    return (filteredCategorizedSections || []).map((section) => {
+      // Find products belonging to this main category
+      const matchedProducts = products.filter((p) => {
+        const pCatId = p.categoryId?._id || p.categoryId;
+        return pCatId === section._id;
       });
 
-    if (subcategoryTiles.length > 0) {
-      return subcategoryTiles.slice(0, 8);
-    }
+      // Map subcategories (Level 3) to the discovery tile format
+      const sectionTiles = (section.subcategories || []).map((sub) => ({
+        id: sub._id,
+        name: sub.name,
+        image: sub.image || getCategoryImage(sub.name) || DEFAULT_DISCOVERY_TILE_IMAGE,
+        fallbackImage: DEFAULT_DISCOVERY_TILE_IMAGE,
+        targetPath: `/category/${section._id}`,
+        targetState: { activeSubcategoryId: sub._id },
+      })).slice(0, 8); // Limit to 8 sub-category tiles per section for UI consistency
 
-    return effectiveQuickCategories.slice(0, 8).map((cat) => ({
-      id: cat.id,
-      name: cat.name,
-      image:
-        cat.image ||
-        getCategoryImage(cat.name) ||
-        "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
-      targetPath: `/category/${cat.id}`,
-      targetState: undefined,
-    }));
-  }, [effectiveQuickCategories, filteredCategorizedSections]);
-
-  const mobileDiscoverySections = useMemo(() => {
-    const primarySections = mobileHomeTiles.length
-      ? [
-          {
-            id: "primary-category-discovery",
-            title: "Daily Grocery & Kirana",
-            tiles: mobileHomeTiles,
-            products: [],
-          },
-        ]
-      : [];
-
-    const derivedSections = EXTRA_HOME_DISCOVERY_PRESETS.map((preset) => {
-      const maxTiles = preset.maxTiles || 4;
-      const productKeywords = preset.productKeywords || preset.keywords;
-      const matchedProducts = products.filter(
-        (product) =>
-          !isDiscoveryPlaceholderProduct(product) &&
-          !normalizeHomeDiscoveryText(product.name).includes("fortune") &&
-          matchesDiscoveryKeywords(
-            [
-              product.name,
-              product.categoryId?.name,
-              product.subcategoryId?.name,
-            ]
-              .filter(Boolean)
-              .join(" "),
-            productKeywords,
-          ) &&
-          !matchesDiscoveryKeywords(
-            [
-              product.name,
-              product.categoryId?.name,
-              product.subcategoryId?.name,
-            ]
-              .filter(Boolean)
-              .join(" "),
-            preset.excludedKeywords || [],
-          ),
-      );
-
-      const sortedProducts = preset.useDiscountedProducts
-        ? [...matchedProducts].sort((left, right) => {
-            const leftOriginal = Number(
-              left.originalPrice || left.price || left.salePrice || 0,
-            );
-            const leftSale = Number(left.price || left.salePrice || 0);
-            const rightOriginal = Number(
-              right.originalPrice || right.price || right.salePrice || 0,
-            );
-            const rightSale = Number(right.price || right.salePrice || 0);
-
-            return rightOriginal - rightSale - (leftOriginal - leftSale);
-          })
-        : matchedProducts;
-
-      const matchedTiles = preset.useFallbackTilesOnly
-        ? []
-        : browseEntries
-            .filter((entry) =>
-              matchesDiscoveryKeywords(entry.matchText || entry.name, preset.keywords),
-            )
-            .slice(0, maxTiles)
-            .map((entry) => ({
-              id: entry.id,
-              name: entry.name,
-              image: entry.image,
-              targetPath: entry.targetPath,
-              targetState: entry.targetState,
-            }));
-
-      const usedTileNames = new Set(
-        matchedTiles.map((tile) => normalizeHomeDiscoveryText(tile.name)),
-      );
-
-      const fallbackTiles = (preset.fallbackTiles || [])
-        .filter((tile) => !usedTileNames.has(normalizeHomeDiscoveryText(tile.name)))
-        .slice(0, Math.max(0, maxTiles - matchedTiles.length))
-        .map((tile, index) => ({
-          id: `${preset.id}-${normalizeHomeDiscoveryText(tile.name) || index}`,
-          name: tile.name,
-          image:
-            tile.image ||
-            (preset.tileImageFromProducts === false
-              ? null
-              : sortedProducts[index]?.image) ||
-            getCategoryImage(tile.query || tile.name) ||
-            DEFAULT_DISCOVERY_TILE_IMAGE,
-          fallbackImage: tile.fallbackImage || DEFAULT_DISCOVERY_TILE_IMAGE,
-          targetPath: "/search",
-          targetState: { query: tile.query || tile.name },
-        }));
-
-      const sectionProducts = (sortedProducts.length
-        ? sortedProducts
-        : preset.useDiscountedProducts
-          ? [...products]
-              .filter(
-                (product) =>
-                  !isDiscoveryPlaceholderProduct(product) &&
-                  Number(product.originalPrice || 0) > Number(product.price || 0),
-              )
-              .sort(
-                (left, right) =>
-                  Number(right.originalPrice || 0) -
-                  Number(right.price || 0) -
-                  (Number(left.originalPrice || 0) - Number(left.price || 0)),
-              )
-          : []
-      ).slice(0, 6);
-
-      const sectionTiles = [...matchedTiles, ...fallbackTiles].slice(0, maxTiles);
-
-      if (!sectionTiles.length && !sectionProducts.length) {
-        return null;
-      }
+      if (sectionTiles.length === 0 && matchedProducts.length === 0) return null;
 
       return {
-        id: preset.id,
-        title: preset.title,
-        tiles: preset.hideTiles ? [] : sectionTiles,
-        products:
-          preset.showBanner && !preset.keepProductsWithBanner
-            ? []
-            : sectionProducts,
-        productsLayout: preset.productsLayout || "scroll",
+        id: section._id,
+        title: section.name, // Level 2 Main Category Name
+        tiles: sectionTiles, // Level 3 Sub-Category Tiles
+        products: matchedProducts.slice(0, 6),
+        productsLayout: "scroll",
         banner: null,
       };
     }).filter(Boolean);
-
-    const showcaseSections = MOBILE_SHOWCASE_SECTIONS.map((section) => ({
-      ...section,
-      tiles: [],
-      banner: null,
-    }));
-
-    return [...derivedSections, ...showcaseSections];
-  }, [browseEntries, mobileHomeTiles, products]);
+  }, [filteredCategorizedSections, products, isAllCategoryActive]);
 
   const filteredMobileDiscoverySections = useMemo(() => {
-    if (isAllCategoryActive) return mobileDiscoverySections;
-
-    return mobileDiscoverySections.filter((section) =>
-      getHeaderScopedMobileSectionAliases(section.id).includes(
-        normalizedActiveHeaderCategory,
-      ),
-    );
-  }, [
-    isAllCategoryActive,
-    mobileDiscoverySections,
-    normalizedActiveHeaderCategory,
-  ]);
+    return mobileDiscoverySections;
+  }, [mobileDiscoverySections]);
 
   // Experience sections for main content (all sections; hero is separate)
   const sectionsForRenderer = useMemo(() => {
@@ -1917,17 +1831,35 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-10">
+    <div className={cn(
+      "min-h-screen pb-10 transition-colors duration-300",
+      isCategoriesAnchorActive ? "bg-[#d2e2fc]" : "bg-white"
+    )}>
       <MainHeader
         categories={categories}
         activeCategory={activeCategory}
-        onCategorySelect={setActiveCategory}
+        onCategorySelect={(cat) => {
+          if (cat.id === "categories-anchor") {
+            setActiveCategory(cat); // Now set to the anchor itself
+            
+            setTimeout(() => {
+              const el = document.getElementById("mobile-category-discovery");
+              if (el) {
+                const yOffset = -130; // Account for sticky header
+                const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                window.scrollTo({ top: y, behavior: "smooth" });
+              }
+            }, 150);
+            return;
+          }
+          setActiveCategory(cat);
+        }}
         featuredOffer={featuredOffer}
       />
-      <PromoBanner activeCategory={activeCategory} />
+      {!isCategoriesAnchorActive && <PromoBanner activeCategory={activeCategory} />}
 
       {/* Hero Banner Carousel - backend driven via HeroConfig */}
-      {heroConfig?.banners?.items?.length > 0 && (
+      {heroConfig?.banners?.items?.length > 0 && !isCategoriesAnchorActive && (
         <div className="w-full mt-2">
           <ExperienceBannerCarousel
             items={heroConfig.banners.items.filter(b => b.status !== 'inactive')}
@@ -1962,9 +1894,9 @@ const Home = () => {
 
           {/* Full-Width Category Banner Carousel - Mobile Only */}
           {isAllCategoryActive && scrollableBannerCategories.length > 0 && (
-            <div className="relative z-20 w-full overflow-visible bg-white md:hidden px-4 pt-2 pb-4">
+            <div className="relative z-20 w-full overflow-visible bg-white md:hidden pt-2 pb-4">
               <div
-                className="relative h-[160px] overflow-hidden rounded-lg shadow-lg"
+                className="relative h-[160px] overflow-hidden"
                 onMouseEnter={() => setIsHoveringCategoryBanner(true)}
                 onMouseLeave={() => setIsHoveringCategoryBanner(false)}
                 onTouchStart={handleCategoryBannerTouchStart}
@@ -1978,7 +1910,7 @@ const Home = () => {
                   {scrollableBannerCategories.map((category) => (
                     <div
                       key={category.id}
-                      className="min-w-full h-full flex-shrink-0 relative overflow-hidden rounded-lg">
+                      className="min-w-full h-full flex-shrink-0 relative overflow-hidden">
                       {/* Background Image */}
                       <img
                         src={
@@ -2017,11 +1949,10 @@ const Home = () => {
                       key={category.id}
                       whileHover={{ scale: 1.2 }}
                       onClick={() => setCategoriesBannerIndex(idx)}
-                      className={`h-2 rounded-full transition-all cursor-pointer ${
-                        idx === categoriesBannerIndex
+                      className={`h-2 rounded-full transition-all cursor-pointer ${idx === categoriesBannerIndex
                           ? "w-6 bg-white"
                           : "w-2 bg-white/50 hover:bg-white/70"
-                      }`}
+                        }`}
                       aria-label={`Go to ${category.name}`}
                     />
                   ))}
@@ -2032,292 +1963,130 @@ const Home = () => {
 
           {filteredMobileDiscoverySections.length > 0 && (
             <div
+              id="mobile-category-discovery"
               className={cn(
-                "relative z-20 bg-white md:hidden",
+                "relative z-20 bg-transparent md:hidden",
                 isAllCategoryActive ? "mt-2" : "mt-10",
               )}>
+              {/* PART 1: CATEGORY DISCOVERY (TILES) */}
               {filteredMobileDiscoverySections.map((section, sectionIndex) => {
-                const isPrimaryCategoryDiscovery =
-                  section.id === "primary-category-discovery";
-                const isSoftHeadingSection =
-                  section.id === "electronics" || section.id === "special";
-                const isDryFruitsSection = section.id === "dry-fruits";
+                if (!section.tiles || section.tiles.length === 0) return null;
 
                 return (
-                <div key={section.id}>
-                <section
-                  className={cn(
-                    "px-4",
-                    sectionIndex === 0
-                      ? isPrimaryCategoryDiscovery
-                        ? "pb-6 pt-8"
-                        : "pb-6 pt-4"
-                      : "pb-6 pt-2",
-                  )}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2
-                      className={cn(
-                        "tracking-tight text-[#1b1b1b]",
-                        isPrimaryCategoryDiscovery
-                          ? "text-[15px] font-extrabold leading-none text-[#3f3f3f]"
-                          : isDryFruitsSection
-                            ? "text-[14px] font-bold text-[#484848]"
-                          : isSoftHeadingSection
-                            ? "text-[24px] font-extrabold text-[#404040]"
-                          : "text-[24px] font-black",
-                      )}>
-                      {section.title}
+                  <div key={`${section.id}-tiles-group`}>
+                    <section className={cn("px-4", sectionIndex === 0 ? "pb-6 pt-8" : "pb-6 pt-2")}>
+                      <div className="mb-4 flex items-center justify-between">
+                        <h2 className="tracking-tight text-[#3f3f3f] text-[15px] font-extrabold leading-none">
+                          {section.title}
+                        </h2>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-x-3 gap-y-4">
+                        {section.tiles.map((tile) => (
+                          <motion.button
+                            key={tile.id}
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() =>
+                              navigate(
+                                tile.targetPath,
+                                tile.targetState ? { state: tile.targetState } : undefined,
+                              )
+                            }
+                            className="flex flex-col items-center">
+                            <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[18px] border border-[#d0b391] bg-[radial-gradient(circle_at_50%_26%,_rgba(255,255,255,0.98)_0%,_rgba(255,255,255,0.42)_36%,_rgba(255,255,255,0)_60%),linear-gradient(160deg,_#d6ab73_0%,_#8b562f_100%)] p-2.5 shadow-[inset_0_10px_18px_rgba(255,255,255,0.22),0_10px_18px_rgba(92,58,28,0.18)]">
+                              <img
+                                src={tile.image}
+                                alt={tile.name}
+                                onError={(event) => {
+                                  if (event.currentTarget.dataset.fallbackApplied === "true") return;
+                                  event.currentTarget.dataset.fallbackApplied = "true";
+                                  event.currentTarget.src = tile.fallbackImage || DEFAULT_DISCOVERY_TILE_IMAGE;
+                                }}
+                                className="h-full w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.18)]"
+                              />
+                            </div>
+                            <span
+                              className="mt-2 line-clamp-2 text-center text-[#1f1f1f] min-h-[24px] text-[10px] font-semibold leading-[1.15]">
+                              {tile.name}
+                            </span>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </section>
+
+                  </div>
+                );
+              })}
+
+              {/* PART 1.5: TOP BRANDS (Standalone for Home Page) */}
+              {isAllCategoryActive && !isCategoriesAnchorActive && (
+                <div className="py-2 mt-0">
+                  <div className="flex items-center justify-between mb-4 px-4">
+                    <h2 className="text-[17px] font-black tracking-tight text-[#111111]">
+                      Top Brands
                     </h2>
-                    {!section.banner &&
-                      !section.hideItemCount &&
-                      section.products?.length > 0 && (
-                      <span
-                        className={cn(
-                          "uppercase tracking-[0.18em] text-[#7a7a7a]",
-                          isDryFruitsSection
-                            ? "text-[9px] font-bold text-[#8a8a8a]"
-                            : "text-[10px] font-black",
-                        )}>
-                        {section.products.length} items
-                      </span>
-                      )}
+                    <span
+                      onClick={() => navigate("/offers")}
+                      className="text-[12px] font-bold text-[#111111] cursor-pointer hover:underline"
+                    >
+                      See All
+                    </span>
                   </div>
-
-                  {section.tiles.length > 0 && (
-                    <div className="grid grid-cols-4 gap-x-3 gap-y-4">
-                      {section.tiles.map((tile) => (
-                        <motion.button
-                          key={tile.id}
-                          whileTap={{ scale: 0.96 }}
-                          onClick={() =>
-                            navigate(
-                              tile.targetPath,
-                              tile.targetState ? { state: tile.targetState } : undefined,
-                            )
-                          }
-                          className="flex flex-col items-center">
-                          <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[18px] border border-[#d0b391] bg-[radial-gradient(circle_at_50%_26%,_rgba(255,255,255,0.98)_0%,_rgba(255,255,255,0.42)_36%,_rgba(255,255,255,0)_60%),linear-gradient(160deg,_#d6ab73_0%,_#8b562f_100%)] p-2.5 shadow-[inset_0_10px_18px_rgba(255,255,255,0.22),0_10px_18px_rgba(92,58,28,0.18)]">
-                            <img
-                              src={tile.image}
-                              alt={tile.name}
-                              onError={(event) => {
-                                if (
-                                  event.currentTarget.dataset.fallbackApplied === "true"
-                                ) {
-                                  return;
-                                }
-                                event.currentTarget.dataset.fallbackApplied = "true";
-                                event.currentTarget.src =
-                                  tile.fallbackImage || DEFAULT_DISCOVERY_TILE_IMAGE;
-                              }}
-                              className="h-full w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.18)]"
-                            />
-                          </div>
-                          <span
-                            className={cn(
-                              "mt-2 line-clamp-2 text-center text-[#1f1f1f]",
-                              isPrimaryCategoryDiscovery
-                                ? "min-h-[22px] px-0.5 text-[9px] font-semibold leading-[1.2] text-[#111111]"
-                                : "min-h-[24px] text-[10px] font-semibold leading-[1.15]",
-                            )}>
-                            {tile.name}
-                          </span>
-                        </motion.button>
-                      ))}
-                    </div>
-                  )}
-
-                  {section.products?.length > 0 &&
-                  section.productsLayout === "showcaseGrid" ? (
-                    <div className="mt-3 grid grid-cols-3 gap-x-2.5 gap-y-4">
-                      {section.products.filter(p => !p.badgeText).slice(0, 3).map((product) => (
-                        <motion.div
-                          key={product.id}
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() =>
-                            navigate("/search", {
-                              state: { query: product.query || product.name },
-                            })
-                          }
-                          className="min-w-0 cursor-pointer text-left">
-                          <div className="relative overflow-hidden rounded-[16px] bg-white">
-                            <div className="relative overflow-hidden rounded-[14px] border border-[#eef1f5] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.06)]">
-                              {product.badgeText && (
-                                <span className="absolute left-1.5 top-1.5 z-10 rounded-[3px] bg-black px-1.5 py-1 text-[8px] font-black uppercase tracking-[0.04em] text-white">
-                                  {product.badgeText}
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                onClick={(event) => event.stopPropagation()}
-                                className="absolute right-1 top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-sm">
-                                <Heart size={10} className="text-[#b7bfcb]" />
-                              </button>
-
-                              <div className="relative flex aspect-[0.84] items-center justify-center bg-white p-2.5">
-                                <img
-                                  src={product.image}
-                                  alt={product.name}
-                                  onError={(event) => {
-                                    if (
-                                      event.currentTarget.dataset.fallbackApplied ===
-                                      "true"
-                                    ) {
-                                      return;
-                                    }
-                                    event.currentTarget.dataset.fallbackApplied = "true";
-                                    event.currentTarget.src =
-                                      product.fallbackImage ||
-                                      buildShowcaseProductImage({
-                                        brand: product.name.split(" ")[0],
-                                        label: product.name,
-                                        kind: "default",
-                                      });
-                                  }}
-                                  className="h-full w-full object-contain"
-                                />
-                                <motion.button
-                                  type="button"
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    navigate("/search", {
-                                      state: { query: product.query || product.name },
-                                    });
-                                  }}
-                                  className="absolute bottom-1 right-1 rounded-[7px] border border-[#1f2937] bg-white px-2 py-0.5 text-[8px] font-black text-[#1f2937] shadow-[0_3px_8px_rgba(15,23,42,0.08)]">
-                                  ADD
-                                </motion.button>
-                              </div>
-                            </div>
-
-                            <div className="px-0.5 pt-1">
-                              <span className="inline-flex rounded-[4px] bg-[#f3f5f8] px-1 py-0.5 text-[7px] font-semibold text-[#4b5563]">
-                                {product.weight}
-                              </span>
-                              <h3 className="mt-1 line-clamp-2 min-h-[28px] text-[9px] font-bold leading-[1.2] text-[#111827]">
-                                {product.name}
-                              </h3>
-                              <p className="mt-0.5 text-[7px] font-extrabold uppercase tracking-[0.01em] text-[#2563eb]">
-                                {product.discountText}
-                              </p>
-                              <div className="mt-0.5 flex items-baseline gap-1">
-                                <span className="text-[10px] font-black text-[#111827]">
-                                  ₹{product.price}
-                                </span>
-                                <span className="text-[8px] font-semibold text-[#9ca3af] line-through">
-                                  ₹{product.originalPrice}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : section.products?.length > 0 && section.productsLayout === "grid3" ? (
-                    <div className="mt-4 grid grid-cols-3 gap-2.5">
-                      {section.products.slice(0, 3).map((product) => (
-                        <div key={product.id || product._id} className="min-w-0">
-                          <ProductCard
-                            product={product}
-                            compact
-                            neutralBg
-                            className="h-full min-w-0 border border-[#efe8df] shadow-[0_8px_22px_rgba(92,58,28,0.08)]"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ) : section.products?.length > 0 && (
-                    <div className="mt-5 flex gap-6 overflow-x-auto pb-1 no-scrollbar">
-                      {section.products.map((product) => (
-                        <div
-                          key={product.id || product._id}
-                          className="w-[220px] flex-shrink-0">
-                          <ProductCard
-                            product={product}
-                            compact
-                            neutralBg
-                            className="border border-[#efe8df] shadow-[0_8px_22px_rgba(92,58,28,0.08)]"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {false && section.banner && (
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate(section.banner.targetPath)}
-                      className="mt-4 block h-[168px] w-full overflow-hidden rounded-[22px] border border-[#f1dfdf] bg-[#fff4f6] shadow-[0_12px_24px_rgba(198,99,116,0.18)]">
-                      <img
-                        src={section.banner.image}
-                        alt={section.banner.alt}
-                        className="h-full w-full object-cover"
-                      />
-                    </motion.button>
-                  )}
-                </section>
-
-                {/* Top Brands between Special and Dry Fruits */}
-                {section.id === "special" && (
-                  <>
-                  <div className="py-2 mt-0">
-                    <div className="flex items-center justify-between mb-4 px-4">
-                      <h2 className="text-[17px] font-black tracking-tight text-[#111111]">
-                        Top Brands
-                      </h2>
-                      <span
-                        onClick={() => navigate("/offers")}
-                        className="text-[12px] font-bold text-[#111111] cursor-pointer hover:underline"
+                  <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 px-4 mb-2">
+                    {[
+                      { name: "Amul", image: "https://th.bing.com/th/id/OIP.AUCLmZuvxchn31YKeHMUowHaHa?w=183&h=183&c=7&r=0&o=5&pid=1.7" },
+                      { name: "Nestle", image: "https://th.bing.com/th/id/OIP.dOFDjSfy2R8-pGHpY0oRAAHaHa?w=155&h=180&c=7&r=0&o=5&pid=1.7" },
+                      { name: "Lays", image: "https://th.bing.com/th/id/OIP.asWIMrXnhPj5wTVqEonUtQHaHa?w=176&h=180&c=7&r=0&o=5&pid=1.7" },
+                      { name: "Pepsi", image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSfI3GZ6iX4qK8z5b-uXvL6wK2K3r6M3L2L1w&s" },
+                      { name: "Dove", image: "https://th.bing.com/th/id/OIP.CVn7c9g-abfYCrbbTnsE-AHaHa?w=199&h=199&c=7&r=0&o=5&pid=1.7" }
+                    ].map((brand, i) => (
+                      <div
+                        key={i}
+                        onClick={() => navigate("/search", { state: { query: brand.name } })}
+                        className="flex-shrink-0 w-[85px] h-[85px] sm:w-[110px] sm:h-[110px] rounded-[14px] border border-[#e8e8e8] bg-white flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                       >
-                        See All
-                      </span>
+                        <img src={brand.image} alt={brand.name} className="w-full h-full object-contain mix-blend-multiply" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* PART 2: CATEGORIZED PRODUCTS (BOTTOM) */}
+              {!isCategoriesAnchorActive && filteredMobileDiscoverySections.map((section) => {
+                if (!section.products || section.products.length === 0 || section.id === "primary-category-discovery") return null;
+
+                return (
+                  <div key={`${section.id}-products-group`} className="px-3 pb-8 pt-4 bg-transparent">
+                    <div className="mb-4 flex items-center justify-between px-1">
+                      <h2 className="tracking-tight text-[#111111] text-[18px] font-black leading-none">
+                        {section.title}
+                      </h2>
                     </div>
-                    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 px-4 mb-2">
-                      {[
-                        { name: "Amul", image: "https://th.bing.com/th/id/OIP.AUCLmZuvxchn31YKeHMUowHaHa?w=183&h=183&c=7&r=0&o=5&pid=1.7" },
-                        { name: "Nestle", image: "https://th.bing.com/th/id/OIP.dOFDjSfy2R8-pGHpY0oRAAHaHa?w=155&h=180&c=7&r=0&o=5&pid=1.7" },
-                        { name: "Lays", image: "https://th.bing.com/th/id/OIP.asWIMrXnhPj5wTVqEonUtQHaHa?w=176&h=180&c=7&r=0&o=5&pid=1.7" },
-                        { name: "Pepsi", image: "data:image/jpeg;base64,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" },
-                        { name: "Dove", image: "https://th.bing.com/th/id/OIP.CVn7c9g-abfYCrbbTnsE-AHaHa?w=199&h=199&c=7&r=0&o=5&pid=1.7" }
-                      ].map((brand, i) => (
-                        <div
-                          key={i}
-                          onClick={() => navigate("/search", { state: { query: brand.name } })}
-                          className="flex-shrink-0 w-[85px] h-[85px] sm:w-[110px] sm:h-[110px] rounded-[14px] border border-[#e8e8e8] bg-white flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                        >
-                          <img src={brand.image} alt={brand.name} className="w-full h-full object-contain mix-blend-multiply" />
-                        </div>
+                    <div className="grid grid-cols-3 gap-x-2 gap-y-4">
+                      {section.products.slice(0, 6).map((product) => (
+                        <ProductCard
+                          key={product.id || product._id}
+                          product={product}
+                          quickComm
+                        />
                       ))}
                     </div>
-                  </div>
 
-                  <div className="pt-2 pb-3 w-full relative">
-                    <motion.button
-                      type="button"
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() =>
-                        navigate("/search", {
-                          state: { query: "health" },
-                        })
-                      }
-                      className="block w-full overflow-hidden relative"
-                      style={{ aspectRatio: "21/9" }}>
-                      <img
-                        src={HealthBanner}
-                        alt="Healthcare banner"
-                        className="absolute inset-0 w-full h-full object-cover object-center scale-[1.25] -translate-y-1"
-                      />
-                    </motion.button>
+                    <div className="mt-6 flex justify-center">
+                      <button
+                        onClick={() => navigate(`/category/${section.id}`)}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white/40 backdrop-blur-sm py-3 text-[14px] font-bold text-gray-800 shadow-sm transition-all active:scale-95"
+                      >
+                        See All Products
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-
-                  </>
-                )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
 
 
 
@@ -2325,8 +2094,8 @@ const Home = () => {
           {filteredCategorizedSections.length > 0 && (
             <div className="relative z-20 mx-auto mb-12 mt-10 hidden w-full max-w-[1360px] space-y-10 px-4 md:block lg:px-6">
               {filteredCategorizedSections.map((section) => (
-                <motion.div 
-                  key={section._id} 
+                <motion.div
+                  key={section._id}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.2 }}
@@ -2361,7 +2130,7 @@ const Home = () => {
                           }}
                           className="flex flex-col items-center cursor-pointer group transition-all duration-300">
                           {/* Premium Brown Gradient Card with Soft White Center Glow */}
-                          <div 
+                          <div
                             className="w-full aspect-square rounded-xl shadow-md p-1.5 hover:shadow-lg transition-all duration-300 flex items-center justify-center overflow-hidden"
                             style={{
                               background: `radial-gradient(circle at center, rgba(255,255,255,0.35), transparent 60%), linear-gradient(135deg, #c89b63, #8b5e34)`,
@@ -2377,7 +2146,6 @@ const Home = () => {
                               className="w-full h-full object-contain drop-shadow-md"
                             />
                           </div>
-                          {/* Name Label Below */}
                           <p className="text-xs sm:text-sm font-medium text-gray-800 mt-1 sm:mt-2 text-center line-clamp-2 px-1 w-full">
                             {sub.name}
                           </p>
@@ -2390,206 +2158,150 @@ const Home = () => {
             </div>
           )}
 
-          {/* Best Sellers: hidden on mobile to keep the curated home flow clean */}
-          <div className="mx-auto hidden w-full max-w-[1360px] px-4 py-8 md:block lg:px-6">
-            <div className="px-0">
-              <div className="flex justify-between items-end mb-5">
-                <div className="flex flex-col">
-                  <h2 className="text-2xl font-bold text-[#1A1A1A] tracking-tight">
-                    Best Sellers
-                  </h2>
-                </div>
-                <button
-                  onClick={() => navigate("/offers")}
-                  className="text-[#2822e3] text-sm font-bold hover:underline transition-all">
-                  See all products →
-                </button>
-              </div>
-            </div>
+          {/* Categorized Products Section (Desktop) */}
+          {/* Dynamic Hierarchical Category Sections (Level 2 & 3) */}
+          {!isCategoriesAnchorActive && filteredCategorizedSections.length > 0 && (
+            <div className="mx-auto hidden w-full max-w-[1360px] px-4 py-8 md:block lg:px-6 space-y-12">
+              {filteredCategorizedSections.map((section) => {
+                // Filter products for this category
+                const sectionProducts = products.filter((p) => {
+                  const pCatId = p.categoryId?._id || p.categoryId;
+                  return pCatId === section._id;
+                });
 
-            <div className="px-0">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {products.slice(0, 5).map((product) => {
-                  const originalPrice = product.price;
-                  const salePrice = product.salePrice;
-                  const discountPercent = originalPrice && salePrice 
-                    ? Math.round(((originalPrice - salePrice) / originalPrice) * 100)
-                    : 0;
+                if (sectionProducts.length === 0) return null;
 
-                  return (
-                    <motion.div
-                      key={product.id || product._id}
-                      initial={{ opacity: 0, y: 12 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, amount: 0.2 }}
-                      transition={{ duration: 0.3 }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate(`/product/${product.id || product._id}`)}
-                      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden cursor-pointer border border-gray-200">
-                      
-                      {/* Product Image Container */}
-                      <div className="relative h-40 bg-gray-50 overflow-hidden flex items-center justify-center">
-                        {/* Bestseller Badge */}
-                        {discountPercent >= 20 && (
-                          <div className="absolute top-2 left-2 bg-gray-900 text-white px-2 py-1 rounded-sm text-xs font-bold z-10">
-                            Bestseller
-                          </div>
-                        )}
-                        
-                        {/* Discount Badge */}
-                        {discountPercent > 0 && (
-                          <div className="absolute top-2 right-2 bg-gray-900 text-white px-2 py-1 rounded-sm text-xs font-bold z-10">
-                            {discountPercent}% OFF
-                          </div>
-                        )}
-
-                        <img
-                          src={product.image || product.mainImage || "https://via.placeholder.com/200"}
-                          alt={product.name}
-                          className="w-full h-full object-contain p-2"
-                        />
-                      </div>
-
-                      {/* Product Info */}
-                      <div className="p-3">
-                        <h3 className="text-sm font-bold text-gray-900 line-clamp-2 mb-2 leading-tight">
-                          {product.name}
-                        </h3>
-
-                        {/* Weight/Size */}
-                        {product.weight && (
-                          <p className="text-xs text-gray-500 mb-2">
-                            {product.weight}
-                          </p>
-                        )}
-
-                        {/* Price Section */}
-                        <div className="flex items-baseline gap-2 mb-3">
-                          <span className="text-base font-bold text-gray-900">
-                            ₹{salePrice || originalPrice}
-                          </span>
-                          {salePrice && originalPrice > salePrice && (
-                            <span className="text-xs text-gray-400 line-through">
-                              ₹{originalPrice}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Add Button */}
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="w-full bg-black hover:bg-gray-900 text-white py-2 rounded-lg font-bold text-sm transition-all">
-                          ADD
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-
-          {/* Category-wise Products Section - HIDDEN TO REDUCE CLUTTER */}
-
-          {/* Shop by Store - Professional Redesign */}
-              {false && nearbyStores.length > 0 && (
-                <div className="py-8 mb-8">
-                  <div className="px-4 mb-6">
-                    <div className="flex justify-between items-end mb-2">
+                return (
+                  <div key={`${section._id}-products-desktop`} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="flex justify-between items-end mb-6">
                       <div className="flex flex-col">
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-1">
-                          Browse Stores
-                        </p>
-                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
-                          Shop by Store
+                        <h2 className="text-2xl font-bold text-[#1A1A1A] tracking-tight">
+                          {section.name}
                         </h2>
                       </div>
                       <button
-                        onClick={() => navigate("/stores")}
-                        className="text-gray-900 text-sm font-bold hover:underline">
-                        View all stores →
+                        onClick={() => navigate(`/category/${section._id}`)}
+                        className="text-[#2822e3] text-sm font-bold hover:underline transition-all">
+                        See all {section.name} →
                       </button>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Choose a store to explore only that store's products.
-                    </p>
-                  </div>
 
-                  <div className="px-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {nearbyStores.slice(0, 10).map((store) => (
-                        <motion.div
-                          key={store._id}
-                          initial={{ opacity: 0, y: 12 }}
-                          whileInView={{ opacity: 1, y: 0 }}
-                          viewport={{ once: true, amount: 0.2 }}
-                          transition={{ duration: 0.3 }}
-                          whileHover={{ y: -4 }}
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => navigate(`/stores/${store._id}`)}
-                          className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all border border-gray-100 cursor-pointer">
-                          
-                          {/* Verified Store Label */}
-                          <div className="px-4 pt-3 pb-0">
-                            <div className="flex items-center gap-1 mb-3">
-                              <div className="w-5 h-5 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0">
-                                <span className="text-green-700 text-xs font-bold">✓</span>
-                              </div>
-                              <span className="text-xs font-bold uppercase tracking-wider text-green-700">
-                                Verified Store
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Store Info */}
-                          <div className="p-4 pt-2">
-                            {/* Logo + Name */}
-                            <div className="flex items-start gap-3 mb-3">
-                              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <img
-                                  src={resolveStoreLogo(store)}
-                                  alt={store.shopName}
-                                  className="w-11 h-11 object-contain"
-                                />
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-base font-bold text-gray-900 line-clamp-2">
-                                  {store.shopName || store.name || "Store"}
-                                </h3>
-                              </div>
-                            </div>
-
-                            {/* Location */}
-                            <div className="flex gap-2 mb-3">
-                              <span className="text-gray-400 text-lg flex-shrink-0">📍</span>
-                              <p className="text-sm text-gray-600 line-clamp-3">
-                                {store.address || store.location?.address || "Address not available"}
-                              </p>
-                            </div>
-
-                            {/* Delivery Time & Distance */}
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                              <div className="text-xs text-gray-600 font-medium">
-                                ⏱ {store.deliveryTime || "8-12 mins"}
-                              </div>
-                              <div className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                                {store.distance ? `${store.distance.toFixed(1)} km` : "0.0 km"}
-                              </div>
-                            </div>
-
-                            {/* View Button */}
-                            <button className="w-full mt-3 bg-gray-900 hover:bg-black text-white py-2.5 rounded-lg font-semibold text-sm transition-all">
-                              View Store
-                            </button>
-                          </div>
-                        </motion.div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                      {sectionProducts.slice(0, 10).map((product) => (
+                        <div key={product.id || product._id} className="min-w-0">
+                          <ProductCard
+                            product={product}
+                            neutralBg
+                            className="h-full border border-gray-200 shadow-sm hover:shadow-lg transition-all"
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })}
             </div>
+          )}
+
+            {/* Category-wise Products Section - HIDDEN TO REDUCE CLUTTER */}
+
+            {/* Shop by Store - Professional Redesign */}
+            {false && nearbyStores.length > 0 && (
+              <div className="py-8 mb-8">
+                <div className="px-4 mb-6">
+                  <div className="flex justify-between items-end mb-2">
+                    <div className="flex flex-col">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-1">
+                        Browse Stores
+                      </p>
+                      <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+                        Shop by Store
+                      </h2>
+                    </div>
+                    <button
+                      onClick={() => navigate("/stores")}
+                      className="text-gray-900 text-sm font-bold hover:underline">
+                      View all stores →
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Choose a store to explore only that store's products.
+                  </p>
+                </div>
+
+                <div className="px-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {nearbyStores.slice(0, 10).map((store) => (
+                      <motion.div
+                        key={store._id}
+                        initial={{ opacity: 0, y: 12 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.2 }}
+                        transition={{ duration: 0.3 }}
+                        whileHover={{ y: -4 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => navigate(`/stores/${store._id}`)}
+                        className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all border border-gray-100 cursor-pointer">
+
+                        {/* Verified Store Label */}
+                        <div className="px-4 pt-3 pb-0">
+                          <div className="flex items-center gap-1 mb-3">
+                            <div className="w-5 h-5 rounded-full bg-green-200 flex items-center justify-center flex-shrink-0">
+                              <span className="text-green-700 text-xs font-bold">✓</span>
+                            </div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-green-700">
+                              Verified Store
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Store Info */}
+                        <div className="p-4 pt-2">
+                          {/* Logo + Name */}
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <img
+                                src={resolveStoreLogo(store)}
+                                alt={store.shopName}
+                                className="w-11 h-11 object-contain"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-base font-bold text-gray-900 line-clamp-2">
+                                {store.shopName || store.name || "Store"}
+                              </h3>
+                            </div>
+                          </div>
+
+                          {/* Location */}
+                          <div className="flex gap-2 mb-3">
+                            <span className="text-gray-400 text-lg flex-shrink-0">📍</span>
+                            <p className="text-sm text-gray-600 line-clamp-3">
+                              {store.address || store.location?.address || "Address not available"}
+                            </p>
+                          </div>
+
+                          {/* Delivery Time & Distance */}
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <div className="text-xs text-gray-600 font-medium">
+                              ⏱ {store.deliveryTime || "8-12 mins"}
+                            </div>
+                            <div className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                              {store.distance ? `${store.distance.toFixed(1)} km` : "0.0 km"}
+                            </div>
+                          </div>
+
+                          {/* View Button */}
+                          <button className="w-full mt-3 bg-gray-900 hover:bg-black text-white py-2.5 rounded-lg font-semibold text-sm transition-all">
+                            View Store
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           {/* Main Content Area */}
           {sectionsForRenderer.length > 0 && (
             <div className="mx-auto w-full max-w-[1360px] px-4 py-8 md:px-6 md:py-12 lg:px-6">

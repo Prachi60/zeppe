@@ -138,6 +138,7 @@ function getCategoryIcon(categoryName) {
 
     // Default
     all: LayoutGrid,
+    categories: LayoutGrid,
   };
 
   // Check for exact match
@@ -171,9 +172,10 @@ function CategoryNavColumn({
 }) {
   const isAll = cat.id === "all" || cat.slug === "all";
 
-  // Priority: 1) MUI icon from admin-set iconId, 2) Lucide fallback by name
-  const MuiIcon = !isAll && cat.iconId ? MUI_ICON_MAP[cat.iconId] : null;
-  const LucideIcon = isAll ? LayoutGrid : getCategoryIcon(cat.name);
+  // Priority: 1) Custom Image (or static image for All), 2) MUI icon, 3) Lucide fallback
+  const customImage = cat.image;
+  const MuiIcon = !isAll && !customImage && cat.iconId ? MUI_ICON_MAP[cat.iconId] : null;
+  const LucideIcon = !customImage && !MuiIcon ? (isAll ? (cat.image ? null : LayoutGrid) : getCategoryIcon(cat.name)) : null;
 
   return (
     <div
@@ -182,39 +184,51 @@ function CategoryNavColumn({
         "group relative flex min-w-[58px] shrink-0 cursor-pointer flex-col items-center justify-center gap-1 pb-1.5 transition-all duration-200 active:scale-95 md:min-w-[70px] md:gap-1.5 md:pb-1 md:hover:scale-105",
       )}>
       <div className="flex h-8 w-8 items-center justify-center md:h-12 md:w-12">
-        {MuiIcon ? (
+        {customImage ? (
+          <img
+            src={customImage}
+            alt={cat.name}
+            className={cn(
+              "h-[18px] w-[18px] object-contain transition-all duration-200 md:h-7 md:w-7",
+              isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100",
+              // Apply a grayscale filter if we want it to match the monochrome look, 
+              // but usually custom icons are meant to be seen in color.
+              !isActive && "grayscale brightness-0" 
+            )}
+          />
+        ) : MuiIcon ? (
           <MuiIcon
             className={cn(
               "transition-colors duration-200",
-              isActive ? "text-white" : "text-white/70 group-hover:text-white",
+              isActive ? "text-black" : "text-black/70 group-hover:text-black",
             )}
             style={{ fontSize: 20 }}
           />
-        ) : (
+        ) : LucideIcon ? (
           <LucideIcon
             className={cn(
               "h-[17px] w-[17px] transition-colors duration-200 md:h-6 md:w-6",
-              isActive ? "text-white" : "text-white/70 group-hover:text-white",
+              isActive ? "text-black" : "text-black/70 group-hover:text-black",
             )}
             strokeWidth={2.2}
           />
-        )}
+        ) : null}
       </div>
       <span
         className={cn(
           "whitespace-nowrap text-center text-[10px] leading-none tracking-tight transition-colors md:text-xs",
           isActive
-            ? "font-black text-white"
-            : "font-medium text-white/80 group-hover:text-white",
+            ? "font-black text-black"
+            : "font-medium text-black/70 group-hover:text-black",
         )}
-        style={isActive ? { color: "rgb(255,255,255)" } : {}}>
+        style={isActive ? { color: "rgb(0,0,0)" } : {}}>
         {cat.name}
       </span>
 
       {isActive && (
         <motion.div
           layoutId="categoryActiveBar"
-          className="absolute -bottom-0.5 w-6 h-1 rounded-full bg-white"
+          className="absolute -bottom-0.5 w-6 h-1 rounded-full bg-black"
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
         />
       )}
@@ -444,7 +458,7 @@ const MainLocationHeader = ({
         )}>
         <div
           style={{
-            backgroundImage: buildHeaderGradient(baseHeaderColor),
+            backgroundImage: buildHeaderGradient(baseHeaderColor, true),
           }}
           className="w-full z-10 rounded-none px-4 pt-[calc(env(safe-area-inset-top,_0px)+8px)] md:hidden">
           
@@ -475,11 +489,11 @@ const MainLocationHeader = ({
             </motion.button>
 
             {/* Top Row: Location only (full width) */}
-            <div className="flex flex-col py-2 pr-14 relative">
-              <div className="text-[18px] font-extrabold leading-none tracking-tight text-white/95">
-                zeppe in
+            <div className="flex flex-col pt-0.5 pb-2 pr-14 relative">
+              <div className="text-[34px] font-black leading-[0.85] tracking-tight text-black">
+                zeppe
               </div>
-              <div className="mt-0.5 text-[24px] font-extrabold leading-[0.9] tracking-[-0.04em] text-white">
+              <div className="mt-2.5 text-[16px] font-bold leading-none tracking-tight text-black/80">
                 {deliveryTimeText}
               </div>
               <div className="mt-1.5 mb-1 overflow-hidden relative w-full flex items-center h-[28px] bg-white/10 rounded-md px-2">
@@ -491,19 +505,19 @@ const MainLocationHeader = ({
                   .text-glass-flare {
                     background: linear-gradient(
                       110deg,
-                      rgba(255,255,255,0.85) 0%,
-                      rgba(255,255,255,0.85) 40%,
-                      #ffffff 48%,
-                      #ffffff 52%,
-                      rgba(255,255,255,0.85) 60%,
-                      rgba(255,255,255,0.85) 100%
+                      rgba(0,0,0,0.85) 0%,
+                      rgba(0,0,0,0.85) 40%,
+                      #000000 48%,
+                      #000000 52%,
+                      rgba(0,0,0,0.85) 60%,
+                      rgba(0,0,0,0.85) 100%
                     );
                     background-size: 200% auto;
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
                     color: transparent;
                     animation: scrollingTextShine 3s linear infinite;
-                    text-shadow: 0px 1px 2px rgba(0,0,0,0.1);
+                    text-shadow: 0px 1px 2px rgba(255,255,255,0.1);
                   }
                 `}</style>
                 <motion.div
@@ -524,20 +538,20 @@ const MainLocationHeader = ({
                 onClick={() => setIsLocationOpen(true)}
                 className="mt-1 mb-1 flex items-center gap-0.5 border-0 bg-transparent p-0 text-left relative z-10 hover:opacity-80 max-w-[260px] sm:max-w-[320px] overflow-hidden">
                 {showDetailedAddress ? (
-                  <span className="text-[13px] sm:text-[14px] font-medium tracking-wide text-white/95 truncate">
+                  <span className="text-[13px] sm:text-[14px] font-medium tracking-wide text-black/95 truncate">
                     {addressString}
                   </span>
                 ) : (
                   <>
-                    <span className="text-[14px] font-bold uppercase tracking-[0.04em] text-white/90">
+                    <span className="text-[14px] font-bold uppercase tracking-[0.04em] text-black/90">
                       HOME
                     </span>
-                    <span className="text-[12px] font-bold tracking-[0.04em] text-white/90 whitespace-nowrap">
+                    <span className="text-[12px] font-bold tracking-[0.04em] text-black/90 whitespace-nowrap">
                       - {promptText}
                     </span>
                   </>
                 )}
-                <ChevronDownIcon sx={{ fontSize: 14, opacity: 0.9, color: "#FFFFFF" }} className="shrink-0" />
+                <ChevronDownIcon sx={{ fontSize: 14, opacity: 0.9, color: "#000000" }} className="shrink-0" />
               </button>
             </div>
 
@@ -556,18 +570,18 @@ const MainLocationHeader = ({
             backgroundImage:
               isDesktopViewport || isScrolled
                 ? "none"
-                : buildHeaderGradient(baseHeaderColor),
+                : buildHeaderGradient(baseHeaderColor, false),
             backgroundColor: isDesktopViewport
               ? "#ffffff"
               : isScrolled
-                ? "#0f0f0f"
+                ? baseHeaderColor
                 : "transparent",
             transition: "all 0.3s ease"
           }}
           className={cn(
             "w-full z-10 rounded-b-none px-4 pb-0 md:rounded-none md:pt-4 md:pb-3 md:border-b md:border-black/10 transition-all duration-300 border-b-0",
             isScrolled && !isDesktopViewport
-              ? "shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+              ? "shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-b-[24px]"
               : "shadow-none"
           )}>
 
@@ -645,7 +659,10 @@ const MainLocationHeader = ({
           </div>
 
           {/* Bottom Row: 60/40 Split Search & Refer/Earn — sticky compact on scroll */}
-          <div className="md:hidden flex items-center gap-2.5 pt-0 pb-0 w-full">
+          <div className={cn(
+            "md:hidden flex items-center gap-2.5 pt-0 pb-0 w-full",
+            isScrolled && "pt-2.5"
+          )}>
               <div className="flex-[0.55]">
                 <div
                   onClick={handleSearchClick}
