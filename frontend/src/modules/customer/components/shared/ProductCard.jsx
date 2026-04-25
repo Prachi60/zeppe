@@ -168,53 +168,54 @@ const ProductCard = React.memo(
         <motion.div
           whileTap={{ scale: 0.98 }}
           className={cn(
-            "group flex flex-col w-full h-full bg-white rounded-xl overflow-hidden transition-all duration-200",
+            "group flex flex-col w-full h-full bg-white rounded-2xl overflow-hidden transition-all duration-300 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-gray-100",
             className
           )}
           onClick={handleProductClick}
         >
-          {/* Top Section: Image + Wishlist + Floating ADD */}
-          <div className="relative aspect-[1/1.1] w-full p-1.5 sm:p-2 bg-gray-50/50 rounded-xl">
-            {/* Discount Badge */}
+          {/* Top Section: Image + Badge + Floating ADD */}
+          <div className="relative aspect-square w-full p-2 sm:p-3 bg-[#f8f9fa] overflow-visible">
+            {/* Discount Badge - Orange with White Gradient */}
             {product.originalPrice > product.price && (
-              <div className="absolute top-0 left-0 z-10 bg-[#2563eb] text-white text-[8px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-br-lg shadow-sm">
-                {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+              <div className="absolute top-0 left-0 z-10 bg-gradient-to-br from-[#ff6b00] via-[#ff8c00] to-[#ff9f1c] text-white text-[10px] font-black px-2.5 py-1 rounded-br-xl shadow-lg border-b border-r border-white/20">
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
+                <span className="relative z-10">{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF</span>
               </div>
             )}
 
             {/* Wishlist Heart */}
             <button
               onClick={toggleWishlist}
-              className="absolute top-1 right-1 z-10 p-1 rounded-full bg-white/80 shadow-sm active:scale-90"
+              className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/90 backdrop-blur-sm shadow-sm active:scale-90 hover:bg-white transition-colors"
             >
               <Heart
-                size={12}
+                size={14}
                 className={cn(isWishlisted ? "text-red-500 fill-current" : "text-gray-400")}
               />
             </button>
 
             {/* Product Image */}
-            <div className="w-full h-full flex items-center justify-center mix-blend-multiply">
+            <div className="w-full h-full flex items-center justify-center">
               <img
                 ref={imageRef}
                 src={product.image}
                 alt={product.name}
-                className="w-full h-full object-contain drop-shadow-sm transition-transform group-hover:scale-105"
+                className="w-[85%] h-[85%] object-contain drop-shadow-md transition-transform duration-500 group-hover:scale-110"
               />
             </div>
 
-            {/* Floating ADD Button - Overlapping Image Bottom Right */}
-            <div className="absolute -bottom-1 -right-1 z-20">
+            {/* Floating ADD Button - Fixed Clipping & Orange Border */}
+            <div className="absolute bottom-2 right-2 z-20">
               {quantity > 0 ? (
-                <div className="flex items-center bg-white border border-gray-200 rounded-lg h-7 min-w-[60px] shadow-md overflow-hidden">
-                  <button onClick={handleDecrement} className="px-1.5 py-1 text-gray-500 hover:bg-gray-50"><Minus size={10} strokeWidth={3} /></button>
-                  <span className="text-[11px] font-bold text-gray-800 flex-1 text-center">{quantity}</span>
-                  <button onClick={handleIncrement} className="px-1.5 py-1 text-gray-500 hover:bg-gray-50"><Plus size={10} strokeWidth={3} /></button>
+                <div className="flex items-center bg-white border-2 border-[#ff6b00] rounded-xl h-8 min-w-[70px] shadow-lg overflow-hidden">
+                  <button onClick={handleDecrement} className="px-2 py-1 text-[#ff6b00] hover:bg-orange-50 transition-colors"><Minus size={11} strokeWidth={3} /></button>
+                  <span className="text-xs font-black text-gray-900 flex-1 text-center">{quantity}</span>
+                  <button onClick={handleIncrement} className="px-2 py-1 text-[#ff6b00] hover:bg-orange-50 transition-colors"><Plus size={11} strokeWidth={3} /></button>
                 </div>
               ) : (
                 <button
                   onClick={handleAddToCart}
-                  className="bg-white text-black border border-gray-200 text-[10px] font-bold px-3 h-7 rounded-lg shadow-md hover:bg-gray-50 active:scale-95 transition-all"
+                  className="bg-white text-[#ff6b00] border-2 border-[#ff6b00] text-[11px] font-black px-4 h-8 rounded-xl shadow-lg hover:bg-[#ff6b00] hover:text-white transition-all active:scale-95 flex items-center justify-center tracking-tight"
                 >
                   ADD
                 </button>
@@ -223,33 +224,65 @@ const ProductCard = React.memo(
           </div>
 
           {/* Info Section */}
-          <div className="flex flex-col flex-1 p-1.5 sm:p-2 gap-0.5">
-            {/* Weight/Unit */}
-            <div className="flex items-center gap-1">
-              <div className="h-2 w-2 border border-gray-300 rounded-full flex items-center justify-center">
-                <div className="h-1 w-1 bg-gray-400 rounded-full" />
+          <div className="flex flex-col flex-1 p-3 gap-1">
+            {/* Ratings & Weight Row */}
+            <div className="flex items-center justify-between mb-1">
+              {/* Ratings */}
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star 
+                    key={star} 
+                    size={10} 
+                    className={cn(
+                      "transition-all",
+                      star <= Math.round(product.ratings || 4.5) 
+                        ? "text-yellow-400 fill-current" 
+                        : "text-gray-200 fill-current"
+                    )} 
+                  />
+                ))}
+                <span className="text-[10px] font-black text-gray-400 ml-1">({product.ratings || "4.5"})</span>
               </div>
-              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tight">
-                {product.weight || "1 unit"}
-              </span>
+              
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 border-[1.5px] border-gray-400 rounded-full flex items-center justify-center">
+                  <div className="h-0.5 w-0.5 bg-gray-500 rounded-full" />
+                </div>
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                  {product.weight || "1 unit"}
+                </span>
+              </div>
             </div>
 
             {/* Product Name */}
-            <h4 className="text-[11px] sm:text-[12px] font-bold text-gray-800 leading-[1.2] line-clamp-2 min-h-[1.5rem] sm:min-h-[1.8rem]">
+            <h4 className="text-[12px] sm:text-[13px] font-bold text-gray-900 leading-tight line-clamp-2 min-h-[2.2rem]">
               {product.name}
             </h4>
 
-            {/* Price Block */}
-            <div className="mt-auto pt-1">
-              <div className="flex items-baseline gap-1 flex-wrap">
-                <span className="text-[13px] sm:text-[14px] font-[900] text-gray-900">₹{product.price}</span>
+            {/* Price & Delivery Block */}
+            <div className="mt-auto pt-2 border-t border-gray-50 flex flex-col gap-1.5">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[16px] font-black text-gray-900">₹{product.price}</span>
                 {product.originalPrice > product.price && (
-                  <span className="text-[10px] font-medium text-gray-400 line-through">₹{product.originalPrice}</span>
+                  <span className="text-[11px] font-bold text-gray-400 line-through">₹{product.originalPrice}</span>
                 )}
               </div>
-              {/* Optional: Delivery Time in tiny text */}
-              <div className="flex items-center gap-1 text-[8px] text-gray-400 font-medium">
-                <Clock size={8} /> <span>{product.deliveryTime || "8-12 mins"}</span>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center h-4 w-4 bg-orange-50 rounded-full">
+                    <Clock size={10} className="text-orange-500" />
+                  </div>
+                  <span className="text-[9px] font-black text-orange-600 uppercase tracking-tighter">
+                    {product.deliveryTime || "8-15 mins"}
+                  </span>
+                </div>
+
+                {product.originalPrice > product.price && (
+                  <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded shadow-sm">
+                    SAVE ₹{product.originalPrice - product.price}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -261,49 +294,52 @@ const ProductCard = React.memo(
       <motion.div
         whileTap={{ scale: 0.97 }}
         className={cn(
-          "group flex h-full w-full flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-100/60 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition-all duration-300 hover:border-[#9edcf3] hover:bg-[#f7fcff] hover:shadow-[0_10px_26_rgba(69,176,226,0.14)] focus-within:border-[#74c8ea] focus-within:bg-[#f7fcff]",
+          "group flex h-full w-full flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-all duration-300 hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)] hover:border-orange-100",
           className,
         )}
         onClick={handleProductClick}>
         {/* Top Image Section */}
         <div
           className={cn(
-            "relative pb-0",
+            "relative",
             storeWide ? "p-3" : microCompact ? "p-1.5" : compact ? "p-2" : "p-3",
           )}>
-          {/* Badge (Custom or Discount) */}
+          {/* Badge (Custom or Discount) - Orange with White Gradient */}
           {(badge ||
             product.discount ||
             product.originalPrice > product.price) && (
               <div
                 className={cn(
-                  "absolute z-10 bg-black text-white font-bold rounded-full shadow-sm uppercase tracking-wider flex items-center justify-center top-2 left-2 px-2 py-1 text-[9px]",
+                  "absolute z-10 bg-gradient-to-br from-[#ff6b00] via-[#ff8c00] to-[#ff9f1c] text-white font-black rounded-br-xl shadow-lg uppercase tracking-wider flex items-center justify-center top-0 left-0 px-3 py-1 text-[11px] border-b border-r border-white/20",
                 )}>
-                {badge ||
-                  product.discount ||
-                  `${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF`}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent pointer-events-none" />
+                <span className="relative z-10">
+                  {badge ||
+                    product.discount ||
+                    `${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF`}
+                </span>
               </div>
             )}
 
           <button
             onClick={toggleWishlist}
             className={cn(
-              "absolute z-10 bg-white/90 backdrop-blur-sm rounded-full shadow-md flex items-center justify-center cursor-pointer hover:bg-white transition-all active:scale-90",
+              "absolute z-10 bg-white/90 backdrop-blur-sm rounded-full shadow-sm flex items-center justify-center cursor-pointer hover:bg-white transition-all active:scale-90",
               microCompact
-                ? "top-1.5 right-1.5 h-5 w-5"
+                ? "top-1.5 right-1.5 h-6 w-6"
                 : compact
                   ? "top-2 right-2 h-7 w-7"
-                  : "top-3 right-3 h-8 w-8",
+                  : "top-3 right-3 h-9 w-9",
             )}>
             <motion.div
               whileTap={{ scale: 0.8 }}
               animate={isWishlisted ? { scale: [1, 1.2, 1] } : {}}>
               <Heart
-                size={microCompact ? 10 : compact ? 13 : 16}
+                size={microCompact ? 12 : compact ? 14 : 18}
                 className={cn(
                   isWishlisted
                     ? "text-red-500 fill-current"
-                    : "text-neutral-400",
+                    : "text-neutral-300",
                 )}
               />
             </motion.div>
@@ -324,7 +360,7 @@ const ProductCard = React.memo(
 
           <div
             className={cn(
-              "block w-full overflow-hidden rounded-lg bg-gray-50 transition-all duration-300 group-hover:scale-[1.02] group-hover:bg-[#f2faff] flex items-center justify-center",
+              "block w-full overflow-hidden rounded-xl bg-[#f8f9fa] transition-all duration-500 group-hover:scale-[1.03] flex items-center justify-center",
               storeWide
                 ? "h-36 rounded-2xl p-2 sm:h-40"
                 : microCompact
@@ -335,7 +371,7 @@ const ProductCard = React.memo(
               ref={imageRef}
               src={product.image}
               alt={product.name}
-              className="w-full h-full object-contain mix-blend-multiply drop-shadow-sm"
+              className="w-[85%] h-[85%] object-contain drop-shadow-md"
             />
           </div>
         </div>
@@ -352,43 +388,19 @@ const ProductCard = React.memo(
                   ? "p-3 pt-1 gap-1"
                   : "p-4 pt-2 gap-1.5",
           )}>
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <div
-              className={cn(
-                "border border-gray-400/30 rounded-full flex items-center justify-center",
-                storeWide
-                  ? "h-3 w-3"
-                  : microCompact
-                    ? "h-2 w-2"
-                    : compact
-                      ? "h-2.5 w-2.5"
-                      : "h-3.5 w-3.5",
-              )}>
-              <div
-                className={cn(
-                  "bg-gray-400 rounded-full",
-                  storeWide
-                    ? "h-1 w-1"
-                    : microCompact
-                      ? "h-0.5 w-0.5"
-                      : compact
-                        ? "h-1 w-1"
-                        : "h-1.5 w-1.5",
-                )}
-              />
+          <div className="flex items-center justify-between mb-0.5">
+            <div className="flex items-center gap-1.5">
+              <div className="h-2.5 w-2.5 border-[1.5px] border-gray-400 rounded-full flex items-center justify-center">
+                <div className="h-0.5 w-0.5 bg-gray-500 rounded-full" />
+              </div>
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-tight">
+                {product.weight || "1 unit"}
+              </span>
             </div>
-            <div
-              className={cn(
-                "bg-gray-100 text-gray-500 font-semibold rounded px-1.5 py-0.5",
-                storeWide
-                  ? "text-[9px]"
-                  : microCompact
-                    ? "text-[7px]"
-                    : compact
-                      ? "text-[8px]"
-                      : "text-[10px]",
-              )}>
-              {product.weight || "1 unit"}
+            
+            <div className="flex items-center gap-0.5 bg-green-50 px-1.5 py-0.5 rounded-md">
+              <Star size={9} className="text-green-600 fill-current" />
+              <span className="text-[10px] font-black text-green-700">{product.ratings || "4.5"}</span>
             </div>
           </div>
 
@@ -398,48 +410,50 @@ const ProductCard = React.memo(
             )}>
             <h4
               className={cn(
-                "font-bold text-[#1A1A1A] leading-tight line-clamp-2",
+                "font-bold text-gray-900 leading-tight line-clamp-2",
                 storeWide
                   ? "text-sm"
                   : microCompact
-                    ? "text-[10px]"
+                    ? "text-[11px]"
                     : compact
                       ? "text-[13px]"
-                      : "text-sm",
+                      : "text-[15px]",
               )}>
               {product.name}
             </h4>
           </div>
 
-          {/* Delivery Time & Unit info */}
-          <div className="mb-2 flex items-center gap-1.5 text-gray-400">
-            <Clock
-              size={storeWide ? 11 : microCompact ? 8 : compact ? 10 : 12}
-              className="text-gray-400/60"
-            />
+          {/* Delivery Time info */}
+          <div className="flex items-center gap-1 text-orange-600 mb-2">
+            <div className="flex items-center justify-center h-4 w-4 bg-orange-50 rounded-full">
+              <Clock
+                size={storeWide ? 10 : microCompact ? 8 : compact ? 9 : 11}
+                className="text-orange-500"
+              />
+            </div>
             <span
               className={cn(
-                "font-medium",
+                "font-black uppercase tracking-tighter",
                 storeWide
-                  ? "text-[10px]"
+                  ? "text-[9px]"
                   : microCompact
-                    ? "text-[8px]"
+                    ? "text-[7px]"
                     : compact
-                      ? "text-[9px]"
-                      : "text-[11px]",
+                      ? "text-[8px]"
+                      : "text-[10px]",
               )}>
               {product.deliveryTime || "8-12 mins"}
             </span>
           </div>
 
           {/* Price Row / ADD Button Combination */}
-          <div className="mt-auto flex items-center justify-between gap-1.5">
+          <div className="mt-auto flex items-center justify-between gap-1.5 border-t border-gray-50 pt-2">
             <div className="flex flex-col">
-              <span className="text-[15px] font-bold text-[#1A1A1A] leading-none">
+              <span className="text-base font-black text-gray-900 leading-none">
                 ₹{product.price}
               </span>
               {product.originalPrice > product.price && (
-                <span className="text-[11px] font-medium text-gray-400 line-through mt-0.5">
+                <span className="text-[11px] font-bold text-gray-400 line-through mt-0.5">
                   ₹{product.originalPrice}
                 </span>
               )}
@@ -450,24 +464,24 @@ const ProductCard = React.memo(
               {quantity > 0 ? (
                 <div
                   className={cn(
-                    "flex items-center bg-white border border-gray-400 rounded-lg p-0.5 justify-between shadow-sm",
+                    "flex items-center bg-white border-2 border-[#ff6b00] rounded-xl p-0.5 justify-between shadow-md",
                     storeWide ? "min-w-[84px]" : compact ? "min-w-[64px]" : "min-w-[90px]",
                   )}>
                   <button
                     onClick={handleDecrement}
-                    className="p-1 px-1.5 text-gray-600 active:scale-90 transition-transform">
+                    className="p-1 px-1.5 text-[#ff6b00] active:scale-90 transition-transform">
                     <Minus size={storeWide ? 13 : compact ? 12 : 14} strokeWidth={3} />
                   </button>
                   <span
                     className={cn(
-                      "font-bold text-gray-700",
+                      "font-black text-gray-900",
                       storeWide ? "text-sm" : compact ? "text-xs" : "text-sm",
                     )}>
                     {quantity}
                   </span>
                   <button
                     onClick={handleIncrement}
-                    className="p-1 px-1.5 text-gray-600 active:scale-90 transition-transform">
+                    className="p-1 px-1.5 text-[#ff6b00] active:scale-90 transition-transform">
                     <Plus size={storeWide ? 13 : compact ? 12 : 14} strokeWidth={3} />
                   </button>
                 </div>
@@ -476,12 +490,12 @@ const ProductCard = React.memo(
                   whileTap={{ scale: 0.95 }}
                   onClick={handleAddToCart}
                   className={cn(
-                    "bg-black text-white rounded-full font-bold transition-all",
+                    "bg-white text-[#ff6b00] border-2 border-[#ff6b00] rounded-xl font-black shadow-md hover:bg-[#ff6b00] hover:text-white transition-all",
                     storeWide
                       ? "px-4 py-1.5 text-[10px]"
                       :
                       compact
-                        ? "px-4 py-1.5 text-[10px]"
+                        ? "px-4 py-1.5 text-[11px]"
                         : "px-6 py-2 text-xs",
                   )}>
                   ADD

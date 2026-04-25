@@ -1001,6 +1001,21 @@ const getHeaderScopedMobileSectionAliases = (sectionId) => {
   }
 };
 
+const MANUAL_SUBCAT_ORDER = [
+  "Vegetables",
+  "Fresh Fruits",
+  "Rice, Dals & Atta",
+  "Masala, Oil & Ghee",
+  "Frozen Food",
+  "Milk, Bakery & Eggs",
+  "Biscuits & Cookies",
+  "Cereals & Nuts",
+  "Dry Fruits",
+  "Sweets",
+  "Puja Samagri",
+  "Kitchen Tools & Appliances"
+];
+
 const Home = () => {
   const { scrollY } = useScroll();
   const { isOpen: isProductDetailOpen } = useProductDetail();
@@ -1373,10 +1388,14 @@ const Home = () => {
           ...sortedHeaders,
         ]);
 
-        // If active category is "All", keep it in sync with admin color updates
-        setActiveCategory((prev) =>
-          !prev || prev._id === "all" ? mergedAllCategory : prev,
-        );
+        // If active category is "All", keep it in sync with admin color updates.
+        // DO NOT overwrite if we are currently in "Categories" state.
+        setActiveCategory((prev) => {
+          if (prev && (prev._id === "categories-anchor" || prev.id === "categories-anchor")) {
+            return prev;
+          }
+          return !prev || prev._id === "all" ? mergedAllCategory : prev;
+        });
 
         // If we have a stored header to restore (coming back from a category page), set it
         const stored = window.sessionStorage.getItem("experienceReturn");
@@ -1397,13 +1416,28 @@ const Home = () => {
         const subCategories = dbCats.filter((cat) => cat.type === "subcategory");
 
         const hierarchy = mainCategories
-          .map((mc) => ({
-            ...mc,
-            subcategories: subCategories.filter((sc) => {
-              const pId = sc.parentId?._id || sc.parentId || sc.categoryId?._id || sc.categoryId;
-              return pId === mc._id;
-            }),
-          }))
+          .map((mc) => {
+            const parentId = mc.parentId?._id || mc.parentId || mc.categoryId?._id || mc.categoryId;
+            const parentHeader = formattedHeaders.find(h => h._id === parentId);
+            
+            return {
+              ...mc,
+              headerColor: mc.headerColor || parentHeader?.headerColor,
+              subcategories: subCategories
+                .filter((sc) => {
+                  const pId = sc.parentId?._id || sc.parentId || sc.categoryId?._id || sc.categoryId;
+                  return pId === mc._id;
+                })
+                .sort((a, b) => {
+                  const idxA = MANUAL_SUBCAT_ORDER.indexOf(a.name);
+                  const idxB = MANUAL_SUBCAT_ORDER.indexOf(b.name);
+                  if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                  if (idxA !== -1) return -1;
+                  if (idxB !== -1) return 1;
+                  return new Date(b.createdAt) - new Date(a.createdAt);
+                }),
+            };
+          })
           .filter((section) => section.subcategories.length > 0)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -1479,6 +1513,13 @@ const Home = () => {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // 4. Update Header when activeCategory changes
+  useEffect(() => {
+    if (activeCategory) {
+      document.title = `${activeCategory.name} | Zeppe`;
+    }
+  }, [activeCategory]);
 
   // Fetch header-specific experience sections when active header category changes
   useEffect(() => {
@@ -1691,13 +1732,14 @@ const Home = () => {
         fallbackImage: DEFAULT_DISCOVERY_TILE_IMAGE,
         targetPath: `/category/${section._id}`,
         targetState: { activeSubcategoryId: sub._id },
-      })).slice(0, 8); // Limit to 8 sub-category tiles per section for UI consistency
+      }));
 
       if (sectionTiles.length === 0 && matchedProducts.length === 0) return null;
 
       return {
         id: section._id,
         title: section.name, // Level 2 Main Category Name
+        headerColor: section.headerColor, // Ensure theme color is passed down
         tiles: sectionTiles, // Level 3 Sub-Category Tiles
         products: matchedProducts.slice(0, 6),
         productsLayout: "scroll",
@@ -1860,7 +1902,7 @@ const Home = () => {
 
       {/* Hero Banner Carousel - backend driven via HeroConfig */}
       {heroConfig?.banners?.items?.length > 0 && !isCategoriesAnchorActive && (
-        <div className="w-full mt-2">
+        <div className="w-full">
           <ExperienceBannerCarousel
             items={heroConfig.banners.items.filter(b => b.status !== 'inactive')}
             fullWidth={true}
@@ -1894,7 +1936,7 @@ const Home = () => {
 
           {/* Full-Width Category Banner Carousel - Mobile Only */}
           {isAllCategoryActive && scrollableBannerCategories.length > 0 && (
-            <div className="relative z-20 w-full overflow-visible bg-white md:hidden pt-2 pb-4">
+            <div className="relative z-20 w-full overflow-visible bg-white md:hidden pt-0 pb-4">
               <div
                 className="relative h-[160px] overflow-hidden"
                 onMouseEnter={() => setIsHoveringCategoryBanner(true)}
@@ -1966,7 +2008,7 @@ const Home = () => {
               id="mobile-category-discovery"
               className={cn(
                 "relative z-20 bg-transparent md:hidden",
-                isAllCategoryActive ? "mt-2" : "mt-10",
+                isAllCategoryActive ? "mt-2" : "mt-2",
               )}>
               {/* PART 1: CATEGORY DISCOVERY (TILES) */}
               {filteredMobileDiscoverySections.map((section, sectionIndex) => {
@@ -1993,7 +2035,16 @@ const Home = () => {
                               )
                             }
                             className="flex flex-col items-center">
-                            <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[18px] border border-[#d0b391] bg-[radial-gradient(circle_at_50%_26%,_rgba(255,255,255,0.98)_0%,_rgba(255,255,255,0.42)_36%,_rgba(255,255,255,0)_60%),linear-gradient(160deg,_#d6ab73_0%,_#8b562f_100%)] p-2.5 shadow-[inset_0_10px_18px_rgba(255,255,255,0.22),0_10px_18px_rgba(92,58,28,0.18)]">
+                            <div 
+                              className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[18px] border p-2.5 shadow-md transition-all duration-300"
+                              style={{
+                                borderColor: (isAllCategoryActive || isCategoriesAnchorActive) ? "#e67e22" : (section.headerColor ? shiftHex(section.headerColor, -20) : "#d0b391"),
+                                background: (isAllCategoryActive || isCategoriesAnchorActive)
+                                  ? `radial-gradient(circle at center, rgba(255,255,255,0.65) 0%, transparent 80%), linear-gradient(160deg, #FF9F1C 0%, #e67e22 100%)`
+                                  : `radial-gradient(circle at center, rgba(255,255,255,0.65) 0%, transparent 80%), linear-gradient(160deg, ${section.headerColor || "#d6ab73"} 0%, ${shiftHex(section.headerColor || "#8b562f", -40)} 100%)`,
+                                boxShadow: `inset 0 8px 16px rgba(255,255,255,0.25), 0 4px 10px rgba(0,0,0,0.12)`
+                              }}
+                            >
                               <img
                                 src={tile.image}
                                 alt={tile.name}
@@ -2002,7 +2053,7 @@ const Home = () => {
                                   event.currentTarget.dataset.fallbackApplied = "true";
                                   event.currentTarget.src = tile.fallbackImage || DEFAULT_DISCOVERY_TILE_IMAGE;
                                 }}
-                                className="h-full w-full object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.18)]"
+                                className="h-full w-full object-contain drop-shadow-[0_8px_8px_rgba(0,0,0,0.15)]"
                               />
                             </div>
                             <span
@@ -2063,7 +2114,7 @@ const Home = () => {
                         {section.title}
                       </h2>
                     </div>
-                    <div className="grid grid-cols-3 gap-x-2 gap-y-4">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-4">
                       {section.products.slice(0, 6).map((product) => (
                         <ProductCard
                           key={product.id || product._id}

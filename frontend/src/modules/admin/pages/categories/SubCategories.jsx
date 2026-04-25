@@ -196,7 +196,9 @@ const SubCategories = () => {
       }
 
       if (editingItem) {
-        await adminApi.updateCategory(editingItem._id || editingItem.id, data);
+        await adminApi.updateCategory(editingItem._id || editingItem.id, data, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
         toast.success("Subcategory updated");
       } else {
         await adminApi.createCategory(data);
@@ -206,8 +208,9 @@ const SubCategories = () => {
       setEditingItem(null);
       fetchCategories();
     } catch (error) {
-      console.error(error);
-      toast.error(editingItem ? "Failed to update" : "Failed to create");
+      console.error("Subcategory save error:", error);
+      const message = error.response?.data?.message || error.message || (editingItem ? "Failed to update" : "Failed to create");
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

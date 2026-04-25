@@ -137,7 +137,7 @@ function getCategoryIcon(categoryName) {
     drinks: Coffee,
 
     // Default
-    all: LayoutGrid,
+    all: Home,
     categories: LayoutGrid,
   };
 
@@ -170,12 +170,27 @@ function CategoryNavColumn({
   onCategorySelect,
   activeColor,
 }) {
-  const isAll = cat.id === "all" || cat.slug === "all";
+  const isAll = cat.id === "all" || cat._id === "all" || cat.slug === "all";
+  const isCategories = cat.id === "categories-anchor" || cat._id === "categories-anchor" || cat.slug === "categories";
 
-  // Priority: 1) Custom Image (or static image for All), 2) MUI icon, 3) Lucide fallback
-  const customImage = cat.image;
-  const MuiIcon = !isAll && !customImage && cat.iconId ? MUI_ICON_MAP[cat.iconId] : null;
-  const LucideIcon = !customImage && !MuiIcon ? (isAll ? (cat.image ? null : LayoutGrid) : getCategoryIcon(cat.name)) : null;
+  // Priority: 1) Special tabs (All, Categories) use Icons, 2) Custom Image, 3) MUI icon, 4) Lucide fallback
+  let customImage = cat.image;
+  let LucideIcon = null;
+  let MuiIcon = null;
+
+  if (isAll) {
+    LucideIcon = Home;
+    customImage = null; // Don't use the broken image for All
+  } else if (isCategories) {
+    LucideIcon = LayoutGrid;
+    customImage = null; // Don't use the broken image for Categories
+  } else if (customImage) {
+    // Keep customImage as is
+  } else if (cat.iconId) {
+    MuiIcon = MUI_ICON_MAP[cat.iconId];
+  } else {
+    LucideIcon = getCategoryIcon(cat.name);
+  }
 
   return (
     <div
@@ -727,7 +742,7 @@ const MainLocationHeader = ({
               <div
                 className="no-scrollbar relative z-20 mt-0 flex min-h-[52px] items-center gap-2 overflow-x-auto pt-0 pb-0 scroll-smooth md:hidden border-t-0 border-b-0 shadow-none">
                 {categories.map((cat) => {
-                  const isActive = activeCategory?.id === cat.id;
+                  const isActive = (activeCategory?._id || activeCategory?.id) === (cat._id || cat.id);
                   return (
                     <CategoryNavColumn
                       key={cat.id}

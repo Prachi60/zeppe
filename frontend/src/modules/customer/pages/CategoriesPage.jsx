@@ -1,250 +1,202 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import MainLocationHeader from "../components/shared/MainLocationHeader";
+import axiosInstance from "@core/api/axios";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { getCategoryImage } from "@/shared/constants/categoryImageMap";
 
-import { customerApi } from '../services/customerApi';
-import MainHeader from '../components/shared/MainHeader';
-import { getCategoryLocation, navigateToCategory } from '../utils/categoryNavigation';
+const DEFAULT_DISCOVERY_TILE_IMAGE = "/FortuneSugarPack.png";
 
-const COLORS = [
-    "#F2EEE4", "#EFE7E2", "#EAF1F4", "#F0E8F2",
-    "#EAF4EC", "#F5F1E6", "#EEF2F6", "#F2EEF5"
+const MANUAL_SUBCAT_ORDER = [
+  "Vegetables",
+  "Fresh Fruits",
+  "Rice, Dals & Atta",
+  "Masala, Oil & Ghee",
+  "Frozen Food",
+  "Milk, Bakery & Eggs",
+  "Biscuits & Cookies",
+  "Cereals & Nuts",
+  "Dry Fruits",
+  "Sweets",
+  "Puja Samagri",
+  "Kitchen Tools & Appliances"
 ];
 
+const CATEGORIES_ANCHOR = {
+  id: "categories-anchor",
+  _id: "categories-anchor",
+  name: "Categories",
+  slug: "categories",
+  image: "/assets/categories-icon.png", // Placeholder
+};
+
 const CategoriesPage = () => {
-    const navigate = useNavigate();
-    const [groups, setGroups] = useState([]);
-    const [headerCategories, setHeaderCategories] = useState([]);
-    const [activeHeaderCategory, setActiveHeaderCategory] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [columnsPerRow, setColumnsPerRow] = useState(() => {
-        if (typeof window === 'undefined') return 4;
-        if (window.innerWidth >= 1024) return 8;
-        if (window.innerWidth >= 768) return 6;
-        return 4;
+  const navigate = useNavigate();
+  const [categories, setCategories] = useState([]);
+  const [categorizedSections, setCategorizedSections] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [catRes] = await Promise.all([
+        axiosInstance.get("/admin/categories"),
+      ]);
+
+      if (catRes.data.success) {
+        const dbCats = catRes.data.results || [];
+        const mainCategories = dbCats.filter((cat) => cat.type === "category");
+        const subCategories = dbCats.filter((cat) => cat.type === "subcategory");
+        const headerCategories = dbCats.filter((cat) => cat.type === "header" || cat.isHeader);
+
+        // Find or create "All" category
+        const allCategoryFromDb = headerCategories.find(
+          (c) => String(c.name || "").trim().toLowerCase() === "all",
+        );
+        const mergedAllCategory = {
+          _id: "all",
+          id: "all",
+          name: "All",
+          slug: "all",
+          ...(allCategoryFromDb || {}),
+        };
+
+        const sortedHeaders = headerCategories
+          .filter((c) => String(c.name || "").trim().toLowerCase() !== "all")
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        const hierarchy = mainCategories
+          .map((mc) => {
+            const parentId = mc.parentId?._id || mc.parentId || mc.categoryId?._id || mc.categoryId;
+            const parentHeader = headerCategories.find(h => h._id === parentId);
+            
+            return {
+              ...mc,
+              headerColor: mc.headerColor || parentHeader?.headerColor,
+              subcategories: subCategories
+                .filter((sc) => {
+                  const pId = sc.parentId?._id || sc.parentId || sc.categoryId?._id || sc.categoryId;
+                  return pId === mc._id;
+                })
+                .sort((a, b) => {
+                  const idxA = MANUAL_SUBCAT_ORDER.indexOf(a.name);
+                  const idxB = MANUAL_SUBCAT_ORDER.indexOf(b.name);
+                  if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                  if (idxA !== -1) return -1;
+                  if (idxB !== -1) return 1;
+                  return new Date(b.createdAt) - new Date(a.createdAt);
+                }),
+            };
+          })
+          .filter((section) => section.subcategories.length > 0)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+        setCategorizedSections(hierarchy);
+        setCategories([
+          mergedAllCategory,
+          CATEGORIES_ANCHOR,
+          ...sortedHeaders
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const mobileDiscoverySections = useMemo(() => {
+    return categorizedSections.map((section) => {
+      const sectionTiles = (section.subcategories || []).map((sub) => ({
+        id: sub._id,
+        name: sub.name,
+        image: sub.image || getCategoryImage(sub.name) || DEFAULT_DISCOVERY_TILE_IMAGE,
+        fallbackImage: DEFAULT_DISCOVERY_TILE_IMAGE,
+        targetPath: `/category/${section._id}`,
+        targetState: { activeSubcategoryId: sub._id },
+      }));
+
+      return {
+        id: section._id,
+        title: section.name,
+        headerColor: section.headerColor,
+        tiles: sectionTiles,
+      };
     });
-    const [flippedCategoryId, setFlippedCategoryId] = useState(null);
+  }, [categorizedSections]);
 
-    const fetchCategories = async () => {
-        setIsLoading(true);
-        try {
-            const res = await customerApi.getCategories({ tree: true });
-            if (res.data.success) {
-                const tree = res.data.results || res.data.result || [];
-                const defaultCategoryImage = 'https://cdn-icons-png.flaticon.com/128/1040/1040230.png';
+  return (
+    <div className="min-h-screen bg-[#d2e2fc]">
+      {/* Reusable Header */}
+      <MainLocationHeader 
+        categories={categories}
+        activeCategory={{ id: "categories-anchor", name: "Categories", _id: "categories-anchor" }}
+        onCategorySelect={(cat) => {
+          if (cat.slug === "all") navigate("/");
+          else if (cat._id === "categories-anchor" || cat.id === "categories-anchor") return; // stay here
+          else navigate(`/category/${cat._id}`);
+        }}
+      />
 
-                const formattedHeaderCategories = tree.map((header) => ({
-                    id: header._id || header.id || header.slug || header.name,
-                    _id: header._id || header.id || header.slug || header.name,
-                    name: header.name,
-                    image: header.image || header.mainImage || defaultCategoryImage,
-                    headerColor: header.headerColor || null,
-                }));
+      <div className="pb-24 pt-2">
+        {/* CATEGORY DISCOVERY (TILES) */}
+        {mobileDiscoverySections.length > 0 ? (
+          <div id="mobile-category-discovery" className="relative z-20 md:hidden">
+            {mobileDiscoverySections.map((section, sectionIndex) => (
+              <div key={`${section.id}-tiles-group`}>
+                <section className={cn("px-4", sectionIndex === 0 ? "pb-6 pt-8" : "pb-6 pt-2")}>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="tracking-tight text-[#3f3f3f] text-[15px] font-extrabold leading-none">
+                      {section.title}
+                    </h2>
+                  </div>
 
-                setHeaderCategories(formattedHeaderCategories);
-                setActiveHeaderCategory((prev) => {
-                    if (prev) return prev;
-                    return (
-                        formattedHeaderCategories.find((category) => String(category.name || '').trim().toLowerCase() === 'all') ||
-                        formattedHeaderCategories[0] ||
-                        null
-                    );
-                });
-
-                const formattedGroups = tree
-                    .filter((header) => (header.name || '').trim().toLowerCase() !== 'all')
-                    .map((header, idx) => {
-                        const categories = (header.children || []).map((cat, cIdx) => ({
-                            id: cat._id,
-                            name: cat.name,
-                            image: cat.image || "https://cdn.grofers.com/cdn-cgi/image/f=auto,fit=scale-down,q=70,metadata=none,w=270/layout-engine/2022-11/Slice-1_9.png",
-                            color: COLORS[(idx + cIdx) % COLORS.length]
-                        }));
-
-                        return {
-                            title: header.name,
-                            categories,
-                        };
-                    })
-                    .filter((group) => group.categories.length > 0);
-                setGroups(formattedGroups);
-            }
-        } catch (error) {
-            console.error("Error fetching categories:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchCategories();
-    }, []);
-
-    useEffect(() => {
-        const updateColumnsPerRow = () => {
-            if (window.innerWidth >= 1024) setColumnsPerRow(8);
-            else if (window.innerWidth >= 768) setColumnsPerRow(6);
-            else setColumnsPerRow(4);
-        };
-        updateColumnsPerRow();
-        window.addEventListener('resize', updateColumnsPerRow);
-        return () => window.removeEventListener('resize', updateColumnsPerRow);
-    }, []);
-
-    const flipRows = useMemo(() => {
-        const rows = [];
-        groups.forEach((group, groupIndex) => {
-            const cats = group.categories || [];
-            const isLeftToRightGroup = groupIndex % 2 === 0;
-            for (let rowStart = 0; rowStart < cats.length; rowStart += columnsPerRow) {
-                const row = cats.slice(rowStart, rowStart + columnsPerRow);
-                const rowSequence = isLeftToRightGroup ? row : [...row].reverse();
-                const rowIds = rowSequence.map((category) => category.id).filter(Boolean);
-                if (rowIds.length) rows.push(rowIds);
-            }
-        });
-        return rows;
-    }, [groups, columnsPerRow]);
-
-    useEffect(() => {
-        if (!flipRows.length) {
-            setFlippedCategoryId(null);
-            return;
-        }
-
-        let isCancelled = false;
-        let activeTimer = null;
-        let settleTimer = null;
-        let rowCursor = 0;
-        const itemCursorByRow = new Array(flipRows.length).fill(0);
-
-        const FLIP_VISIBLE_MS = 620;
-        const GAP_BETWEEN_FLIPS_MS = 220;
-
-        const getNextFromRows = () => {
-            const totalRows = flipRows.length;
-            for (let tries = 0; tries < totalRows; tries += 1) {
-                const rowIndex = (rowCursor + tries) % totalRows;
-                const rowItems = flipRows[rowIndex] || [];
-                if (!rowItems.length) continue;
-                const itemIndex = itemCursorByRow[rowIndex] % rowItems.length;
-                const nextId = rowItems[itemIndex];
-                itemCursorByRow[rowIndex] = (itemIndex + 1) % rowItems.length;
-                rowCursor = (rowIndex + 1) % totalRows; // alternate to next row
-                return nextId;
-            }
-            return null;
-        };
-
-        const scheduleNextFlip = () => {
-            if (isCancelled) return;
-            activeTimer = setTimeout(() => {
-                if (isCancelled) return;
-                const nextId = getNextFromRows();
-                if (!nextId) return;
-                setFlippedCategoryId(nextId);
-
-                settleTimer = setTimeout(() => {
-                    if (isCancelled) return;
-                    setFlippedCategoryId(null);
-                    scheduleNextFlip();
-                }, FLIP_VISIBLE_MS);
-            }, GAP_BETWEEN_FLIPS_MS);
-        };
-
-        scheduleNextFlip();
-
-        return () => {
-            isCancelled = true;
-            if (activeTimer) clearTimeout(activeTimer);
-            if (settleTimer) clearTimeout(settleTimer);
-        };
-    }, [flipRows]);
-
-    return (
-        <div className="min-h-screen bg-white w-full">
-            <MainHeader
-                categories={headerCategories}
-                activeCategory={activeHeaderCategory}
-                onCategorySelect={(category) => {
-                    setActiveHeaderCategory(category);
-                    navigateToCategory(navigate, category._id || category.id || 'all');
-                }}
-            />
-            <div className="px-3 pt-6 pb-24">
-                {groups.map((group, groupIdx) => (
-                    <div key={groupIdx} className="mb-8" style={{ animationDelay: `${groupIdx * 100}ms` }}>
-                        {/* Group Title */}
-                        <h2 className="text-[17px] font-black text-[#1A1A1A] mb-3 px-1">
-                            {group.title}
-                        </h2>
-
-                        {/* Categories Grid — forced 4 cols */}
-                        <div className="grid grid-cols-4 gap-x-2 gap-y-3">
-                            {group.categories.map((category) => (
-                                <Link
-                                    key={category.id}
-                                    to={getCategoryLocation(category._id || category.id)}
-                                    className="flex flex-col items-center gap-1.5 group cursor-pointer"
-                                >
-                                    {/* Square image box */}
-                                    <div
-                                        className="w-full aspect-square rounded-2xl flex items-center justify-center overflow-hidden relative [perspective:800px]"
-                                        style={{ backgroundColor: category.color }}
-                                    >
-                                        <div
-                                            className="relative w-full h-full transition-transform duration-500"
-                                            style={{
-                                                transformStyle: 'preserve-3d',
-                                                WebkitTransformStyle: 'preserve-3d',
-                                                transform: flippedCategoryId === category.id ? 'rotateY(180deg)' : 'rotateY(0deg)'
-                                            }}
-                                        >
-                                            {/* Front */}
-                                            <div
-                                                className="absolute inset-0 flex items-center justify-center p-2"
-                                                style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-                                            >
-                                                <img
-                                                    src={category.image}
-                                                    alt={category.name}
-                                                    crossOrigin="anonymous"
-                                                    className="w-full h-full object-contain"
-                                                    onError={(e) => {
-                                                        e.currentTarget.style.display = 'none';
-                                                        const parent = e.currentTarget.parentElement;
-                                                        if (parent && !parent.querySelector('.cat-fallback')) {
-                                                            const fb = document.createElement('div');
-                                                            fb.className = 'cat-fallback';
-                                                            fb.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:rgba(0,0,0,0.25);';
-                                                            fb.textContent = (category.name || '?')[0].toUpperCase();
-                                                            parent.appendChild(fb);
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                            {/* Back (flip) */}
-                                            <div
-                                                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#F6EFE4] via-[#EEE7F8] to-[#E7F1FB] text-slate-700 flex items-center justify-center p-1.5 text-center"
-                                                style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
-                                            >
-                                                <span className="text-[9px] font-bold leading-tight">
-                                                    {category.name}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {/* Name below */}
-                                    <span className="text-[11px] font-semibold text-[#1A1A1A] text-center leading-tight line-clamp-2 px-0.5 group-hover:text-[#45B0E2] transition-colors">
-                                        {category.name}
-                                    </span>
-                                </Link>
-                            ))}
+                  <div className="grid grid-cols-4 gap-x-3 gap-y-6">
+                    {section.tiles.map((tile) => (
+                      <motion.button
+                        key={tile.id}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => navigate(tile.targetPath, { state: tile.targetState })}
+                        className="flex flex-col items-center">
+                        <div 
+                          className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[18px] border p-2.5 shadow-md transition-all duration-300"
+                          style={{
+                            borderColor: "#e67e22",
+                            background: `radial-gradient(circle at center, rgba(255,255,255,0.65) 0%, transparent 80%), linear-gradient(160deg, #FF9F1C 0%, #e67e22 100%)`,
+                            boxShadow: `inset 0 8px 16px rgba(255,255,255,0.25), 0 4px 10px rgba(0,0,0,0.12)`
+                          }}
+                        >
+                          <img
+                            src={tile.image}
+                            alt={tile.name}
+                            className="h-full w-full object-contain drop-shadow-[0_8px_8px_rgba(0,0,0,0.15)]"
+                          />
                         </div>
-                    </div>
-                ))}
+                        <span className="mt-2 line-clamp-2 text-center text-[#1f1f1f] min-h-[24px] text-[10px] font-semibold leading-[1.15]">
+                          {tile.name}
+                        </span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            ))}
+          </div>
+        ) : (
+          !isLoading && (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+               <p className="text-lg font-bold">No categories found</p>
             </div>
-        </div>
-    );
+          )
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default CategoriesPage;

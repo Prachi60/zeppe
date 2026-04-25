@@ -7,11 +7,11 @@ import { useAuth } from '@core/context/AuthContext';
 import GuestProfilePrompt from '../shared/GuestProfilePrompt';
 
 const navItems = [
-    { label: 'Home', icon: Home, path: '/' },
-    { label: 'Order Again', icon: ShoppingBag, path: '/orders' },
-    { label: 'Category', icon: LayoutGrid, path: '/categories' },
-    { label: 'Stores', icon: Store, path: '/stores' },
-    { label: 'Profile', icon: User, path: '/profile' },
+    { label: 'Home', icon: Home, path: '/', id: 'home' },
+    { label: 'Order Again', icon: ShoppingBag, path: '/orders', id: 'orders' },
+    { label: 'Category', icon: LayoutGrid, path: '/categories', id: 'categories' },
+    { label: 'Stores', icon: Store, path: '/stores', id: 'stores' },
+    { label: 'Profile', icon: User, path: '/profile', id: 'profile' },
 ];
 
 const BottomNav = () => {
@@ -25,6 +25,7 @@ const BottomNav = () => {
             setIsGuestPromptOpen(true);
             return;
         }
+
         navigate(item.path);
     };
 
@@ -37,7 +38,7 @@ const BottomNav = () => {
 
                     return (
                         <button
-                            key={item.path}
+                            key={item.id}
                             type="button"
                             onClick={() => handleNavClick(item)}
                             className="flex-1 flex h-full flex-col items-center justify-center relative group transition-all"
