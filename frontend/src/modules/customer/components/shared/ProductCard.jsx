@@ -119,7 +119,7 @@ const ProductCard = React.memo(
         if (imageRef.current) {
           animateAddToCart(
             imageRef.current.getBoundingClientRect(),
-            product.image,
+            product.image || product.mainImage,
           );
         }
         addToCart({
@@ -146,7 +146,7 @@ const ProductCard = React.memo(
         e.stopPropagation();
 
         if (quantity === 1) {
-          animateRemoveFromCart(product.image);
+          animateRemoveFromCart(product.image || product.mainImage);
           removeFromCart(productId, variantKey);
         } else {
           updateQuantity(productId, -1, variantKey);
@@ -156,6 +156,7 @@ const ProductCard = React.memo(
         quantity,
         animateRemoveFromCart,
         product.image,
+        product.mainImage,
         removeFromCart,
         productId,
         updateQuantity,
@@ -168,7 +169,7 @@ const ProductCard = React.memo(
         <motion.div
           whileTap={{ scale: 0.98 }}
           className={cn(
-            "group flex flex-col w-full max-w-[120px] h-full bg-white rounded-xl overflow-hidden transition-all duration-300 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-gray-100",
+            "group relative flex flex-col w-full max-w-[110px] h-full bg-white rounded-xl overflow-hidden transition-all duration-300 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-gray-100",
             className
           )}
           onClick={handleProductClick}
@@ -197,7 +198,7 @@ const ProductCard = React.memo(
             <div className="w-full h-full flex items-center justify-center">
               <img
                 ref={imageRef}
-                src={product.image}
+                src={product.image || product.mainImage}
                 alt={product.name}
                 className="w-[80%] h-[80%] object-contain drop-shadow-sm transition-transform duration-500 group-hover:scale-110"
               />
@@ -223,14 +224,14 @@ const ProductCard = React.memo(
           </div>
 
           {/* Info Section */}
-          <div className="flex flex-col flex-1 p-1 gap-0.5">
+          <div className="flex flex-col items-center flex-1 p-1 gap-0.5 text-center">
             {/* Product Name */}
             <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-900 leading-tight line-clamp-2 min-h-[1.35rem]">
               {product.name}
             </h4>
 
             {/* Price Block */}
-            <div className="flex items-baseline gap-1.5">
+            <div className="flex items-baseline justify-center gap-1.5">
               <span className="text-[14px] font-semibold text-gray-900">₹{product.price}</span>
               {product.originalPrice > product.price && (
                 <span className="text-[10px] font-medium text-gray-400 line-through">₹{product.originalPrice}</span>
@@ -238,7 +239,7 @@ const ProductCard = React.memo(
             </div>
 
             {/* Ratings Row */}
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center justify-center gap-0.5">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star 
                   key={star} 
@@ -255,7 +256,7 @@ const ProductCard = React.memo(
             </div>
 
             {/* Delivery Time Bar */}
-            <div className="mt-1 flex items-center gap-1 bg-[#E8F3FF] rounded-md px-1.5 py-1">
+            <div className="mt-1 flex items-center justify-center gap-1 bg-[#E8F3FF] rounded-md px-1.5 py-1 w-full">
               <Clock size={10} className="text-[#2563EB]" />
               <span className="text-[10px] font-bold text-[#2563EB] tracking-tight">
                 {product.deliveryTime || "21 min"}
@@ -270,7 +271,7 @@ const ProductCard = React.memo(
       <motion.div
         whileTap={{ scale: 0.97 }}
         className={cn(
-          "group flex h-full w-full max-w-[120px] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-all duration-300 hover:shadow-[0_12px_30_rgba(0,0,0,0.1)] hover:border-orange-100",
+          "group relative flex h-full w-full max-w-[110px] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-all duration-300 hover:shadow-[0_12px_30_rgba(0,0,0,0.1)] hover:border-orange-100",
           className,
         )}
         onClick={handleProductClick}>
@@ -345,7 +346,7 @@ const ProductCard = React.memo(
             )}>
             <img
               ref={imageRef}
-              src={product.image}
+              src={product.image || product.mainImage}
               alt={product.name}
               className={cn(
                 "object-contain drop-shadow-md",
@@ -358,7 +359,7 @@ const ProductCard = React.memo(
         {/* Info Section */}
         <div
           className={cn(
-            "flex flex-col flex-1",
+            "flex flex-col items-center flex-1 text-center",
             storeWide
               ? "p-3 pt-2 gap-1.5"
               : microCompact
@@ -388,7 +389,7 @@ const ProductCard = React.memo(
           </div>
 
           {/* Price Block */}
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col items-center gap-0.5">
             <span className={cn(
               "font-semibold text-gray-900 leading-none",
               compact ? "text-sm" : "text-base"
@@ -403,14 +404,14 @@ const ProductCard = React.memo(
           </div>
 
           {/* Rating */}
-          <div className="flex items-center gap-0.5 bg-green-50 w-fit px-1.5 py-0.5 rounded-md mt-1">
+          <div className="flex items-center justify-center gap-0.5 bg-green-50 w-fit mx-auto px-1.5 py-0.5 rounded-md mt-1">
             <Star size={8} className="text-green-600 fill-current" />
             <span className="text-[8px] font-semibold text-green-700">{product.ratings || "4.5"}</span>
           </div>
 
           {/* Delivery Time */}
-          <div className="mt-auto flex items-center justify-between gap-1 border-t border-gray-50 pt-1">
-            <div className="flex items-center gap-1 text-orange-600">
+          <div className="mt-auto flex items-center justify-center gap-1 border-t border-gray-50 pt-1 w-full">
+            <div className="flex items-center justify-center gap-1 text-orange-600">
               <div className="flex items-center justify-center h-3.5 w-3.5 bg-orange-50 rounded-full">
                 <Clock
                   size={storeWide ? 10 : microCompact ? 7 : compact ? 9 : 11}
@@ -431,41 +432,41 @@ const ProductCard = React.memo(
                 {product.deliveryTime || "8-12 mins"}
               </span>
             </div>
+          </div>
 
-            {/* ADD Button - Absolute Corner */}
-            <div className="absolute bottom-0 right-0">
-              {quantity > 0 ? (
-                <div
-                  className={cn(
-                    "flex items-center bg-white border-2 border-[#f59931] rounded-tl-xl p-0.5 justify-between shadow-md",
-                    storeWide ? "min-w-[84px]" : compact ? "min-w-[64px]" : "min-w-[90px]",
-                  )}>
-                  <button
-                    onClick={handleDecrement}
-                    className="p-1 px-1.5 text-[#f59931] active:scale-90 transition-transform">
-                    <Minus size={16} strokeWidth={3} />
-                  </button>
-                  <span className="text-[15px] font-black text-[#f59931] min-w-[24px] text-center">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={handleIncrement}
-                    className="p-1 px-1.5 text-[#f59931] active:scale-90 transition-transform">
-                    <Plus size={16} strokeWidth={3} />
-                  </button>
-                </div>
-              ) : (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleAddToCart}
-                  className={cn(
-                    "bg-[#f59931] text-white rounded-tl-lg font-semibold shadow-md transition-all flex items-center justify-center",
-                    compact ? "h-6 w-6" : "h-8 w-8"
-                  )}>
-                  <Plus size={compact ? 12 : 16} strokeWidth={3} />
-                </motion.button>
-              )}
-            </div>
+          {/* ADD Button - Absolute Corner */}
+          <div className="absolute bottom-0 right-0 z-20">
+            {quantity > 0 ? (
+              <div
+                className={cn(
+                  "flex items-center bg-white border-2 border-[#f59931] rounded-tl-xl p-0.5 justify-between shadow-md",
+                  storeWide ? "min-w-[84px]" : compact ? "min-w-[64px]" : "min-w-[90px]",
+                )}>
+                <button
+                  onClick={handleDecrement}
+                  className="p-1 px-1.5 text-[#f59931] active:scale-90 transition-transform">
+                  <Minus size={16} strokeWidth={3} />
+                </button>
+                <span className="text-[15px] font-black text-[#f59931] min-w-[24px] text-center">
+                  {quantity}
+                </span>
+                <button
+                  onClick={handleIncrement}
+                  className="p-1 px-1.5 text-[#f59931] active:scale-90 transition-transform">
+                  <Plus size={16} strokeWidth={3} />
+                </button>
+              </div>
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleAddToCart}
+                className={cn(
+                  "bg-[#f59931] text-white rounded-tl-lg font-semibold shadow-md transition-all flex items-center justify-center",
+                  compact ? "h-6 w-6" : "h-8 w-8"
+                )}>
+                <Plus size={compact ? 12 : 16} strokeWidth={3} />
+              </motion.button>
+            )}
           </div>
         </div>
       </motion.div>

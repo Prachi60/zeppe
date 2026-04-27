@@ -448,12 +448,12 @@ export const getOrderDetails = async (req, res) => {
     const isAssignedDeliveryBoy =
       role === "delivery" &&
       (primaryRiderId === uid || returnRiderId === uid);
-    
+
     // ALLOW view if it is a broadcasted delivery or return that is not yet assigned
-    const isBroadcastedOrder = 
-      role === "delivery" && 
-      ((!order.deliveryBoy && order.workflowStatus === WORKFLOW_STATUS.DELIVERY_SEARCH) || 
-       (!order.returnDeliveryBoy && ["return_approved", "return_pickup_assigned"].includes(order.returnStatus)));
+    const isBroadcastedOrder =
+      role === "delivery" &&
+      ((!order.deliveryBoy && order.workflowStatus === WORKFLOW_STATUS.DELIVERY_SEARCH) ||
+        (!order.returnDeliveryBoy && ["return_approved", "return_pickup_assigned"].includes(order.returnStatus)));
 
     const isAdmin = role === "admin";
 

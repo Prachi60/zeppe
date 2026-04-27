@@ -74,7 +74,7 @@ const DeliveryOtpDisplay = ({ orderId, checkoutGroupId = null }) => {
 
     const getToken = () => localStorage.getItem("auth_customer");
     const socket = getOrderSocket(getToken);
-    
+
     console.log(`[DeliveryOtpDisplay] Socket connection status:`, socket?.connected);
     console.log(`[DeliveryOtpDisplay] Socket ID:`, socket?.id);
     const acceptedOrderIds = [orderId, checkoutGroupId];
@@ -203,18 +203,16 @@ const DeliveryOtpDisplay = ({ orderId, checkoutGroupId = null }) => {
         {/* Requirement 4.2: Display OTP in prominent, easily readable format */}
         {/* Requirement 4.3: Display with font size at least 24 points */}
         <div
-          className={`border rounded-2xl p-6 text-center transition-colors duration-300 ${
-            isExpiringSoon
+          className={`border rounded-2xl p-6 text-center transition-colors duration-300 ${isExpiringSoon
               ? "bg-amber-50 border-amber-300"
               : "bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200"
-          }`}
+            }`}
         >
           <div className="flex items-center justify-center gap-2 mb-2">
             <Shield className={`w-5 h-5 ${isExpiringSoon ? "text-amber-600" : "text-purple-600"}`} />
             <p
-              className={`text-xs font-bold uppercase tracking-wider ${
-                isExpiringSoon ? "text-amber-800" : "text-purple-800"
-              }`}
+              className={`text-xs font-bold uppercase tracking-wider ${isExpiringSoon ? "text-amber-800" : "text-purple-800"
+                }`}
             >
               Delivery OTP
             </p>
@@ -223,9 +221,8 @@ const DeliveryOtpDisplay = ({ orderId, checkoutGroupId = null }) => {
           {/* OTP Value - Minimum 24pt font (32px = 24pt) */}
           {/* Requirement 4.3: Font size at least 24 points */}
           <div
-            className={`text-5xl font-black font-mono tracking-[0.3em] mb-3 ${
-              isExpiringSoon ? "text-amber-950" : "text-purple-950"
-            }`}
+            className={`text-5xl font-black font-mono tracking-[0.3em] mb-3 ${isExpiringSoon ? "text-amber-950" : "text-purple-950"
+              }`}
             style={{ fontSize: "48px" }} // 36pt = 48px (exceeds 24pt requirement)
           >
             {otpData.otp}
@@ -239,11 +236,10 @@ const DeliveryOtpDisplay = ({ orderId, checkoutGroupId = null }) => {
         {/* Countdown Timer */}
         {/* Requirement 7.5: Display countdown timer showing remaining validity */}
         <div
-          className={`border rounded-xl p-4 flex items-center justify-between transition-colors duration-300 ${
-            isExpiringSoon
+          className={`border rounded-xl p-4 flex items-center justify-between transition-colors duration-300 ${isExpiringSoon
               ? "bg-amber-50 border-amber-200"
               : "bg-gray-50 border-gray-200"
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2">
             <Clock className={`w-4 h-4 ${isExpiringSoon ? "text-amber-600" : "text-gray-600"}`} />
@@ -252,9 +248,8 @@ const DeliveryOtpDisplay = ({ orderId, checkoutGroupId = null }) => {
             </span>
           </div>
           <span
-            className={`text-lg font-bold font-mono ${
-              isExpiringSoon ? "text-amber-950" : "text-gray-900"
-            }`}
+            className={`text-lg font-bold font-mono ${isExpiringSoon ? "text-amber-950" : "text-gray-900"
+              }`}
           >
             {formatTime(remainingSeconds)}
           </span>

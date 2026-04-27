@@ -75,7 +75,7 @@ const SectionRenderer = ({
                         }}
                         transition={{ duration: 0.5, ease: "easeInOut" }}
                         className="relative aspect-square w-full rounded-2xl border border-white/30 flex items-center justify-center overflow-hidden p-3 shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)]">
-                        
+
                         {cat.image ? (
                           <img
                             src={cat.image}
@@ -86,7 +86,7 @@ const SectionRenderer = ({
                           <div className="h-6 w-6 rounded-full bg-slate-100" />
                         )}
                       </motion.div>
-                      <motion.div 
+                      <motion.div
                         animate={{ color: "#1A1A1A" }}
                         className="text-[11px] font-bold text-center leading-snug line-clamp-2 transition-colors duration-500">
                         {cat.name}
@@ -157,12 +157,12 @@ const SectionRenderer = ({
                           }
                         }}>
                         <motion.div
-                        animate={{
-                          background: `radial-gradient(circle at center, ${mixHexColors("#FFFFFF", themeColor, 0.3)} 0%, ${themeColor} 65%, ${mixHexColors(themeColor, "#000000", 0.15)} 100%)`,
-                        }}
+                          animate={{
+                            background: `radial-gradient(circle at center, ${mixHexColors("#FFFFFF", themeColor, 0.3)} 0%, ${themeColor} 65%, ${mixHexColors(themeColor, "#000000", 0.15)} 100%)`,
+                          }}
                           transition={{ duration: 0.5, ease: "easeInOut" }}
                           className="relative aspect-square w-full rounded-2xl border border-white/30 flex items-center justify-center overflow-hidden p-3 shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_8px_25px_rgba(0,0,0,0.15)]">
-                          
+
                           {cat.image ? (
                             <img
                               src={cat.image}
@@ -173,7 +173,7 @@ const SectionRenderer = ({
                             <div className="h-6 w-6 rounded-full bg-slate-100" />
                           )}
                         </motion.div>
-                        <motion.div 
+                        <motion.div
                           animate={{ color: "#1A1A1A" }}
                           className="text-[11px] font-bold text-center leading-snug line-clamp-2 transition-colors duration-500">
                           {cat.name}
@@ -190,8 +190,8 @@ const SectionRenderer = ({
         if (section.displayType === "products") {
           const productConfig = section.config?.products || {};
           const ids = productConfig.productIds || [];
-          const rows = productConfig.rows || 1;
-          const columns = productConfig.columns || 2;
+          const rows = productConfig.rows || 3;
+          const columns = productConfig.columns || 3;
           const singleRowScrollable = !!productConfig.singleRowScrollable;
 
           let allProducts;
@@ -239,11 +239,11 @@ const SectionRenderer = ({
                     {allProducts.length} items
                   </span>
                 </div>
-                <div className="relative z-10 flex overflow-x-auto gap-2 pb-4 no-scrollbar">
+                <div className="relative z-10 flex overflow-x-auto gap-3 pb-4 no-scrollbar">
                   {allProducts.map((product) => (
                     <div
                       key={product._id || product.id}
-                      className="w-[120px] shrink-0"
+                      className="w-[110px] shrink-0"
                     >
                       <ProductCard product={product} compact={true} neutralBg={true} />
                     </div>
@@ -260,28 +260,28 @@ const SectionRenderer = ({
             <div
               key={section._id}
               id={`section-${section._id}`}
-              className="-mx-4 md:-mx-4 px-4 md:px-2 mt-6"
+              className="-mx-4 md:-mx-4 px-4 md:px-3 mt-8 mb-4"
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-4 px-1">
                 {heading && (
-                  <h3 className="text-base font-black text-[#1A1A1A]">
+                  <h3 className="text-[17px] font-black text-[#1A1A1A] tracking-tight">
                     {heading}
                   </h3>
                 )}
-                <span className="text-[11px] font-semibold text-slate-400">
-                  {items.length} items
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  {allProducts.length} items
                 </span>
               </div>
               <div
                 className={cn(
-                  "grid gap-2",
+                  "grid gap-x-3 gap-y-6",
                   columns === 1
                     ? "grid-cols-1"
                     : "grid-cols-3"
                 )}
               >
                 {items.map((product) => (
-                  <div key={product._id || product.id}>
+                  <div key={product._id || product.id} className="flex justify-center">
                     <ProductCard product={product} compact={true} neutralBg={true} />
                   </div>
                 ))}

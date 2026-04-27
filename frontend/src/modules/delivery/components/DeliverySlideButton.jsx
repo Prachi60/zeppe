@@ -56,13 +56,13 @@ const DeliverySlideButton = ({
       // Call appropriate endpoint based on flow type
       const response = isReturnDrop
         ? await deliveryApi.requestReturnDropOtp(orderId, {})
-        : isReturn 
-        ? await deliveryApi.requestReturnOtp(orderId, {})
-        : await deliveryApi.generateDeliveryOtp(orderId);
+        : isReturn
+          ? await deliveryApi.requestReturnOtp(orderId, {})
+          : await deliveryApi.generateDeliveryOtp(orderId);
 
       // Handle success
       toast.success(response.data?.message || "OTP generated and sent to customer");
-      
+
       if (onSuccess) {
         onSuccess(response.data);
       }
@@ -76,7 +76,7 @@ const DeliverySlideButton = ({
         const details = error.response?.data?.error?.details;
         const distance = details?.currentDistance;
         const range = details?.requiredRange || "0-120m";
-        
+
         toast.error(
           `You are too ${distance > 120 ? "far" : "close"}. You must be within ${range} of the delivery location.`,
           { duration: 5000 }
@@ -105,9 +105,8 @@ const DeliverySlideButton = ({
     <div className="relative h-16 bg-gray-100 rounded-full overflow-hidden select-none">
       {/* Label text */}
       <motion.div
-        className={`absolute inset-0 flex items-center justify-center text-gray-400 font-bold text-sm pointer-events-none transition-opacity duration-300 ${
-          dragX > 50 || isLoading ? "opacity-0" : "opacity-100"
-        }`}
+        className={`absolute inset-0 flex items-center justify-center text-gray-400 font-bold text-sm pointer-events-none transition-opacity duration-300 ${dragX > 50 || isLoading ? "opacity-0" : "opacity-100"
+          }`}
         animate={{ x: [0, 5, 0] }}
         transition={{ repeat: Infinity, duration: 1.5 }}>
         {label} <ChevronRight className="ml-1 inline" />

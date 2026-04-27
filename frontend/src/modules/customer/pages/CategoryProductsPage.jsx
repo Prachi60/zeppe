@@ -43,7 +43,7 @@ const KuikloCard = React.memo(({ product }) => {
     const handleAdd = (e) => {
         e.preventDefault(); e.stopPropagation();
         if (imageRef.current) {
-            animateAddToCart(imageRef.current.getBoundingClientRect(), product.image);
+            animateAddToCart(imageRef.current.getBoundingClientRect(), product.image || product.mainImage);
         }
         addToCart({ ...product });
     };
@@ -56,7 +56,7 @@ const KuikloCard = React.memo(({ product }) => {
     const handleDec = (e) => {
         e.preventDefault(); e.stopPropagation();
         if (quantity === 1) {
-            animateRemoveFromCart(product.image);
+            animateRemoveFromCart(product.image || product.mainImage);
             removeFromCart(productId);
         } else {
             updateQuantity(productId, -1);
@@ -89,7 +89,7 @@ const KuikloCard = React.memo(({ product }) => {
                 <div className="absolute inset-0 flex items-center justify-center p-3">
                     <img
                         ref={imageRef}
-                        src={product.image}
+                        src={product.image || product.mainImage}
                         alt={product.name}
                         className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     />

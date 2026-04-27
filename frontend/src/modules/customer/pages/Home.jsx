@@ -2148,13 +2148,15 @@ const Home = () => {
                         {section.title}
                       </h2>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-4">
-                      {section.products.slice(0, 6).map((product) => (
-                        <ProductCard
-                          key={product.id || product._id}
-                          product={product}
-                          quickComm
-                        />
+                    <div className="grid grid-cols-3 gap-x-3 gap-y-5">
+                      {section.products.slice(0, 9).map((product) => (
+                        <div key={product.id || product._id} className="flex justify-center">
+                          <ProductCard
+                            product={product}
+                            compact={true}
+                            quickComm
+                          />
+                        </div>
                       ))}
                     </div>
 
