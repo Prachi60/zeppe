@@ -594,7 +594,8 @@ const CheckoutPage = () => {
       try {
         const res = await customerApi.getActiveCoupons();
         if (res.data.success) {
-          const list = res.data.result || res.data.results || [];
+          const rawList = res.data.result || res.data.results;
+          const list = Array.isArray(rawList) ? rawList : [];
           setCoupons(list);
         }
       } catch {
@@ -605,7 +606,10 @@ const CheckoutPage = () => {
 
     // M-2 FIX: Fetch real recommendations
     customerApi.getProducts({ limit: 6, sort: "popular" })
-      .then(r => setRecommendedProducts(r.data.result?.items || []))
+      .then(r => {
+        const items = r.data.result?.items || r.data.result || [];
+        setRecommendedProducts(Array.isArray(items) ? items : []);
+      })
       .catch(() => {});
 
     // M-8 FIX: Auto-populate default address from profile
@@ -918,7 +922,7 @@ const CheckoutPage = () => {
   return (
     <div className="min-h-screen bg-[#f5f1e8] pb-32 font-sans">
       {/* Premium Header - Curved on mobile, integrated on desktop */}
-      <div className="bg-[linear-gradient(180deg,_#ab7458_0%,_#7f4e39_34%,_#2b1811_100%)] pt-6 pb-12 md:pb-24 relative z-10 shadow-[0_24px_60px_rgba(36,18,12,0.28)] md:rounded-b-[4rem] rounded-b-[2rem] overflow-hidden">
+      <div className="bg-[linear-gradient(180deg,_#ab7458_0%,_#7f4e39_34%,_#2b1811_100%)] pt-safe pb-12 md:pb-24 relative z-10 shadow-[0_24px_60px_rgba(36,18,12,0.28)] md:rounded-b-[4rem] rounded-b-[2rem] overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/8 rounded-full blur-[100px] -mr-32 -mt-64 pointer-events-none" />
         <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-amber-100/10 rounded-full blur-[80px] pointer-events-none" />
         <div className="absolute -top-10 left-[-5%] w-56 h-56 rounded-full bg-amber-50/10 blur-[90px] pointer-events-none" />
@@ -1338,7 +1342,7 @@ const CheckoutPage = () => {
                 </button>
               </div>
               <div className="space-y-3">
-                {coupons.map((coupon) => (
+                {Array.isArray(coupons) && coupons.map((coupon) => (
                   <div
                     key={coupon.code}
                     className="flex items-center gap-3 p-3 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-100">

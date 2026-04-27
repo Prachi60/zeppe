@@ -11,11 +11,23 @@
     href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Outfit:wght@100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
     rel="stylesheet">
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <meta name="theme-color" content="#f59931" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Zeppe- Fresh Grocery Delivery</title>
 </head>
 
 <body>
   <div id="root"></div>
+  <script>
+    // Fix for 100vh on mobile browsers
+    const vh = () => {
+      let vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    window.addEventListener('resize', vh);
+    vh();
+  </script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 

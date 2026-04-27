@@ -80,8 +80,8 @@ import { getCategoryImage } from "@/shared/constants/categoryImageMap";
 import { navigateToCategory } from "../utils/categoryNavigation";
 
 const DEFAULT_CATEGORY_THEME = {
-  gradient: "linear-gradient(to bottom, #7B4419, #9D5C3A)",
-  shadow: "shadow-amber-700/20",
+  gradient: "linear-gradient(to bottom, #f59931, #d47a1c)",
+  shadow: "shadow-orange-700/20",
   accent: "text-[#1A1A1A]",
 };
 
@@ -178,6 +178,7 @@ const ALL_CATEGORY = {
   name: "All",
   image: CustomHomeIcon,
   headerVisualKey: "all",
+  headerColor: "#f59931",
   theme: DEFAULT_CATEGORY_THEME,
   banner: {
     title: "HOUSEFULL",
@@ -1874,7 +1875,7 @@ const Home = () => {
 
   return (
     <div className={cn(
-      "min-h-screen pb-10 transition-colors duration-300",
+      "min-h-screen min-h-[100dvh] transition-colors duration-300",
       isCategoriesAnchorActive ? "bg-[#d2e2fc]" : "bg-white"
     )}>
       <MainHeader
@@ -1912,23 +1913,56 @@ const Home = () => {
 
       {/* Main Page Content - Conditionally Hidden if No Service */}
       {products.length === 0 && !isLoading ? (
-        <div className="flex flex-col items-center justify-center pt-24 pb-48 animate-in fade-in zoom-in duration-700">
-          <div className="w-64 h-64 md:w-96 md:h-96 mb-8 drop-shadow-2xl">
-            <Lottie animationData={noServiceAnimation} loop={true} />
+        <div className="flex flex-col items-center justify-center pt-24 pb-48 px-6 text-center animate-in fade-in zoom-in duration-700">
+          {/* Coming Soon UI - Premium Look */}
+          <div className="relative mb-10">
+            <div className="h-44 w-44 bg-indigo-50 rounded-[48px] flex items-center justify-center relative overflow-hidden shadow-2xl shadow-indigo-100/50">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent" />
+              <motion.div 
+                animate={{ 
+                  y: [0, -12, 0],
+                  rotate: [0, 8, -8, 0]
+                }}
+                transition={{ 
+                  duration: 5, 
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="relative z-10"
+              >
+                <div className="h-24 w-24 bg-indigo-600 rounded-[32px] flex items-center justify-center shadow-xl shadow-indigo-200/50">
+                  <Sparkles size={48} className="text-white" strokeWidth={2.5} />
+                </div>
+              </motion.div>
+              
+              {/* Floating Decorative Elements */}
+              <div className="absolute top-6 right-6 h-4 w-4 bg-yellow-400 rounded-full blur-[1px] animate-pulse" />
+              <div className="absolute bottom-10 left-8 h-3 w-3 bg-indigo-300 rounded-full" />
+              <div className="absolute top-1/2 left-4 h-2 w-2 bg-purple-400 rounded-full blur-[0.5px]" />
+            </div>
           </div>
-          <h3 className="text-3xl md:text-5xl font-[1000] text-slate-800 tracking-tighter mb-4 text-center px-4 uppercase">
-            Service <span className="text-[#45B0E2]">Unavailable</span>
+
+          <div className="inline-flex items-center gap-2 bg-indigo-50 px-5 py-2 rounded-full mb-8 border border-indigo-100/50">
+            <span className="h-2 w-2 bg-indigo-600 rounded-full animate-pulse" />
+            <span className="text-[12px] font-black uppercase tracking-[0.25em] text-indigo-600">Stay Tuned</span>
+          </div>
+
+          <h3 className="text-4xl md:text-6xl font-black text-slate-900 leading-tight mb-6 tracking-tighter uppercase">
+            SERVICE <span className="text-indigo-600">UNAVAILABLE</span>
           </h3>
-          <p className="text-slate-500 font-bold max-w-md text-center px-10 text-sm md:text-lg leading-relaxed opacity-80">
-            Ah! We haven't reached your neighborhood yet. We're expanding rapidly to bring {settings?.appName || "Noyo"} to every corner.
+
+          <p className="text-base md:text-xl font-medium text-slate-500 leading-relaxed mb-12 max-w-[320px] md:max-w-md mx-auto opacity-90">
+            Ah! We haven't reached your neighborhood yet. We're expanding rapidly to bring <span className="text-slate-900 font-bold">{settings?.appName || "Zeppe"}</span> to every corner.
           </p>
+
           <motion.button
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => window.location.reload()}
-            className="mt-12 px-10 py-4 bg-[#45B0E2] text-white font-[1000] rounded-[24px] shadow-2xl shadow-cyan-200 uppercase text-[13px] tracking-[0.2em] transition-all"
+            className="group relative px-12 py-5 bg-indigo-600 text-white font-black rounded-[32px] shadow-2xl shadow-indigo-200/60 uppercase text-[14px] tracking-[0.25em] transition-all overflow-hidden"
           >
-            Check Again
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            <span className="relative z-10">Check Again</span>
           </motion.button>
         </div>
       ) : (
@@ -2108,8 +2142,8 @@ const Home = () => {
                 if (!section.products || section.products.length === 0 || section.id === "primary-category-discovery") return null;
 
                 return (
-                  <div key={`${section.id}-products-group`} className="px-3 pb-8 pt-4 bg-transparent">
-                    <div className="mb-4 flex items-center justify-between px-1">
+                  <div key={`${section.id}-products-group`} className="px-4 pb-8 pt-4 bg-transparent">
+                    <div className="mb-4 flex items-center justify-between px-0">
                       <h2 className="tracking-tight text-[#111111] text-[18px] font-black leading-none">
                         {section.title}
                       </h2>
@@ -2361,7 +2395,7 @@ const Home = () => {
                 productsById={productsById}
                 categoriesById={categoryMap}
                 subcategoriesById={subcategoryMap}
-                themeColor={activeCategory?.headerColor || "#7B4419"}
+                themeColor={activeCategory?.headerColor || "#f59931"}
               />
             </div>
           )}

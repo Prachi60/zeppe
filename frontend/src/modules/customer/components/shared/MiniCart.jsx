@@ -39,39 +39,36 @@ const MiniCart = () => {
                         initial={{ y: 50, opacity: 0, scale: 0.9 }}
                         animate={{ y: 0, opacity: 1, scale: 1 }}
                         exit={{ y: 50, opacity: 0, scale: 0.9 }}
-                        className="w-full max-w-[148px] pointer-events-auto"
+                        className="w-full max-w-[170px] pointer-events-auto"
                     >
                         <Link
                             to="/checkout"
-                            style={{
-                                backgroundColor: "var(--customer-mini-cart-color, #45B0E2)",
-                            }}
-                            className="flex items-center gap-2 text-white py-1.5 px-2.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.22)] hover:scale-[1.02] active:scale-95 transition-all group border border-white/10 relative overflow-hidden"
+                            className="flex items-center gap-2 text-white py-1 px-1.5 rounded-full shadow-[0_12px_40px_rgba(245,153,49,0.4)] hover:scale-[1.02] active:scale-95 transition-all group border border-white/10 relative overflow-hidden bg-[#f59931]"
                         >
                             <div className="absolute inset-0 overflow-hidden rounded-full pointer-events-none">
-                                <div className="mini-cart-shimmer absolute inset-y-0 left-[-40%] w-[40%] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]" />
+                                <div className="mini-cart-shimmer absolute inset-y-0 left-[-40%] w-[40%] bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg]" />
                             </div>
 
-                            {/* Single Product Image Icon */}
-                            <div className="h-7 w-7 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                            {/* Single Circular Thumbnail */}
+                            <div className="h-9 w-9 rounded-full bg-white p-0.5 border-2 border-white/10 shadow-sm overflow-hidden flex-shrink-0 z-[1]">
                                 {cart.length > 0 && (
                                     <img
                                         src={cart[0].image}
                                         alt={cart[0].name}
-                                        className="w-full h-full object-contain p-0.5"
+                                        className="w-full h-full object-contain rounded-full"
                                     />
                                 )}
                             </div>
 
                             {/* Text Section */}
-                            <div className="flex-1 flex flex-col justify-center min-w-0">
-                                <h4 className="text-[12px] font-black leading-tight truncate">View cart</h4>
-                                <p className="text-[9px] opacity-90 font-bold leading-tight">{cartCount} {cartCount === 1 ? 'item' : 'items'}</p>
+                            <div className="flex-1 flex flex-col justify-center min-w-0 pr-0.5">
+                                <h4 className="text-[12px] font-bold leading-tight whitespace-nowrap">View cart</h4>
+                                <p className="text-[10px] opacity-90 font-semibold leading-tight">{cartCount} {cartCount === 1 ? 'item' : 'items'}</p>
                             </div>
 
-                            {/* Arrow Icon in circle */}
-                            <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                                <ChevronRight size={15} strokeWidth={3} className="text-white" />
+                            {/* Arrow Button */}
+                            <div className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 transition-transform">
+                                <ChevronRight size={16} strokeWidth={3} className="text-white" />
                             </div>
                         </Link>
                     </motion.div>

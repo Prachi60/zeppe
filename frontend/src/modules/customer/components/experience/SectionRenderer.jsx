@@ -40,7 +40,7 @@ const SectionRenderer = ({
             <div
               key={section._id}
               id={`section-${section._id}`}
-              className="-mx-2 md:-mx-4 lg:-mx-6 px-2 md:px-4 lg:px-6"
+              className="-mx-4 md:-mx-4 lg:-mx-6 px-4 md:px-4 lg:px-6"
             >
               {heading && (
                 <div className="flex items-center justify-between mb-2">
@@ -113,7 +113,7 @@ const SectionRenderer = ({
             <div
               key={section._id}
               id={`section-${section._id}`}
-              className="-mx-2 md:-mx-4 lg:-mx-6 px-2 md:px-4 lg:px-6"
+              className="-mx-4 md:-mx-4 lg:-mx-6 px-4 md:px-4 lg:px-6"
             >
               {heading && (
                 <div className="flex items-center justify-between mb-2">
@@ -227,7 +227,7 @@ const SectionRenderer = ({
               <div
                 key={section._id}
                 id={`section-${section._id}`}
-                className="-mx-2 md:-mx-4 px-2 md:px-4 mt-6 mb-2"
+                className="-mx-4 md:-mx-4 px-4 md:px-4 mt-6 mb-2"
               >
                 <div className="flex items-center justify-between mb-3">
                   {heading && (
@@ -239,11 +239,11 @@ const SectionRenderer = ({
                     {allProducts.length} items
                   </span>
                 </div>
-                <div className="relative z-10 flex overflow-x-auto gap-3 pb-4 no-scrollbar">
+                <div className="relative z-10 flex overflow-x-auto gap-2 pb-4 no-scrollbar">
                   {allProducts.map((product) => (
                     <div
                       key={product._id || product.id}
-                      className="w-[165px] shrink-0"
+                      className="w-[120px] shrink-0"
                     >
                       <ProductCard product={product} compact={true} neutralBg={true} />
                     </div>
@@ -260,7 +260,7 @@ const SectionRenderer = ({
             <div
               key={section._id}
               id={`section-${section._id}`}
-              className="-mx-2 md:-mx-4 px-2 md:px-4 mt-6"
+              className="-mx-4 md:-mx-4 px-4 md:px-2 mt-6"
             >
               <div className="flex items-center justify-between mb-3">
                 {heading && (
@@ -274,15 +274,15 @@ const SectionRenderer = ({
               </div>
               <div
                 className={cn(
-                  "grid gap-3",
+                  "grid gap-2",
                   columns === 1
                     ? "grid-cols-1"
-                    : "grid-cols-2"
+                    : "grid-cols-3"
                 )}
               >
                 {items.map((product) => (
                   <div key={product._id || product.id}>
-                    <ProductCard product={product} compact={columns >= 2} neutralBg={true} />
+                    <ProductCard product={product} compact={true} neutralBg={true} />
                   </div>
                 ))}
               </div>

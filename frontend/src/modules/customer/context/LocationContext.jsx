@@ -23,6 +23,7 @@ export const LocationProvider = ({ children }) => {
     latitude: 22.711140989838025,
     longitude: 75.9001552518043,
   });
+  const [isServiceable, setIsServiceable] = useState(true);
 
   // Address list for drawer UI – will be hydrated from profile API.
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -38,6 +39,10 @@ export const LocationProvider = ({ children }) => {
     { persist = true, updateSavedHome = false } = {},
   ) => {
     setCurrentLocation(newLoc);
+    
+    // Determine serviceability (Mock: only Indore is supported for now)
+    const serviceable = String(newLoc.city || "").trim().toLowerCase() === "indore";
+    setIsServiceable(serviceable);
 
     if (updateSavedHome) {
       setSavedAddresses((prev) =>
@@ -322,6 +327,7 @@ export const LocationProvider = ({ children }) => {
         refreshAddresses,
         isFetchingLocation,
         locationError,
+        isServiceable,
         refreshLocation: fetchAndCacheLocation,
       }}>
       {children}

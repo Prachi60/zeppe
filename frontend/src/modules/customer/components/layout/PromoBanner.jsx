@@ -26,9 +26,9 @@ const PromoBanner = ({ activeCategory }) => {
             : (activeCategory?.image || getCategoryImage(categoryName) || '/FortuneSugarPack.png'));
     const bannerImageAlt = isAllCategory ? 'Fortune sugar pack' : `${categoryName} banner`;
 
-    // Color: if admin set headerColor use it, else "All" defaults to black, others use their headerColor
+    // Color: if admin set headerColor use it, else "All" defaults to brand orange
     const bannerBackground = (isAllCategory && !activeCategory?.headerColor)
-        ? '#FFE100'
+        ? '#f59931'
         : buildHeaderGradient(gradientColor);
 
     return (

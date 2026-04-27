@@ -240,3 +240,42 @@ export const updateSellerProfile = async (req, res) => {
     return handleResponse(res, 500, error.message);
   }
 };
+
+/* ===============================
+   GET PUBLIC SELLER BY ID
+================================ */
+export const getPublicSellerById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lat, lng } = req.query;
+
+    const seller = await Seller.findById(id)
+      .select("shopName shopLogo shopBanner address locality city state location isActive isVerified serviceRadius")
+      .lean();
+
+    if (!seller) {
+      return handleResponse(res, 404, "Seller not found");
+    }
+
+    // Add distance if coordinates provided
+    if (lat && lng) {
+      const sellerLng = seller.location.coordinates[0];
+      const sellerLat = seller.location.coordinates[1];
+      seller.distance = calculateDistance(
+        Number(lat),
+        Number(lng),
+        sellerLat,
+        sellerLng,
+      );
+    }
+
+    return handleResponse(
+      res,
+      200,
+      "Seller details fetched successfully",
+      seller,
+    );
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};

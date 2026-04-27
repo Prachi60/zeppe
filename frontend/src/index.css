@@ -37,18 +37,23 @@
   --customer-mini-cart-color: #0284c7;
 }
 
-html {
-  scroll-behavior: smooth;
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: white;
+  overscroll-behavior-y: none;
 }
 
 body {
-  margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 13px;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Custom scrollbar */
@@ -286,6 +291,22 @@ body {
     100% {
       transform: translateX(-50%);
     }
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .mt-safe {
+    margin-top: env(safe-area-inset-top, 0px);
+  }
+
+  .h-safe-top {
+    height: env(safe-area-inset-top, 0px);
   }
 }
 

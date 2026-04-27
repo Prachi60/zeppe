@@ -51,7 +51,7 @@ const BottomNav = () => {
                                             initial={{ opacity: 0, scale: 0.8 }}
                                             animate={{ opacity: 1, scale: 1 }}
                                             exit={{ opacity: 0, scale: 0.8 }}
-                                            className="absolute -inset-y-1.5 -inset-x-3 bg-[#2822e3]/10 rounded-xl -z-10 px-2 py-1"
+                                            className="absolute -inset-y-1.5 -inset-x-3 bg-[#f59931]/10 rounded-xl -z-10 px-2 py-1"
                                             transition={{ type: "spring", stiffness: 400, damping: 30 }}
                                         />
                                     )}
@@ -69,7 +69,7 @@ const BottomNav = () => {
                                         strokeWidth={isActive ? 2.5 : 2}
                                         className={cn(
                                             "transition-colors duration-300",
-                                            isActive ? "text-[#2822e3]" : "text-gray-400"
+                                            isActive ? "text-[#f59931]" : "text-gray-400"
                                         )}
                                     />
                                 </motion.div>

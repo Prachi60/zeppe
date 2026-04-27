@@ -5,7 +5,7 @@ import {
     sendSellerSignupOtp,
     verifySellerSignupOtp,
 } from "../controller/sellerAuthController.js";
-import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers } from "../controller/sellerController.js";
+import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers, getPublicSellerById } from "../controller/sellerController.js";
 import { getSellerStats, getSellerEarnings, getLedger } from "../controller/sellerStatsController.js";
 import { getSellerWalletSummaryController } from "../controller/adminFinanceController.js";
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
@@ -45,6 +45,7 @@ router.post(
 );
 router.post("/login", loginSeller);
 router.get("/nearby", getNearbySellers);
+router.get("/public/:id", getPublicSellerById);
 
 // Profile routes
 router.get(

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { useNavigate, useLocation as useRouteLocation } from "react-router-dom";
+import { MapPin } from "lucide-react";
 import { motion, useScroll, useTransform, useMotionValue } from "framer-motion";
 import Lottie from "lottie-react";
 import LocationDrawer from "./LocationDrawer";
@@ -208,7 +209,7 @@ function CategoryNavColumn({
               isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100",
               // Apply a grayscale filter if we want it to match the monochrome look, 
               // but usually custom icons are meant to be seen in color.
-              !isActive && "grayscale brightness-0" 
+              !isActive && "grayscale brightness-0"
             )}
           />
         ) : MuiIcon ? (
@@ -264,7 +265,7 @@ const MainLocationHeader = ({
 }) => {
   const { scrollY } = useScroll();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
-  const { currentLocation, savedAddresses, refreshLocation, isFetchingLocation } =
+  const { currentLocation, isServiceable, savedAddresses, refreshLocation, isFetchingLocation } =
     useLocation();
   const { isOpen: isProductDetailOpen } = useProductDetail();
   const { settings } = useSettings();
@@ -411,7 +412,7 @@ const MainLocationHeader = ({
   }, [typingState]);
 
   // Search bar always white/cream — visible on gradient background
-  const baseHeaderColor = activeCategory?.headerColor || "#7B4419";
+  const baseHeaderColor = activeCategory?.headerColor || "#f59931";
   const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
   const matchedSavedAddress = savedAddresses?.find((address) => {
     const savedAddress = String(address?.address || "").trim().toLowerCase();
@@ -463,36 +464,30 @@ const MainLocationHeader = ({
 
   return (
     <>
-      {/* 1. TOP INFO (Scrolls away normally) */}
-      <div 
+      <div
         id="mobile-top-info"
+        style={{
+          backgroundImage: buildHeaderGradient(baseHeaderColor, true),
+        }}
         className={cn(
-          "relative w-full z-[900] h-auto",
+          "relative w-full z-[900] h-auto pt-[calc(env(safe-area-inset-top,0px)+8px)] md:hidden",
           isProductDetailOpen && "hidden",
           isLocationOpen && "hidden"
         )}>
-        <div
-          style={{
-            backgroundImage: buildHeaderGradient(baseHeaderColor, true),
-          }}
-          className="w-full z-10 rounded-none px-4 pt-[calc(env(safe-area-inset-top,_0px)+8px)] md:hidden">
-          
+        <div className="w-full z-10 px-4">
+
           <div className="flex flex-col pt-1">
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              type="button"
-              onClick={() => setIsLocationOpen(true)}
-              className="absolute top-[calc(env(safe-area-inset-top,0px)+30px)] right-[4.55rem] z-30 flex h-7 items-center gap-1 rounded-full px-2.5 shadow-[0_8px_18px_rgba(0,0,0,0.16)]"
-              style={{
-                background: "linear-gradient(180deg, #a6e4cc 0%, #84cfb0 100%)",
-                border: "1px solid rgba(255,255,255,0.38)",
-              }}>
-              <LocationOnIcon sx={{ fontSize: 12, color: "#1F6B53" }} />
-              <span className="text-[10px] font-black tracking-tight text-[#1F6B53]">
-                2.7 kms
-              </span>
-            </motion.button>
+            {isServiceable && (
+              <div
+                id="header-distance-chip"
+                className="absolute top-[calc(env(safe-area-inset-top,0px)+30px)] right-[4.55rem] z-30 flex h-7 items-center gap-1 rounded-full px-2.5 shadow-[0_8px_18px_rgba(0,0,0,0.16)]"
+                style={{ backgroundColor: "rgba(102, 218, 190, 0.85)", border: "1.5px solid rgba(255,255,255,0.2)" }}>
+                <MapPin size={14} className="text-emerald-900/80" />
+                <span className="text-[11px] font-black text-emerald-950/90 tracking-tight">
+                  2.7 kms
+                </span>
+              </div>
+            )}
             {/* Profile Button — absolute top-right corner */}
             <motion.button
               whileHover={{ scale: 1.1 }}
@@ -508,46 +503,51 @@ const MainLocationHeader = ({
               <div className="text-[34px] font-black leading-[0.85] tracking-tight text-black">
                 zeppe
               </div>
-              <div className="mt-2.5 text-[16px] font-bold leading-none tracking-tight text-black/80">
-                {deliveryTimeText}
+              <div className={cn(
+                "mt-2 text-black transition-all duration-300",
+                !isServiceable ? "text-[15px] font-semibold leading-tight opacity-90" : "text-[16px] font-bold leading-none tracking-tight text-black/80"
+              )}>
+                {!isServiceable ? "Coming soon in your city" : deliveryTimeText}
               </div>
-              <div className="mt-1.5 mb-1 overflow-hidden relative w-full flex items-center h-[28px] bg-white/10 rounded-md px-2">
-                <style>{`
-                  @keyframes scrollingTextShine {
-                    0% { background-position: 200% center; }
-                    100% { background-position: -200% center; }
-                  }
-                  .text-glass-flare {
-                    background: linear-gradient(
-                      110deg,
-                      rgba(0,0,0,0.85) 0%,
-                      rgba(0,0,0,0.85) 40%,
-                      #000000 48%,
-                      #000000 52%,
-                      rgba(0,0,0,0.85) 60%,
-                      rgba(0,0,0,0.85) 100%
-                    );
-                    background-size: 200% auto;
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    color: transparent;
-                    animation: scrollingTextShine 3s linear infinite;
-                    text-shadow: 0px 1px 2px rgba(255,255,255,0.1);
-                  }
-                `}</style>
-                <motion.div
-                  animate={{ x: ["105%", "-105%"] }}
-                  transition={{
-                    duration: 12,
-                    repeat: Infinity,
-                    ease: "linear",
-                  }}
-                  className="inline-flex items-center whitespace-nowrap h-full">
-                  <span className="text-[14px] font-bold tracking-[0.02em] text-glass-flare">
-                    Our favourite offer is back "{featuredOffer?.title || "Sugar"} @ {featuredOffer?.subtitle || "Rs. 1 per Kg*"}"
-                  </span>
-                </motion.div>
-              </div>
+              {isServiceable && (
+                <div className="mt-1.5 mb-1 overflow-hidden relative w-full flex items-center h-[28px] bg-white/10 rounded-md px-2">
+                  <style>{`
+                    @keyframes scrollingTextShine {
+                      0% { background-position: 200% center; }
+                      100% { background-position: -200% center; }
+                    }
+                    .text-glass-flare {
+                      background: linear-gradient(
+                        110deg,
+                        rgba(0,0,0,0.85) 0%,
+                        rgba(0,0,0,0.85) 40%,
+                        #000000 48%,
+                        #000000 52%,
+                        rgba(0,0,0,0.85) 60%,
+                        rgba(0,0,0,0.85) 100%
+                      );
+                      background-size: 200% auto;
+                      -webkit-background-clip: text;
+                      -webkit-text-fill-color: transparent;
+                      color: transparent;
+                      animation: scrollingTextShine 3s linear infinite;
+                      text-shadow: 0px 1px 2px rgba(255,255,255,0.1);
+                    }
+                  `}</style>
+                  <motion.div
+                    animate={{ x: ["105%", "-105%"] }}
+                    transition={{
+                      duration: 12,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                    className="inline-flex items-center whitespace-nowrap h-full">
+                    <span className="text-[14px] font-bold tracking-[0.02em] text-glass-flare">
+                      Our favourite offer is back "{featuredOffer?.title || "Sugar"} @ {featuredOffer?.subtitle || "Rs. 1 per Kg*"}"
+                    </span>
+                  </motion.div>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setIsLocationOpen(true)}
@@ -570,7 +570,7 @@ const MainLocationHeader = ({
               </button>
             </div>
 
-            </div>
+          </div>
         </div>
       </div>
 
@@ -594,7 +594,7 @@ const MainLocationHeader = ({
             transition: "all 0.3s ease"
           }}
           className={cn(
-            "w-full z-10 rounded-b-none px-4 pb-0 md:rounded-none md:pt-4 md:pb-3 md:border-b md:border-black/10 transition-all duration-300 border-b-0",
+            "w-full z-10 rounded-b-none px-4 pt-safe pb-0 md:rounded-none md:pt-4 md:pb-3 md:border-b md:border-black/10 transition-all duration-300 border-b-0",
             isScrolled && !isDesktopViewport
               ? "shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-b-[24px]"
               : "shadow-none"
@@ -678,63 +678,63 @@ const MainLocationHeader = ({
             "md:hidden flex items-center gap-2.5 pt-0 pb-0 w-full",
             isScrolled && "pt-2.5"
           )}>
-              <div className="flex-[0.55]">
-                <div
-                  onClick={handleSearchClick}
-                  className="flex h-[40px] w-full cursor-pointer items-center rounded-xl px-4 shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-colors duration-200"
-                  style={{ backgroundColor: "rgba(255,252,248,0.95)" }}>
-                  <SearchIcon sx={{ color: "#6B7280", fontSize: 16 }} />
-                  <input
-                    type="text"
-                    placeholder={searchPlaceholder || "Search products..."}
-                    readOnly
-                    className="flex-1 bg-transparent border-none outline-none pl-2 text-[#1A1A1A] font-medium placeholder:text-[#9CA3AF] text-[12px] cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              <div className="flex-[0.45]">
-                <button
-                  type="button"
-                  onClick={() => navigate("/refer-earn")}
-                  className="relative overflow-hidden w-full h-[38px] flex flex-col items-center justify-center transition-all duration-300 active:scale-[0.98] rounded-[6px]"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(35,35,35,1) 0%, rgba(0,0,0,1) 100%)",
-                    border: "1px solid rgba(255, 255, 255, 0.5)",
-                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.4)",
-                  }}>
-                  {/* Glass Flare Animation (Left to Right Shine) */}
-                  <motion.div 
-                    className="absolute top-0 bottom-0 w-[40%] pointer-events-none"
-                    style={{
-                      background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)",
-                      transform: "skewX(-20deg)",
-                      zIndex: 20
-                    }}
-                    initial={{ left: "-100%" }}
-                    animate={{ left: "200%" }}
-                    transition={{
-                      repeat: Infinity,
-                      duration: 1.5,
-                      ease: "linear",
-                      repeatDelay: 2.5
-                    }}
-                  />
-                  
-                  <span 
-                    className="text-[13px] font-black uppercase tracking-wider z-10 leading-none"
-                    style={{
-                      color: "#FCD34D", // pure sharp gold/amber
-                      textShadow: "0px 1px 3px rgba(0,0,0,0.9)",
-                    }}>
-                    Refer &amp; Earn
-                  </span>
-                  <span className="text-[5px] font-bold text-white/80 tracking-widest uppercase z-10 mt-[2px]">
-                    Unlock rewards together
-                  </span>
-                </button>
+            <div className="flex-[0.55]">
+              <div
+                onClick={handleSearchClick}
+                className="flex h-[40px] w-full cursor-pointer items-center rounded-xl px-4 shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-colors duration-200"
+                style={{ backgroundColor: "rgba(255,252,248,0.95)" }}>
+                <SearchIcon sx={{ color: "#6B7280", fontSize: 16 }} />
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder || "Search products..."}
+                  readOnly
+                  className="flex-1 bg-transparent border-none outline-none pl-2 text-[#1A1A1A] font-medium placeholder:text-[#9CA3AF] text-[12px] cursor-pointer"
+                />
               </div>
             </div>
+
+            <div className="flex-[0.45]">
+              <button
+                type="button"
+                onClick={() => navigate("/refer-earn")}
+                className="relative overflow-hidden w-full h-[38px] flex flex-col items-center justify-center transition-all duration-300 active:scale-[0.98] rounded-[6px]"
+                style={{
+                  background: "linear-gradient(135deg, rgba(35,35,35,1) 0%, rgba(0,0,0,1) 100%)",
+                  border: "1px solid rgba(255, 255, 255, 0.5)",
+                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.4)",
+                }}>
+                {/* Glass Flare Animation (Left to Right Shine) */}
+                <motion.div
+                  className="absolute top-0 bottom-0 w-[40%] pointer-events-none"
+                  style={{
+                    background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)",
+                    transform: "skewX(-20deg)",
+                    zIndex: 20
+                  }}
+                  initial={{ left: "-100%" }}
+                  animate={{ left: "200%" }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 1.5,
+                    ease: "linear",
+                    repeatDelay: 2.5
+                  }}
+                />
+
+                <span
+                  className="text-[13px] font-black uppercase tracking-wider z-10 leading-none"
+                  style={{
+                    color: "#FCD34D", // pure sharp gold/amber
+                    textShadow: "0px 1px 3px rgba(0,0,0,0.9)",
+                  }}>
+                  Refer &amp; Earn
+                </span>
+                <span className="text-[5px] font-bold text-white/80 tracking-widest uppercase z-10 mt-[2px]">
+                  Unlock rewards together
+                </span>
+              </button>
+            </div>
+          </div>
 
           {/* Categories Navigation - Smooth Collapse */}
           {categories.length > 0 && (

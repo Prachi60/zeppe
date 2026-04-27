@@ -223,7 +223,7 @@ const CategoryHierarchy = () => {
               <div
                 className="h-6 w-6 rounded-lg shadow-sm ring-1 ring-gray-200 cursor-pointer hover:ring-indigo-300 transition-all"
                 style={{
-                  background: `linear-gradient(135deg, ${item.headerColor || '#7B4419'} 0%, ${item.headerColor || '#7B4419'}dd 100%)`
+                  background: `linear-gradient(135deg, ${item.headerColor || '#f59931'} 0%, ${item.headerColor || '#f59931'}dd 100%)`
                 }}
                 title="Click to change color"
                 onClick={(e) => {
@@ -234,7 +234,7 @@ const CategoryHierarchy = () => {
               <input
                 id={`color-input-${item._id || item.id}`}
                 type="color"
-                value={item.headerColor || '#7B4419'}
+                value={item.headerColor || '#f59931'}
                 onChange={(e) => {
                   onColorChange(item._id || item.id, e.target.value);
                   e.stopPropagation();

@@ -17,6 +17,7 @@ export const customerApi = {
 
   // Sellers & Location
   getNearbySellers: (params) => getWithDedupe("/seller/nearby", params),
+  getPublicSellerById: (id, params) => getWithDedupe(`/seller/public/${id}`, params),
   getStoreProducts: (sellerId, params = {}) =>
     getWithDedupe("/products", { ...params, sellerId }, { ttl: 5000 }),
 
