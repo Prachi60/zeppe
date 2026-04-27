@@ -1902,7 +1902,7 @@ const Home = () => {
       {!isCategoriesAnchorActive && <PromoBanner activeCategory={activeCategory} />}
 
       {/* Hero Banner Carousel - backend driven via HeroConfig */}
-      {heroConfig?.banners?.items?.length > 0 && !isCategoriesAnchorActive && (
+      {heroConfig?.banners?.items?.length > 0 && !isCategoriesAnchorActive && isAllCategoryActive && (
         <div className="w-full">
           <ExperienceBannerCarousel
             items={heroConfig.banners.items.filter(b => b.status !== 'inactive')}

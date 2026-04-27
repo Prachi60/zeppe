@@ -16,6 +16,7 @@ import { useCartAnimation } from '../context/CartAnimationContext';
 import Lottie from 'lottie-react';
 import noServiceAnimation from '@/assets/lottie/animation.json';
 import { getCategoryLocation } from '../utils/categoryNavigation';
+import { useLocation as useAppLocation } from '../context/LocationContext';
 
 /* ─── Compact Kuiklo-style card ─────────────────────────────────────────── */
 const KuikloCard = React.memo(({ product }) => {
@@ -265,6 +266,7 @@ const CategoryProductsPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { settings } = useSettings();
+    const { currentLocation } = useAppLocation();
     const finalCategoryId = location.state?.selectedCategory || categoryId;
     console.log("URL categoryId:", categoryId);
     console.log("STATE categoryId:", location.state?.selectedCategory);
@@ -289,6 +291,8 @@ const CategoryProductsPage = () => {
                 const res = await customerApi.getProducts({
                     categoryId: finalCategoryId,
                     limit: 50,
+                    lat: currentLocation?.latitude,
+                    lng: currentLocation?.longitude
                 });
 
                 console.log("API RESPONSE:", res.data);

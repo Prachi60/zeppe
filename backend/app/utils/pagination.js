@@ -9,7 +9,7 @@ import * as logger from "../services/logger.js";
 
 // Configuration constants
 const DEFAULT_LIMIT = parseInt(process.env.PAGINATION_DEFAULT_LIMIT || "20", 10);
-const MAX_LIMIT = parseInt(process.env.PAGINATION_MAX_LIMIT || "100", 10);
+const MAX_LIMIT = parseInt(process.env.PAGINATION_MAX_LIMIT || "1000", 10);
 const MAX_SKIP = parseInt(process.env.PAGINATION_MAX_SKIP || "1000000", 10);
 
 /**

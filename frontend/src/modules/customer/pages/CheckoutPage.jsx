@@ -605,7 +605,12 @@ const CheckoutPage = () => {
     fetchCoupons();
 
     // M-2 FIX: Fetch real recommendations
-    customerApi.getProducts({ limit: 6, sort: "popular" })
+    customerApi.getProducts({ 
+      limit: 6, 
+      sort: "popular",
+      lat: currentLocation?.latitude,
+      lng: currentLocation?.longitude
+    })
       .then(r => {
         const items = r.data.result?.items || r.data.result || [];
         setRecommendedProducts(Array.isArray(items) ? items : []);

@@ -53,26 +53,38 @@ const StoreDetailPage = () => {
           params.lng = currentLocation.longitude;
         }
 
-        const [storeRes, productsRes, categoriesRes] = await Promise.all([
+        // Use allSettled to ensure one failure (like 404 store) doesn't block categories/products
+        const results = await Promise.allSettled([
           customerApi.getPublicSellerById(storeId, params),
           customerApi.getStoreProducts(storeId, params),
-          customerApi.getCategories({ limit: 1000, status: "active" }) // Fetch all active categories
+          customerApi.getCategories({ limit: 1000, status: "active" })
         ]);
-        
-        if (categoriesRes?.data?.result) {
-          const catData = categoriesRes.data.result.items || categoriesRes.data.result;
+
+        const [storeResult, productsResult, categoriesResult] = results;
+
+        // 1. Handle Categories
+        if (categoriesResult.status === "fulfilled" && categoriesResult.value?.data?.success) {
+          const catData = categoriesResult.value.data.result?.items || categoriesResult.value.data.result || categoriesResult.value.data.results;
           const list = Array.isArray(catData) ? catData : [];
           setGlobalCategories(list);
         }
 
-        if (storeRes?.data?.result) {
-          setStore(storeRes.data.result);
+        // 2. Handle Store Details
+        if (storeResult.status === "fulfilled" && storeResult.value?.data?.success) {
+          setStore(storeResult.value.data.result);
         } else {
-          setError("Store details not found.");
+          console.warn("Store details could not be loaded", storeResult.reason);
+          // If 404, we can still show products if they exist
+          if (storeResult.reason?.response?.status === 404) {
+            setError("Store profile not found in database.");
+          }
         }
 
-        const productItems = productsRes?.data?.result?.items || productsRes?.data?.results || [];
-        setProducts(Array.isArray(productItems) ? productItems : []);
+        // 3. Handle Products
+        if (productsResult.status === "fulfilled" && productsResult.value?.data?.success) {
+          const productItems = productsResult.value.data.result?.items || productsResult.value.data.results || [];
+          setProducts(Array.isArray(productItems) ? productItems : []);
+        }
 
       } catch (err) {
         console.error("Store load error:", err);
@@ -89,7 +101,7 @@ const StoreDetailPage = () => {
     // 1. Start with 'All'
     const catList = [{ id: "all", name: "All", image: "https://cdn-icons-png.flaticon.com/512/3081/3081840.png" }];
     
-    // 2. Use categories from the fetched list - Only Level 2
+    // 2. Show all Level 2 Categories from the system
     globalCategories
       .filter(cat => cat.type === "category")
       .forEach(cat => {

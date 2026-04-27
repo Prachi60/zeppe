@@ -232,7 +232,7 @@ async function startHttpServer() {
   }
   
   return new Promise((resolve) => {
-    server.listen(PORT, "0.0.0.0", () => {
+    server.listen(PORT, () => {
       logger.info('HTTP server started', {
         port: PORT,
         environment: NODE_ENV,
