@@ -224,6 +224,7 @@ const ProductDetailSheet = () => {
     const cleanDesc = cleanDescription(selectedProduct?.description);
 
     const AccordionItem = ({ title, children, id, icon }) => {
+        if (id === 'reviews') return null;
         const isOpen = expandedSections.includes(id);
         return (
             <div className="border-b border-slate-100 last:border-0">
@@ -231,13 +232,7 @@ const ProductDetailSheet = () => {
                     onClick={() => toggleSection(id)}
                     className="w-full py-4 flex items-center justify-between transition-all hover:bg-slate-50/50 rounded-lg group px-2"
                 >
-                    <div className="flex items-center gap-3">
-                        <div className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
-                            isOpen ? "bg-cyan-50 text-[#45B0E2]" : "bg-slate-50 text-slate-400 group-hover:bg-slate-100"
-                        )}>
-                            {icon}
-                        </div>
+                    <div className="flex items-center">
                         <span className={cn(
                             "font-bold text-[13px] uppercase tracking-wider",
                             isOpen ? "text-[#1A1A1A]" : "text-slate-500"
@@ -245,7 +240,7 @@ const ProductDetailSheet = () => {
                     </div>
                     <motion.div
                         animate={{ rotate: isOpen ? 180 : 0 }}
-                        className={cn("transition-colors", isOpen ? "text-[#45B0E2]" : "text-slate-300")}
+                        className={cn("transition-colors", isOpen ? "text-[#e88a31]" : "text-slate-300")}
                     >
                         <ChevronDown size={18} strokeWidth={3} />
                     </motion.div>
@@ -295,7 +290,7 @@ const ProductDetailSheet = () => {
                         {/* Parent flex container that holds both sides together so the whole modal scrolls */}
                         <div className="flex w-full min-h-full">
                                 {/* Left: Image Gallery — sticky to window so it doesn't scroll out of view if you want */}
-                                <div className="relative w-[42%] lg:w-[44%] flex-shrink-0 flex flex-col min-h-full sticky top-0" style={{ background: 'linear-gradient(145deg, #f9fafb 0%, #f1f8f2 50%, #fafbfc 100%)' }}>
+                                <div className="relative w-[42%] lg:w-[44%] flex-shrink-0 flex flex-col min-h-full sticky top-0" style={{ background: 'linear-gradient(145deg, #f9fafb 0%, #fff7ed 50%, #fafbfc 100%)' }}>
                                     {/* Top bar with back + wishlist */}
                                     <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-5 z-20">
                                         <motion.button
@@ -313,7 +308,7 @@ const ProductDetailSheet = () => {
                                                 initial={{ scale: 0, rotate: -10 }}
                                                 animate={{ scale: 1, rotate: 0 }}
                                                 transition={{ type: 'spring', delay: 0.2 }}
-                                                className="bg-gradient-to-r from-[#45B0E2] to-[#38bdf8] text-white text-[10px] font-[800] px-3 py-1.5 rounded-xl uppercase tracking-wider shadow-md shadow-cyan-200/40"
+                                                className="bg-gradient-to-r from-[#e88a31] to-[#f59e3b] text-white text-[10px] font-[800] px-3 py-1.5 rounded-xl uppercase tracking-wider shadow-md shadow-orange-200/40"
                                             >
                                                 {Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% OFF
                                             </motion.div>
@@ -349,7 +344,7 @@ const ProductDetailSheet = () => {
                                                         className={cn(
                                                             'w-[52px] h-[52px] lg:w-14 lg:h-14 rounded-xl overflow-hidden flex-shrink-0 transition-all duration-300 border-2',
                                                             i === activeImageIndex
-                                                                ? 'border-[#45B0E2] shadow-lg shadow-cyan-100/60 ring-2 ring-cyan-100 bg-white'
+                                                                ? 'border-[#e88a31] shadow-lg shadow-orange-100/60 ring-2 ring-orange-100 bg-white'
                                                                 : 'border-gray-200/60 opacity-50 hover:opacity-90 bg-white/60'
                                                         )}
                                                     >
@@ -385,7 +380,7 @@ const ProductDetailSheet = () => {
                                                     onClick={() => setActiveImageIndex(i)}
                                                     className={cn(
                                                         'rounded-full transition-all duration-400',
-                                                        i === activeImageIndex ? 'w-8 h-2 bg-[#45B0E2]' : 'w-2 h-2 bg-gray-300/60 hover:bg-gray-400'
+                                                        i === activeImageIndex ? 'w-8 h-2 bg-[#e88a31]' : 'w-2 h-2 bg-gray-300/60 hover:bg-gray-400'
                                                     )}
                                                 />
                                             ))}
@@ -403,9 +398,9 @@ const ProductDetailSheet = () => {
                                                 initial={{ opacity: 0, x: -10 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ delay: 0.1 }}
-                                                className="inline-flex items-center gap-1.5 bg-[#ecfeff] border border-cyan-200/50 text-[#45B0E2] px-3 py-1.5 rounded-lg text-[10px] font-[700] uppercase tracking-wider"
+                                                className="inline-flex items-center gap-1.5 bg-[#fff7ed] border border-orange-200/50 text-[#e88a31] px-3 py-1.5 rounded-lg text-[10px] font-[700] uppercase tracking-wider"
                                             >
-                                                <Clock size={12} strokeWidth={2.5} className="text-[#45B0E2]" />
+                                                <Clock size={12} strokeWidth={2.5} className="text-[#e88a31]" />
                                                 {selectedProduct.deliveryTime || '8-15 MINS'}
                                             </motion.div>
                                             {selectedProduct.originalPrice > selectedProduct.price && (
@@ -413,21 +408,23 @@ const ProductDetailSheet = () => {
                                                     initial={{ opacity: 0, x: -10 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: 0.15 }}
-                                                    className="text-[10px] font-[700] text-[#45B0E2] bg-cyan-50 px-3 py-1.5 rounded-lg border border-cyan-200/50 uppercase tracking-wider"
+                                                    className="text-[10px] font-[700] text-[#e88a31] bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200/50 uppercase tracking-wider"
                                                 >
                                                     💰 Save ₹{selectedProduct.originalPrice - selectedProduct.price}
                                                 </motion.div>
                                             )}
-                                            <motion.div
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.2 }}
-                                                className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-[10px] font-[700] border border-orange-100/50"
-                                            >
-                                                <Star size={10} fill="currentColor" />
-                                                {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '4.8'}
-                                                <span className="text-orange-400 font-medium">({reviews.length > 0 ? reviews.length : '120+'})</span>
-                                            </motion.div>
+                                            {reviews.length > 0 && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: 0.2 }}
+                                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-[10px] font-[700] border border-orange-100/50"
+                                                >
+                                                    <Star size={10} fill="currentColor" />
+                                                    {(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)}
+                                                    <span className="text-orange-400 font-medium">({reviews.length})</span>
+                                                </motion.div>
+                                            )}
                                         </div>
 
                                         {/* Product Name */}
@@ -449,17 +446,17 @@ const ProductDetailSheet = () => {
                                             initial={{ opacity: 0, y: 12 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: 0.2 }}
-                                            className="relative overflow-hidden rounded-[20px] border border-cyan-200/60 shadow-sm"
-                                            style={{ background: 'linear-gradient(135deg, #f4fcfe 0%, #eefbfb 100%)' }}
+                                            className="relative overflow-hidden rounded-[20px] border border-orange-200/60 shadow-sm"
+                                            style={{ background: 'linear-gradient(135deg, #fffcf8 0%, #fffbf0 100%)' }}
                                         >
                                             {/* Decorative subtle patterns */}
-                                            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl" />
-                                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-sky-500/5 rounded-full blur-2xl" />
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-3xl" />
+                                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-400/5 rounded-full blur-2xl" />
 
                                             <div className="relative flex items-center justify-between py-4 px-5">
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-baseline gap-2">
-                                                        <span className="text-[28px] lg:text-[32px] font-[800] text-[#45B0E2] tracking-tight leading-none">
+                                                        <span className="text-[28px] lg:text-[32px] font-[800] text-[#e88a31] tracking-tight leading-none">
                                                             ₹{selectedProduct.price}
                                                         </span>
                                                         {selectedProduct.originalPrice > selectedProduct.price && (
@@ -474,12 +471,12 @@ const ProductDetailSheet = () => {
                                                 </div>
                                                 <div>
                                                     {quantity > 0 ? (
-                                                        <div className="flex items-center gap-1 bg-white border border-cyan-200 rounded-xl p-1 shadow-sm">
-                                                            <motion.button whileTap={{ scale: 0.85 }} onClick={handleDecrement} className="w-9 h-9 bg-cyan-50 rounded-lg flex items-center justify-center text-cyan-700 hover:bg-cyan-100 transition-colors">
+                                                        <div className="flex items-center gap-1 bg-white border border-orange-200 rounded-xl p-1 shadow-sm">
+                                                            <motion.button whileTap={{ scale: 0.85 }} onClick={handleDecrement} className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center text-orange-700 hover:bg-orange-100 transition-colors">
                                                                 <Minus size={16} strokeWidth={2.5} />
                                                             </motion.button>
                                                             <span className="font-[800] text-base text-gray-800 w-8 text-center">{quantity}</span>
-                                                            <motion.button whileTap={{ scale: 0.85 }} onClick={handleIncrement} className="w-9 h-9 bg-[#45B0E2] rounded-lg flex items-center justify-center text-white hover:bg-[#38bdf8] transition-colors shadow-sm">
+                                                            <motion.button whileTap={{ scale: 0.85 }} onClick={handleIncrement} className="w-9 h-9 bg-[#e88a31] rounded-lg flex items-center justify-center text-white hover:bg-[#f59e3b] transition-colors shadow-sm">
                                                                 <Plus size={16} strokeWidth={2.5} />
                                                             </motion.button>
                                                         </div>
@@ -488,7 +485,7 @@ const ProductDetailSheet = () => {
                                                         whileHover={{ scale: 1.02, y: -2 }}
                                                         whileTap={{ scale: 0.98 }}
                                                         onClick={handleAddToCart}
-                                                        className="bg-gradient-to-r from-[#45B0E2] to-[#38bdf8] text-white h-12 px-8 rounded-xl font-black text-[13px] flex items-center gap-2 shadow-lg shadow-cyan-100 hover:shadow-cyan-200 transition-all uppercase tracking-widest border border-white/20"
+                                                        className="bg-gradient-to-r from-[#e88a31] to-[#f59e3b] text-white h-12 px-8 rounded-xl font-black text-[13px] flex items-center gap-2 shadow-lg shadow-orange-100 hover:shadow-orange-200 transition-all uppercase tracking-widest border border-white/20"
                                                     >
                                                         <ShoppingBag size={16} strokeWidth={3} />
                                                         Add to Cart
@@ -508,7 +505,7 @@ const ProductDetailSheet = () => {
                                                 <Link
                                                     to="/checkout"
                                                     onClick={closeProduct}
-                                                    className="w-[80%] bg-gradient-to-r from-[#45B0E2] to-[#0ea5e9] text-white h-[40px] rounded-xl flex items-center justify-between px-4 shadow-md shadow-cyan-200/40 hover:shadow-lg hover:-translate-y-0.5 transition-all active:scale-[0.98]"
+                                                    className="w-[80%] bg-gradient-to-r from-[#e88a31] to-[#f59e3b] text-white h-[40px] rounded-xl flex items-center justify-between px-4 shadow-md shadow-orange-200/40 hover:shadow-lg hover:-translate-y-0.5 transition-all active:scale-[0.98]"
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         <ShoppingBag size={14} strokeWidth={2.0} />
@@ -546,7 +543,7 @@ const ProductDetailSheet = () => {
                                                             className={cn(
                                                                 'px-4 py-2 font-[600] rounded-lg text-[13px] transition-all border-2',
                                                                 selectedVariant?.sku === v.sku
-                                                                    ? 'bg-brand-50 border-[#45B0E2] text-[#45B0E2] shadow-md shadow-brand-100/50'
+                                                                    ? 'bg-orange-50 border-[#e88a31] text-[#e88a31] shadow-md shadow-brand-100/50'
                                                                     : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:shadow-sm'
                                                             )}
                                                         >
@@ -577,7 +574,7 @@ const ProductDetailSheet = () => {
                                                             className={cn(
                                                                 'px-4 py-2 font-black rounded-xl text-xs transition-all border-2',
                                                                 selectedVariant?.sku === v.sku
-                                                                    ? 'bg-white border-[#45B0E2] text-[#45B0E2] shadow-sm shadow-cyan-100'
+                                                                    ? 'bg-white border-[#e88a31] text-[#e88a31] shadow-sm shadow-orange-100'
                                                                     : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'
                                                             )}
                                                         >
@@ -628,21 +625,21 @@ const ProductDetailSheet = () => {
                                             {/* Customer Reviews */}
                                             <AccordionItem 
                                                 id="reviews" 
-                                                title={`Customer Reviews (${reviews.length > 0 ? reviews.length : '120+'})`}
+                                                title={`Customer Reviews (${reviews.length})`}
                                                 icon={<Star size={16} />}
                                             >
                                                 <div className="space-y-6 mt-2">
                                                     <div className="flex items-center justify-between mb-4">
-                                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-50 text-[#45B0E2] rounded-xl text-xs font-black border border-cyan-100">
+                                                        <div className={cn("flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-[#e88a31] rounded-xl text-xs font-black border border-orange-100", reviews.length === 0 && "hidden")}>
                                                             <Star size={14} fill="currentColor" />
-                                                            {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '4.8'}
+                                                            {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '0.0'}
                                                         </div>
                                                     </div>
 
                                                     {/* Review Form */}
                                                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
                                                         <h4 className="font-black text-slate-800 text-xs mb-3 flex items-center gap-2">
-                                                            <MessageSquare size={13} className="text-[#45B0E2]" />
+                                                            <MessageSquare size={13} className="text-[#e88a31]" />
                                                             Rate this product
                                                         </h4>
                                                         <form onSubmit={handleReviewSubmit} className="space-y-3">
@@ -656,15 +653,15 @@ const ProductDetailSheet = () => {
                                                                         onClick={() => setNewReview({ ...newReview, rating: s })}
                                                                         className={cn(
                                                                             'h-9 w-9 rounded-xl flex items-center justify-center transition-all shadow-sm',
-                                                                            newReview.rating >= s ? 'bg-cyan-50 text-[#45B0E2] border border-cyan-100' : 'bg-white text-slate-300 border border-slate-100'
+                                                                            newReview.rating >= s ? 'bg-orange-50 text-[#e88a31] border border-orange-100' : 'bg-white text-slate-300 border border-slate-100'
                                                                         )}
                                                                     >
                                                                         <Star size={15} className={cn(newReview.rating >= s && 'fill-current')} />
                                                                     </motion.button>
                                                                 ))}
                                                             </div>
-                                                            <textarea value={newReview.comment} onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })} placeholder="Share your experience..." className="w-full bg-white border border-slate-100 rounded-xl p-3 text-xs font-medium min-h-[80px] outline-none focus:border-[#45B0E2] transition-all resize-none shadow-sm" />
-                                                            <Button type="submit" disabled={isSubmittingReview} className="w-full h-10 bg-[#45B0E2] hover:opacity-90 text-white font-black rounded-xl text-[11px] uppercase tracking-[0.1em] transition-all shadow-lg shadow-cyan-100">
+                                                            <textarea value={newReview.comment} onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })} placeholder="Share your experience..." className="w-full bg-white border border-slate-100 rounded-xl p-3 text-xs font-medium min-h-[80px] outline-none focus:border-[#e88a31] transition-all resize-none shadow-sm" />
+                                                            <Button type="submit" disabled={isSubmittingReview} className="w-full h-10 bg-[#e88a31] hover:opacity-90 text-white font-black rounded-xl text-[11px] uppercase tracking-[0.1em] transition-all shadow-lg shadow-orange-100">
                                                                 {isSubmittingReview ? 'Submitting...' : 'Post Review'}
                                                                 </Button>
                                                         </form>
@@ -673,16 +670,16 @@ const ProductDetailSheet = () => {
                                                     {/* Reviews List */}
                                                     <div className="space-y-3">
                                                         {reviewLoading ? (
-                                                            <div className="flex justify-center py-6"><Loader2 className="animate-spin text-[#45B0E2]" size={20} /></div>
+                                                            <div className="flex justify-center py-6"><Loader2 className="animate-spin text-[#e88a31]" size={20} /></div>
                                                         ) : reviews.length > 0 ? (
                                                             reviews.map((r, rIdx) => (
                                                                 <div key={r._id} className="p-4 rounded-xl border border-slate-100 bg-white hover:shadow-md hover:translate-x-1 transition-all group">
                                                                     <div className="flex justify-between items-start mb-2">
                                                                         <div className="flex items-center gap-2">
-                                                                            <div className="h-8 w-8 rounded-full bg-cyan-50 flex items-center justify-center text-[11px] font-black text-[#45B0E2] border border-cyan-100">{r.userId?.name?.[0] || 'A'}</div>
+                                                                            <div className="h-8 w-8 rounded-full bg-orange-50 flex items-center justify-center text-[11px] font-black text-[#e88a31] border border-orange-100">{r.userId?.name?.[0] || 'A'}</div>
                                                                             <div>
                                                                                 <p className="text-[12px] font-black text-slate-800">{r.userId?.name || 'Anonymous'}</p>
-                                                                                <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <Star key={i} size={9} className={cn(i < r.rating ? 'text-[#45B0E2] fill-[#45B0E2]' : 'text-slate-200')} />)}</div>
+                                                                                <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <Star key={i} size={9} className={cn(i < r.rating ? 'text-[#e88a31] fill-[#e88a31]' : 'text-slate-200')} />)}</div>
                                                                             </div>
                                                                         </div>
                                                                         <span className="text-[10px] font-bold text-slate-400">{new Date(r.createdAt).toLocaleDateString()}</span>
@@ -762,12 +759,30 @@ const ProductDetailSheet = () => {
                             <motion.button
                                 onClick={closeProduct}
                                 whileTap={{ scale: 0.9 }}
-                                className="w-10 h-10 bg-white shadow-lg rounded-full flex items-center justify-center border border-gray-100 pointer-events-auto"
+                                className="w-9 h-9 bg-white shadow rounded-full flex items-center justify-center border border-gray-100/50 pointer-events-auto"
                             >
-                                <ArrowLeft size={24} className="text-[#45B0E2]" strokeWidth={3} />
+                                <ArrowLeft size={18} className="text-slate-700" strokeWidth={2.5} />
                             </motion.button>
-                            <div className="flex gap-3 pointer-events-auto invisible">
-                                {/* Hidden as per request to simplify the view */}
+                            <div className="flex gap-2 pointer-events-auto">
+                                <motion.button
+                                    onClick={toggleWishlist}
+                                    whileTap={{ scale: 0.9 }}
+                                    className="w-9 h-9 bg-white shadow rounded-full flex items-center justify-center border border-gray-100/50"
+                                >
+                                    <Heart size={16} className={cn(isWishlisted ? "text-red-500 fill-red-500" : "text-slate-700")} strokeWidth={2.5} />
+                                </motion.button>
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    className="w-9 h-9 bg-white shadow rounded-full flex items-center justify-center border border-gray-100/50"
+                                >
+                                    <Search size={16} className="text-slate-700" strokeWidth={2.5} />
+                                </motion.button>
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    className="w-9 h-9 bg-white shadow rounded-full flex items-center justify-center border border-gray-100/50"
+                                >
+                                    <ChevronDown size={18} className="text-slate-700 rotate-180" strokeWidth={2.5} />
+                                </motion.button>
                             </div>
                         </div>
 
@@ -812,7 +827,7 @@ const ProductDetailSheet = () => {
                                                 key={i}
                                                 className={cn(
                                                     "h-1.5 rounded-full transition-all duration-300",
-                                                    i === activeImageIndex ? "w-6 bg-[#45B0E2]" : "w-1.5 bg-gray-300"
+                                                    i === activeImageIndex ? "w-6 bg-[#e88a31]" : "w-1.5 bg-gray-300"
                                                 )}
                                             />
                                         ))}
@@ -823,14 +838,39 @@ const ProductDetailSheet = () => {
                             {/* Product Info Container */}
                             <div className="px-5 pt-2 pb-6">
                                 {/* Delivery Time Badge */}
-                                <div className="inline-flex items-center gap-1.5 bg-[#F0FDF4] border border-brand-100 text-[#45B0E2] px-2.5 py-1 rounded-lg text-[10px] font-black uppercase mb-3">
-                                    <Clock size={12} strokeWidth={3} />
-                                    {selectedProduct.deliveryTime || "8 Mins"}
+                                <div className="inline-flex items-center gap-1 text-slate-500 text-[10px] font-bold uppercase mb-2">
+                                    <Clock size={12} strokeWidth={2.5} className="text-slate-500" />
+                                    <span>{selectedProduct.deliveryTime || "8-12 Mins"}</span>
                                 </div>
 
-                                <h2 className="text-xl font-black text-[#1A1A1A] leading-tight mb-2">
+                                <h2 className="text-lg font-extrabold text-slate-900 leading-snug mb-1">
                                     {selectedProduct.name}
                                 </h2>
+
+                                <div className="text-xs text-slate-400 font-bold select-none mb-3">
+                                    {selectedVariant?.name || selectedProduct.weight || "1 unit"}
+                                </div>
+
+                                {/* Price Row in main info */}
+                                <div className="flex items-baseline gap-2 mb-4">
+                                    <span className="text-lg font-black text-slate-900 leading-none">
+                                        ₹{selectedVariant?.salePrice || selectedVariant?.price || selectedProduct.price}
+                                    </span>
+                                    {((selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.price) || 
+                                       (!selectedVariant && selectedProduct.originalPrice > selectedProduct.price)) && (
+                                        <span className="text-xs text-slate-400 font-bold line-through">
+                                            ₹{selectedVariant?.price || selectedProduct.originalPrice}
+                                        </span>
+                                    )}
+                                    {((selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.price) || 
+                                       (!selectedVariant && selectedProduct.originalPrice > selectedProduct.price)) && (
+                                        <span className="bg-[#e88a31] text-white text-[9px] font-black px-1.5 py-0.5 rounded leading-none">
+                                            {selectedVariant
+                                                ? Math.round(((selectedVariant.price - selectedVariant.salePrice) / selectedVariant.price) * 100)
+                                                : Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% OFF
+                                        </span>
+                                    )}
+                                </div>
 
                                 {/* Variants Selection (Mobile) */}
                                 {selectedProduct.variants && selectedProduct.variants.length > 0 && (
@@ -845,13 +885,13 @@ const ProductDetailSheet = () => {
                                                     className={cn(
                                                         "flex-shrink-0 px-5 py-2.5 font-bold rounded-xl text-sm transition-all relative border-2",
                                                         selectedVariant?.sku === v.sku
-                                                            ? "bg-[#ecfeff] border-[#45B0E2] text-[#45B0E2] shadow-sm shadow-cyan-100"
+                                                            ? "bg-orange-50 border-[#e88a31] text-[#e88a31] shadow-sm shadow-orange-100"
                                                             : "bg-slate-50 border-slate-100 text-slate-500"
                                                     )}
                                                 >
                                                     {v.name}
                                                     {selectedVariant?.sku === v.sku && (
-                                                        <div className="absolute top-0 right-0 w-3 h-3 bg-[#45B0E2] rounded-bl-lg" />
+                                                        <div className="absolute top-0 right-0 w-3 h-3 bg-[#e88a31] rounded-bl-lg" />
                                                     )}
                                                 </motion.button>
                                             ))}
@@ -859,54 +899,98 @@ const ProductDetailSheet = () => {
                                     </div>
                                 )}
 
-                                {/* Product Information Accordion (Mobile) */}
-                                <div className="mt-4 border-t border-slate-100">
-                                    {/* Description */}
-                                    {cleanDesc && (
-                                        <AccordionItem 
-                                            id="description" 
-                                            title="Product Description" 
-                                            icon={<Clock size={18} strokeWidth={2.5} />}
-                                        >
-                                            <div
-                                                className="text-sm text-slate-500 font-medium leading-relaxed whitespace-pre-line"
-                                                dangerouslySetInnerHTML={{ __html: cleanDesc }}
-                                            />
-                                        </AccordionItem>
-                                    )}
+                                {/* USP Row */}
+                                <div className="grid grid-cols-3 gap-2 py-4 border-t border-b border-slate-100 my-4">
+                                    <div className="flex flex-col items-center text-center">
+                                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-700 mb-2">
+                                            <ArrowLeft size={18} className="rotate-90" />
+                                        </div>
+                                        <span className="text-[10px] font-extrabold text-slate-800 leading-tight">48 hours</span>
+                                        <span className="text-[9px] font-bold text-slate-400">Replacement</span>
+                                    </div>
+                                    <div className="flex flex-col items-center text-center">
+                                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-700 mb-2">
+                                            <MessageSquare size={18} />
+                                        </div>
+                                        <span className="text-[10px] font-extrabold text-slate-800 leading-tight">24/7</span>
+                                        <span className="text-[9px] font-bold text-slate-400">Support</span>
+                                    </div>
+                                    <div className="flex flex-col items-center text-center">
+                                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-700 mb-2">
+                                            <ShoppingBag size={18} />
+                                        </div>
+                                        <span className="text-[10px] font-extrabold text-slate-800 leading-tight">Fast</span>
+                                        <span className="text-[9px] font-bold text-slate-400">Delivery</span>
+                                    </div>
+                                </div>
 
-                                    {/* Product Details */}
+                                {/* Product Information Accordion (Mobile) */}
+                                <div className="mt-2 border-t border-slate-100">
+                                    {/* Highlights */}
                                     <AccordionItem 
-                                        id="details" 
-                                        title="Product Details" 
+                                        id="highlights" 
+                                        title="Highlights" 
                                         icon={<Search size={18} strokeWidth={2.5} />}
                                     >
-                                        <div className="grid grid-cols-2 gap-3 mt-1">
-                                            {[
-                                                { label: 'Shelf Life', value: '3 Days' },
-                                                { label: 'Country of Origin', value: 'India' },
-                                                { label: 'FSSAI License', value: '1001234567890' },
-                                                { label: 'Customer Care', value: supportEmail }
-                                            ].map((d) => (
-                                                <div key={d.label} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                                    <span className="text-gray-400 block mb-0.5 text-[10px] font-bold uppercase tracking-wider">{d.label}</span>
-                                                    <span className="font-black text-slate-800 text-xs">{d.value}</span>
-                                                </div>
-                                            ))}
+                                        <div className="flex flex-col gap-2 mt-1">
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                                                <span className="text-xs text-slate-400 font-bold">Key Features:</span>
+                                                <span className="text-xs text-slate-800 font-extrabold">Bestseller</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                                                <span className="text-xs text-slate-400 font-bold">Source:</span>
+                                                <span className="text-xs text-slate-800 font-extrabold">From India</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                                                <span className="text-xs text-slate-400 font-bold">Category:</span>
+                                                <span className="text-xs text-slate-800 font-extrabold">
+                                                    {selectedProduct.headerId?.name || selectedProduct.category || "General"}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </AccordionItem>
+
+                                    {/* Info */}
+                                    <AccordionItem 
+                                        id="info" 
+                                        title="Info" 
+                                        icon={<Clock size={18} strokeWidth={2.5} />}
+                                    >
+                                        <div className="flex flex-col gap-2 mt-1">
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                                                <span className="text-xs text-slate-400 font-bold">Unit:</span>
+                                                <span className="text-xs text-slate-800 font-extrabold">
+                                                    {selectedVariant?.name || selectedProduct.weight || "1 unit"}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                                                <span className="text-xs text-slate-400 font-bold">FSSAI License:</span>
+                                                <span className="text-xs text-slate-800 font-extrabold">1001234567890</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                                                <span className="text-xs text-slate-400 font-bold">Shelf Life:</span>
+                                                <span className="text-xs text-slate-800 font-extrabold">3 Days</span>
+                                            </div>
+                                            <div className="flex flex-col py-1">
+                                                <span className="text-xs text-slate-400 font-bold mb-1">Disclaimer:</span>
+                                                <span className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                                                    Every effort is made to maintain accuracy of all information. However, actual product packaging and materials may contain more and/or different information.
+                                                </span>
+                                            </div>
                                         </div>
                                     </AccordionItem>
 
                                     {/* Customer Reviews */}
                                     <AccordionItem 
                                         id="reviews" 
-                                        title={`Customer Reviews (${reviews.length > 0 ? reviews.length : '120+'})`}
+                                        title={`Customer Reviews (${reviews.length})`}
                                         icon={<Star size={18} strokeWidth={2.5} />}
                                     >
                                         <div className="space-y-6 mt-2">
                                             <div className="flex items-center justify-between mb-4">
-                                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-50 text-[#45B0E2] rounded-xl text-xs font-black border border-cyan-100">
+                                                <div className={cn("flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-[#e88a31] rounded-xl text-xs font-black border border-orange-100", reviews.length === 0 && "hidden")}>
                                                     <Star size={16} fill="currentColor" />
-                                                    {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '4.8'}
+                                                    {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '0.0'}
                                                 </div>
                                             </div>
 
@@ -923,15 +1007,15 @@ const ProductDetailSheet = () => {
                                                                 onClick={() => setNewReview({ ...newReview, rating: s })}
                                                                 className={cn(
                                                                     "h-10 w-10 rounded-xl flex items-center justify-center transition-all shadow-sm",
-                                                                    newReview.rating >= s ? "bg-cyan-50 text-[#45B0E2] border border-cyan-100" : "bg-white text-slate-300 border border-slate-100"
+                                                                    newReview.rating >= s ? "bg-orange-50 text-[#e88a31] border border-orange-100" : "bg-white text-slate-300 border border-slate-100"
                                                                 )}
                                                             >
                                                                 <Star size={18} className={cn(newReview.rating >= s && "fill-current")} />
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    <textarea value={newReview.comment} onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })} placeholder="Write your experience..." className="w-full bg-white border border-slate-100 rounded-2xl p-4 text-sm font-medium min-h-[100px] outline-none focus:border-[#45B0E2] transition-all resize-none shadow-sm" />
-                                                    <Button type="submit" disabled={isSubmittingReview} className="w-full h-12 bg-[#45B0E2] hover:opacity-90 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-cyan-100">
+                                                    <textarea value={newReview.comment} onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })} placeholder="Write your experience..." className="w-full bg-white border border-slate-100 rounded-2xl p-4 text-sm font-medium min-h-[100px] outline-none focus:border-[#e88a31] transition-all resize-none shadow-sm" />
+                                                    <Button type="submit" disabled={isSubmittingReview} className="w-full h-12 bg-[#e88a31] hover:opacity-90 text-white font-black rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-orange-100">
                                                         {isSubmittingReview ? "Submitting..." : "Post Review"}
                                                     </Button>
                                                 </form>
@@ -940,16 +1024,16 @@ const ProductDetailSheet = () => {
                                             {/* Reviews List */}
                                             <div className="space-y-4">
                                                 {reviewLoading ? (
-                                                    <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#45B0E2]" size={24} /></div>
+                                                    <div className="flex justify-center py-8"><Loader2 className="animate-spin text-[#e88a31]" size={24} /></div>
                                                 ) : reviews.length > 0 ? (
                                                     reviews.map((r, rIdx) => (
                                                         <div key={r._id} className="p-5 rounded-2xl border border-slate-100 bg-white hover:shadow-md transition-all">
                                                             <div className="flex justify-between items-start mb-2">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="h-8 w-8 rounded-full bg-cyan-50 flex items-center justify-center text-[10px] font-black text-[#45B0E2] border border-cyan-100">{r.userId?.name?.[0] || 'A'}</div>
+                                                                    <div className="h-8 w-8 rounded-full bg-orange-50 flex items-center justify-center text-[10px] font-black text-[#e88a31] border border-orange-100">{r.userId?.name?.[0] || 'A'}</div>
                                                                     <div>
                                                                         <p className="text-xs font-black text-slate-800">{r.userId?.name || 'Anonymous'}</p>
-                                                                        <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <Star key={i} size={10} className={cn(i < r.rating ? 'text-[#45B0E2] fill-[#45B0E2]' : 'text-slate-200')} />)}</div>
+                                                                        <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <Star key={i} size={10} className={cn(i < r.rating ? 'text-[#e88a31] fill-[#e88a31]' : 'text-slate-200')} />)}</div>
                                                                     </div>
                                                                 </div>
                                                                 <span className="text-[10px] font-bold text-slate-400">{new Date(r.createdAt).toLocaleDateString()}</span>
@@ -973,84 +1057,87 @@ const ProductDetailSheet = () => {
                         </div>
 
                         {/* Sticky Bottom Action Bar */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50">
-                            <div className="flex flex-col gap-3">
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex flex-col min-w-[80px]">
-                                        {((selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.price) || 
-                                           (!selectedVariant && selectedProduct.originalPrice > selectedProduct.price)) && (
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-medium text-gray-400 line-through decoration-gray-400/50">
-                                                    ₹{selectedVariant?.price || selectedProduct.originalPrice}
-                                                </span>
-                                                <span className="bg-red-50 text-red-500 text-[10px] font-black px-1.5 py-0.5 rounded leading-none">
-                                                    {selectedVariant
-                                                        ? Math.round(((selectedVariant.price - selectedVariant.salePrice) / selectedVariant.price) * 100)
-                                                        : Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% OFF
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className="text-2xl font-black text-[#1A1A1A] leading-none mt-1">
-                                            ₹{selectedVariant?.salePrice || selectedVariant?.price || selectedProduct.price}
-                                        </div>
-                                    </div>
-
-                                    {quantity > 0 ? (
-                                        <div className="flex items-center gap-1 bg-slate-50 border-2 border-slate-100 rounded-2xl p-1.5 shadow-inner flex-1 justify-between max-w-[170px]">
-                                            <motion.button
-                                                whileTap={{ scale: 0.9 }}
-                                                onClick={handleDecrement}
-                                                className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-white shadow-sm border border-slate-100 transition-all"
-                                            >
-                                                <Minus size={18} strokeWidth={3.5} />
-                                            </motion.button>
-                                            <span className="font-black text-xl text-slate-800 w-8 text-center tabular-nums">{quantity}</span>
-                                            <motion.button
-                                                whileTap={{ scale: 0.9 }}
-                                                onClick={handleIncrement}
-                                                className="w-10 h-10 bg-gradient-to-br from-[#45B0E2] to-[#38bdf8] rounded-xl flex items-center justify-center text-white shadow-lg shadow-cyan-100/50 hover:shadow-cyan-200 transition-all border border-white/20"
-                                            >
-                                                <Plus size={18} strokeWidth={3.5} />
-                                            </motion.button>
-                                        </div>
-                                    ) : (
-                                        <motion.button
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            onClick={handleAddToCart}
-                                            className="flex-1 bg-gradient-to-r from-[#45B0E2] to-[#38bdf8] text-white h-[56px] rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-cyan-100 transition-all border border-white/20 uppercase tracking-[0.05em] whitespace-nowrap px-4"
-                                        >
-                                            <ShoppingBag size={18} strokeWidth={3} />
-                                            ADD TO CART
-                                        </motion.button>
+                        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 pb-6 flex items-center justify-between z-40 shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">
+                            <div className="flex flex-col">
+                                <span className="text-xs text-slate-400 font-bold uppercase tracking-wide leading-none">
+                                    {selectedVariant?.name || selectedProduct.weight || "1 unit"}
+                                </span>
+                                <div className="flex items-baseline gap-1.5 mt-1.5">
+                                    <span className="text-xl font-black text-slate-900 leading-none">
+                                        ₹{selectedVariant?.salePrice || selectedVariant?.price || selectedProduct.price}
+                                    </span>
+                                    {((selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.price) || 
+                                       (!selectedVariant && selectedProduct.originalPrice > selectedProduct.price)) && (
+                                        <span className="text-xs text-slate-400 font-bold line-through">
+                                            ₹{selectedVariant?.price || selectedProduct.originalPrice}
+                                        </span>
+                                    )}
+                                    {((selectedVariant?.salePrice && selectedVariant.salePrice < selectedVariant.price) || 
+                                       (!selectedVariant && selectedProduct.originalPrice > selectedProduct.price)) && (
+                                        <span className="bg-[#e88a31] text-white text-[9px] font-black px-1.5 py-0.5 rounded leading-none">
+                                            {selectedVariant
+                                                ? Math.round(((selectedVariant.price - selectedVariant.salePrice) / selectedVariant.price) * 100)
+                                                : Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% OFF
+                                        </span>
                                     )}
                                 </div>
-
-                                {/* View Cart Button */}
-                                {cartCount > 0 && (
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="mt-2"
-                                    >
-                                        <Link
-                                            to="/checkout"
-                                            onClick={closeProduct}
-                                            className="w-full bg-gradient-to-r from-[#45B0E2] to-[#33c9f2] text-white h-[64px] rounded-2xl flex items-center justify-between px-5 shadow-xl shadow-cyan-200/50 hover:shadow-cyan-300 transition-all active:scale-[0.98] border border-white/20 relative overflow-hidden group"
-                                        >
-                                            <div className="flex flex-col items-start leading-none">
-                                                <span className="text-[13px] font-[1000] uppercase tracking-wide">View cart</span>
-                                                <span className="text-[11px] font-bold opacity-90 mt-1">{cartCount} {cartCount === 1 ? 'item' : 'items'} in cart</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[16px] font-[1000] tracking-tight">₹{cart.reduce((total, item) => total + (item.price * item.quantity), 0)}</span>
-                                                <ChevronRight size={18} strokeWidth={4} />
-                                            </div>
-                                        </Link>
-                                    </motion.div>
-                                )}
+                                <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase">Inclusive of all taxes</span>
                             </div>
+
+                            {quantity > 0 ? (
+                                <div className="flex items-center bg-white border-2 border-[#f59931] rounded-xl p-1 justify-between shadow-sm min-w-[100px] h-10">
+                                    <button
+                                        onClick={handleDecrement}
+                                        className="p-1 text-[#f59931] active:scale-90 transition-transform">
+                                        <Minus size={14} strokeWidth={3} />
+                                    </button>
+                                    <span className="text-sm font-black text-slate-800 min-w-[20px] text-center">
+                                        {quantity}
+                                    </span>
+                                    <button
+                                        onClick={handleIncrement}
+                                        className="p-1 text-[#f59931] active:scale-90 transition-transform">
+                                        <Plus size={14} strokeWidth={3} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleAddToCart}
+                                    className="px-6 py-2 bg-white border-2 border-[#f59931] hover:bg-orange-50 text-[#f59931] font-black text-sm rounded-xl transition-colors shadow-sm min-w-[100px] h-10 flex items-center justify-center">
+                                    ADD
+                                </button>
+                            )}
                         </div>
+
+                        {/* View Cart Button - Floating Orange Pill */}
+                        {cartCount > 0 && (
+                            <Link
+                                to="/checkout"
+                                onClick={closeProduct}
+                                className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[185px] max-w-[90%] bg-gradient-to-r from-[#e88a31] to-[#f59e3b] text-white h-[52px] rounded-full flex items-center justify-between pl-2 pr-3 shadow-[0_8px_25px_rgba(232,138,49,0.25)] z-50 pointer-events-auto"
+                            >
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center p-1.5 shadow-sm overflow-hidden select-none">
+                                        {cart[0]?.mainImage || cart[0]?.image ? (
+                                            <img 
+                                                src={cart[0].mainImage || cart[0].image} 
+                                                alt="item" 
+                                                className="w-full h-full object-contain" 
+                                            />
+                                        ) : (
+                                            <ShoppingBag size={14} className="text-[#e88a31]" strokeWidth={2.5} />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col leading-tight">
+                                        <span className="text-xs font-bold tracking-tight">View cart</span>
+                                        <span className="text-[10px] font-medium opacity-90">{cartCount} {cartCount === 1 ? 'item' : 'items'}</span>
+                                    </div>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                    <ChevronRight size={16} strokeWidth={3} className="text-white" />
+                                </div>
+                            </Link>
+                        )}
                     </motion.div>
                 </>
             )}
