@@ -241,24 +241,77 @@ export async function validateDeliveryOtp(orderId, enteredOtp) {
 
     const customer = order.customer;
     const staticOtp = customer?.deliveryStaticOtp;
-    if (!staticOtp || !/^\d{4}$/.test(staticOtp)) {
+    if (staticOtp && /^\d{4}$/.test(staticOtp)) {
+      const isMatch = enteredOtp === staticOtp;
+      if (isMatch) {
+        return {
+          valid: true,
+          message: 'OTP validated successfully'
+        };
+      }
+      // If static OTP exists but doesn't match, we still fall back to legacy
+      // per-order OTP validation below to avoid breaking older UI flows.
+    }
+
+    // Legacy fallback: validate against latest per-order OTP (if still used anywhere)
+    const otpRecord = await OrderOtp.findOne({ orderId, type: 'delivery' }).sort({
+      lastGeneratedAt: -1,
+      createdAt: -1,
+    });
+
+    if (!otpRecord) {
       return {
         valid: false,
         error: 'OTP_NOT_FOUND',
-        message: 'Customer static OTP is not available. Ask customer to login once and try again.'
+        message: staticOtp
+          ? 'Invalid OTP. Please try again.'
+          : 'Customer static OTP is not available. Ask customer to login once and try again.'
       };
     }
 
-    const isMatch = enteredOtp === staticOtp;
+    if (otpRecord.consumedAt) {
+      return {
+        valid: false,
+        error: 'OTP_CONSUMED',
+        message: 'OTP has already been used. Please generate a new OTP.'
+      };
+    }
 
-    if (!isMatch) {
+    if (otpRecord.attempts >= otpRecord.maxAttempts) {
+      return {
+        valid: false,
+        error: 'MAX_ATTEMPTS_EXCEEDED',
+        message: 'Maximum validation attempts exceeded. Supervisor intervention required.',
+        attemptsRemaining: 0
+      };
+    }
+
+    if (isOtpExpired(otpRecord.expiresAt)) {
+      return {
+        valid: false,
+        error: 'OTP_EXPIRED',
+        message: 'OTP has expired. Please generate a new OTP.',
+        attemptsRemaining: otpRecord.maxAttempts - otpRecord.attempts
+      };
+    }
+
+    const enteredHash = OrderOtp.hashCode(enteredOtp);
+    const isMatchLegacy = enteredHash === otpRecord.codeHash;
+
+    if (!isMatchLegacy) {
+      otpRecord.attempts += 1;
+      await otpRecord.save();
+      const attemptsRemaining = otpRecord.maxAttempts - otpRecord.attempts;
       return {
         valid: false,
         error: 'OTP_MISMATCH',
         message: 'Invalid OTP. Please try again.',
-        attemptsRemaining: null
+        attemptsRemaining
       };
     }
+
+    otpRecord.consumedAt = new Date();
+    await otpRecord.save();
 
     return {
       valid: true,
