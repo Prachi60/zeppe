@@ -36,9 +36,14 @@ export const getFirebaseApp = () => {
 };
 
 export const getRealtimeDb = () => {
-  const app = getFirebaseApp();
-  if (!app) return null;
-  const dbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL || `https://${import.meta.env.VITE_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`;
-  return getDatabase(app, dbUrl);
+  try {
+    const app = getFirebaseApp();
+    if (!app) return null;
+    const dbUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL || `https://${import.meta.env.VITE_FIREBASE_PROJECT_ID || 'default'}-default-rtdb.firebaseio.com`;
+    return getDatabase(app, dbUrl);
+  } catch (e) {
+    console.error("[firebase] Failed to initialize Realtime DB:", e);
+    return null;
+  }
 };
 
