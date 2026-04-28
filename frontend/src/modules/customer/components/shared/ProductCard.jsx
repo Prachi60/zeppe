@@ -229,6 +229,13 @@ const ProductCard = React.memo(
             <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-900 leading-tight line-clamp-2 min-h-[1.35rem]">
               {product.name}
             </h4>
+            
+            {/* Product Weight */}
+            <div className="bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5 select-none my-0.5">
+              <span className="text-[9px] font-extrabold text-slate-500 tracking-tight">
+                {product.weight || "1 unit"}
+              </span>
+            </div>
 
             {/* Price Block */}
             <div className="flex items-baseline justify-center gap-1.5">
@@ -386,6 +393,13 @@ const ProductCard = React.memo(
               )}>
               {product.name}
             </h4>
+          </div>
+
+          {/* Product Weight */}
+          <div className="bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5 select-none my-0.5">
+            <span className="text-[10px] font-extrabold text-slate-500 tracking-tight">
+              {product.weight || "1 unit"}
+            </span>
           </div>
 
           {/* Price Block */}
