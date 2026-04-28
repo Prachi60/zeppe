@@ -185,8 +185,17 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
 
       // Display appropriate error message
       if (errorCode === "OTP_MISMATCH") {
-        setError(`Incorrect OTP. ${remainingAttempts} attempt${remainingAttempts !== 1 ? "s" : ""} remaining.`);
-        toast.error(`Incorrect OTP. ${remainingAttempts} attempt${remainingAttempts !== 1 ? "s" : ""} remaining.`);
+        if (typeof remainingAttempts === "number") {
+          setError(
+            `Incorrect OTP. ${remainingAttempts} attempt${remainingAttempts !== 1 ? "s" : ""} remaining.`,
+          );
+          toast.error(
+            `Incorrect OTP. ${remainingAttempts} attempt${remainingAttempts !== 1 ? "s" : ""} remaining.`,
+          );
+        } else {
+          setError("Incorrect OTP. Please try again.");
+          toast.error("Incorrect OTP. Please try again.");
+        }
         clearInputs();
       } else if (errorCode === "OTP_EXPIRED") {
         setError("OTP has expired. Please generate a new one.");
