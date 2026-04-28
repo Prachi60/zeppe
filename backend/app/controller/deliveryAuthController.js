@@ -17,12 +17,13 @@ const generateToken = (delivery) =>
 ================================ */
 export const signupDelivery = async (req, res) => {
     try {
+        const body = req.body || {};
         const {
             name, email, vehicleType,
             phone, address, vehicleNumber,
             drivingLicenseNumber,
             accountHolder, accountNumber, ifsc
-        } = req.body;
+        } = body;
 
         if (!name || !email) {
             return handleResponse(res, 400, "Name and email are required");
@@ -40,10 +41,10 @@ export const signupDelivery = async (req, res) => {
         let panUrl = delivery?.documents?.pan || "";
         let dlUrl = delivery?.documents?.drivingLicense || "";
 
-        const normalizedAadhar = String(req.body?.aadharUrl || req.body?.aadhar || "").trim();
-        const normalizedPan = String(req.body?.panUrl || req.body?.pan || "").trim();
+        const normalizedAadhar = String(body?.aadharUrl || body?.aadhar || "").trim();
+        const normalizedPan = String(body?.panUrl || body?.pan || "").trim();
         const normalizedDl = String(
-          req.body?.drivingLicenseUrl || req.body?.dlUrl || req.body?.dl || "",
+          body?.drivingLicenseUrl || body?.dlUrl || body?.dl || "",
         ).trim();
         if (/^https?:\/\//i.test(normalizedAadhar)) aadharUrl = normalizedAadhar;
         if (/^https?:\/\//i.test(normalizedPan)) panUrl = normalizedPan;

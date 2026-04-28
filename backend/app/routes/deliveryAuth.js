@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import {
   signupDelivery,
   loginDelivery,
@@ -24,10 +25,16 @@ import { getRiderWalletSummaryController } from "../controller/adminFinanceContr
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 console.log("Delivery Auth Routes Loading...");
 
 router.post(
   "/send-signup-otp",
+  upload.fields([
+    { name: "aadhar", maxCount: 1 },
+    { name: "pan", maxCount: 1 },
+    { name: "dl", maxCount: 1 },
+  ]),
   signupDelivery,
 );
 router.post("/send-login-otp", loginDelivery);
