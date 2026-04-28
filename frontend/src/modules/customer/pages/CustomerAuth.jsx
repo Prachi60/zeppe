@@ -239,7 +239,7 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
         {/* App name */}
         <div className="mb-6 text-center">
           <h2
-            className="text-6xl font-black italic tracking-tight text-gray-900"
+            className="text-4xl font-black italic tracking-tight text-gray-900"
             style={{ letterSpacing: "-0.04em" }}
           >
             zeppe
@@ -322,7 +322,6 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
               </button>
 
               <div className="mb-5 text-center">
-                <h2 className="text-xl font-black tracking-tight text-gray-900">Verify your email</h2>
                 <p className="mt-1 text-sm font-medium text-slate-500">OTP sent to {formData.email}</p>
               </div>
 
