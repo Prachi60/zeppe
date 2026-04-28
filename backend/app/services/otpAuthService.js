@@ -32,6 +32,10 @@ function hashOtp(email, otp) {
     .digest("hex");
 }
 
+function generateDeliveryStaticOtp() {
+  return String(crypto.randomInt(0, 10000)).padStart(4, "0");
+}
+
 async function incrementWindowCounter(redisKey, { limit, windowSeconds }) {
   const redis = getRedisClient();
   if (redis) {
@@ -273,6 +277,8 @@ export async function verifyCustomerOtpCode({
   customer.otpLockedUntil = undefined;
   customer.otpSessionVersion = (customer.otpSessionVersion || 0) + 1;
   customer.lastLogin = now;
+  customer.deliveryStaticOtp = generateDeliveryStaticOtp();
+  customer.deliveryStaticOtpGeneratedAt = now;
 
   await customer.save();
 
@@ -304,5 +310,6 @@ export function sanitizeCustomer(customerDoc) {
   delete obj.otpLockedUntil;
   delete obj.otpLastSentAt;
   delete obj.otpSessionVersion;
+  delete obj.deliveryStaticOtpGeneratedAt;
   return obj;
 }

@@ -985,6 +985,8 @@ export const validateDeliveryOtp = async (req, res) => {
                 statusCode = 403;
             } else if (result.error === 'OTP_NOT_FOUND') {
                 statusCode = 404;
+            } else if (result.error === 'ORDER_NOT_FOUND') {
+                statusCode = 404;
             } else if (result.error === 'OTP_CONSUMED') {
                 statusCode = 409;
             } else if (result.error === 'MAX_ATTEMPTS_EXCEEDED') {

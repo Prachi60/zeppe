@@ -6,6 +6,7 @@ import {
   onDeliveryOtpGenerated,
   onDeliveryOtpValidated,
 } from "@/core/services/orderSocket";
+import { useAuth } from "@/core/context/AuthContext";
 
 /**
  * DeliveryOtpDisplay Component
@@ -32,11 +33,14 @@ const matchesOrderIdentifier = (payloadOrderId, identifiers = []) => {
 };
 
 const DeliveryOtpDisplay = ({ orderId, checkoutGroupId = null }) => {
+  const { user } = useAuth();
   const [otpData, setOtpData] = useState(null);
   const [isDelivered, setIsDelivered] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const timerRef = useRef(null);
+  const staticOtp = String(user?.deliveryStaticOtp || "").trim();
+  const hasStaticOtp = /^\d{4}$/.test(staticOtp);
 
   // Calculate remaining time from expiration timestamp
   const calculateRemainingTime = (expiresAt) => {
@@ -259,6 +263,31 @@ const DeliveryOtpDisplay = ({ orderId, checkoutGroupId = null }) => {
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
           <p className="text-xs text-gray-600 text-center">
             🔒 This OTP is valid for 10 minutes and will be hidden when you switch apps
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if no OTP or app is backgrounded
+  if (!otpData && hasStaticOtp && isVisible) {
+    return (
+      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="border rounded-2xl p-6 text-center bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Shield className="w-5 h-5 text-cyan-700" />
+            <p className="text-xs font-bold uppercase tracking-wider text-cyan-800">
+              Your Static Delivery OTP
+            </p>
+          </div>
+          <div
+            className="text-5xl font-black font-mono tracking-[0.3em] mb-3 text-cyan-950"
+            style={{ fontSize: "48px" }}
+          >
+            {staticOtp}
+          </div>
+          <p className="text-xs text-cyan-800">
+            Share this code with your delivery partner.
           </p>
         </div>
       </div>

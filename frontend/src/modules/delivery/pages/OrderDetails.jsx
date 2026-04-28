@@ -196,6 +196,12 @@ const OrderDetails = () => {
     return () => clearInterval(iv);
   }, []);
 
+  useEffect(() => {
+    if (!isReturn && step === 3) {
+      setShowOtpInput(true);
+    }
+  }, [isReturn, step]);
+
   const steps = useMemo(() => {
 
     if (isReturn) {
@@ -1017,23 +1023,23 @@ const OrderDetails = () => {
         </motion.div>
       )}
 
-      {/* Normal delivery Step 3: generate OTP for customer */}
+      {/* Normal delivery Step 3: customer shares static OTP from their app */}
       {!isReturn && step === 3 && !showOtpInput && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="p-6 rounded-3xl shadow-sm border border-slate-100">
             <div className="flex items-center mb-4 text-gray-800">
               <ShieldCheck className="mr-2 text-primary" size={24} />
-              <h3 className="font-bold text-lg">Generate Delivery OTP</h3>
+              <h3 className="font-bold text-lg">Verify Customer OTP</h3>
             </div>
             <p className="text-gray-500 text-sm mb-4">
-              Slide to generate OTP for the customer.
+              Ask customer to share their static 4-digit OTP from user app.
             </p>
-            <DeliverySlideButton
-              orderId={orderId}
-              onSuccess={handleOtpGenerated}
-              onError={handleOtpGenerationError}
-              isReturn={false}
-            />
+            <Button
+              className="w-full"
+              onClick={() => setShowOtpInput(true)}
+            >
+              Enter OTP
+            </Button>
           </Card>
         </motion.div>
       )}

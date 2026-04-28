@@ -115,6 +115,14 @@ const userSchema = new mongoose.Schema(
         },
 
         lastLogin: Date,
+
+        deliveryStaticOtp: {
+            type: String,
+            trim: true,
+        },
+        deliveryStaticOtpGeneratedAt: {
+            type: Date,
+        },
     },
     {
         timestamps: true,
