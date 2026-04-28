@@ -66,6 +66,9 @@ export const signupDelivery = async (req, res) => {
                 pan: panUrl,
                 drivingLicense: dlUrl,
             },
+            applicationStatus: "pending",
+            rejectionReason: "",
+            reviewedAt: null,
             otp: hashOtp(otp),
             otpExpiry: Date.now() + 5 * 60 * 1000,
         };

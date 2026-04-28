@@ -34,8 +34,8 @@ const PendingDeliveryBoys = () => {
     const fetchPendingRiders = async () => {
         setIsLoading(true);
         try {
-            // verified=false fetches riders waiting for review
-            const params = { verified: 'false' };
+            // Fetch riders waiting for admin review
+            const params = { applicationStatus: 'pending' };
             if (searchTerm.trim()) params.search = searchTerm.trim();
             const response = await adminApi.getDeliveryPartners(params);
             const payload = response.data.result || {};
@@ -52,7 +52,7 @@ const PendingDeliveryBoys = () => {
                 location: r.currentArea || 'Unknown',
                 vehicle: r.vehicleType,
                 documents: Object.keys(r.documents || {}).filter(key => r.documents[key]),
-                status: r.isVerified ? 'approved' : 'pending_review',
+                status: r.applicationStatus === 'approved' ? 'approved' : 'pending_review',
                 experience: 'Not Specified', // Mock for now
                 preferredArea: r.currentArea || 'Not Specified'
             }));
