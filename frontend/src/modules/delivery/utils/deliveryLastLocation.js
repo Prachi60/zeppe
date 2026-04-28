@@ -61,6 +61,22 @@ export function getCachedDeliveryPartnerLocation(
  * @param {{ maxCacheAgeMs?: number, geoOptions?: PositionOptions }} [options]
  */
 export function getCurrentPositionWithCache(onSuccess, onHardFail, options = {}) {
+  // Localhost/dev environment bypass to prevent persistent GPS timeouts on desktop
+  if (
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1")
+  ) {
+    const mockLat = 28.6139; // Delhi center
+    const mockLng = 77.2090;
+    
+    // Simulate slight async delay
+    setTimeout(() => {
+      onSuccess({ lat: mockLat, lng: mockLng, fromCache: true });
+    }, 200);
+    return;
+  }
+
   const maxCacheAgeMs =
     options.maxCacheAgeMs ?? DEFAULT_MAX_CACHE_AGE_MS;
   const strictOpts = options.geoOptions ?? {

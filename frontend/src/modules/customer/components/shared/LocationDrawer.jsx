@@ -578,10 +578,10 @@ const LocationDrawer = ({ isOpen, onClose }) => {
                             </h3>
                             {(addr.address === currentLocation.name ||
                               addr.isCurrent) && (
-                              <span className="text-[10px] bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight border border-teal-100">
-                                You are here
-                              </span>
-                            )}
+                                <span className="text-[10px] bg-teal-50 text-teal-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight border border-teal-100">
+                                  You are here
+                                </span>
+                              )}
                           </div>
                           <p className="text-[13px] text-slate-500 font-medium leading-relaxed mb-3">
                             {addr.address}
@@ -595,8 +595,8 @@ const LocationDrawer = ({ isOpen, onClose }) => {
                       {/* Selection Glow */}
                       {(addr.address === currentLocation.name ||
                         addr.isCurrent) && (
-                        <div className="absolute top-0 right-0 h-1 w-24 bg-gradient-to-l from-[#45B0E2] to-transparent opacity-50" />
-                      )}
+                          <div className="absolute top-0 right-0 h-1 w-24 bg-gradient-to-l from-[#45B0E2] to-transparent opacity-50" />
+                        )}
                     </div>
                   ))}
                 </div>

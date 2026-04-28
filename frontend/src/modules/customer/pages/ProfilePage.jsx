@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     User, MapPin, Package, CreditCard, Wallet, ChevronRight,
-    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell
+    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Phone
 } from 'lucide-react';
 import { useAuth } from '@core/context/AuthContext';
 import { useSettings } from '@core/context/SettingsContext';
@@ -88,16 +88,39 @@ const ProfilePage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 pb-24 md:pb-8 font-sans">
-            <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm px-4 pt-4 pb-3 border-b border-slate-200/60 mb-4 flex items-center gap-2">
+        <div className="min-h-screen bg-white pb-24 md:pb-8 font-sans">
+            {/* Header bar / Back button */}
+            <div className="px-4 pt-6 pb-2 flex items-start gap-3">
                 <button
                     onClick={() => navigate(-1)}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-slate-200/70 rounded-full transition-colors -ml-1"
+                    className="w-10 h-10 flex items-center justify-center hover:bg-slate-100 rounded-full transition-colors flex-shrink-0 mt-1"
                 >
-                    <ChevronLeft size={22} className="text-slate-800" />
+                    <ChevronLeft size={24} className="text-slate-900 stroke-[2.5]" />
                 </button>
-                <h1 className="text-xl font-semibold text-slate-900 tracking-tight">My Profile</h1>
-                <div className="ml-auto flex items-center gap-2">
+                
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-2xl font-black text-gray-900 tracking-tight">Your Account</h1>
+                    <div className="flex items-center gap-2 text-gray-700 mt-1 font-bold text-sm">
+                        {user?.phone || formatIndiaPhone(user?.phone) ? (
+                            <>
+                                <Phone size={16} className="text-gray-500 flex-shrink-0" />
+                                <span className="truncate">{user?.phone}</span>
+                            </>
+                        ) : user?.email ? (
+                            <>
+                                <User size={16} className="text-gray-500 flex-shrink-0" />
+                                <span className="truncate">{user?.email}</span>
+                            </>
+                        ) : (
+                            <>
+                                <User size={16} className="text-gray-500 flex-shrink-0" />
+                                <span className="truncate">Customer</span>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 mt-1 flex-shrink-0">
                     <button
                         type="button"
                         onClick={handleTestPush}
@@ -110,33 +133,43 @@ const ProfilePage = () => {
                 </div>
             </div>
 
-            <div className="max-w-2xl mx-auto px-4 pt-1 relative z-20 space-y-4">
+            <div className="max-w-2xl mx-auto px-6 pt-2 space-y-6">
+                {/* Quick Action Tiles */}
+                <div className="grid grid-cols-3 gap-3 pt-2 items-stretch">
+                    {/* Zeppe Money */}
+                    <button 
+                        onClick={() => navigate('/wallet')}
+                        className="flex flex-col items-center justify-center bg-white border border-gray-200/80 rounded-2xl p-3 shadow-sm hover:shadow-md active:scale-95 transition-all h-full gap-2 min-h-[90px]"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-800 flex-shrink-0">
+                            <Wallet size={20} strokeWidth={2} />
+                        </div>
+                        <span className="text-xs font-bold text-gray-800 text-center leading-tight">Zeppe Money</span>
+                    </button>
 
-                {/* User Identity Card */}
-                <div className="bg-white rounded-xl p-4 border border-slate-200 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="h-14 w-14 rounded-xl bg-slate-100 flex items-center justify-center p-1 border border-slate-200">
-                            <div className="h-full w-full rounded-lg bg-white flex items-center justify-center overflow-hidden">
-                                <User size={28} className="text-slate-700" />
-                            </div>
+                    {/* Support */}
+                    <button 
+                        onClick={() => navigate('/support')}
+                        className="flex flex-col items-center justify-center bg-white border border-gray-200/80 rounded-2xl p-3 shadow-sm hover:shadow-md active:scale-95 transition-all h-full gap-2 min-h-[90px]"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-800 flex-shrink-0">
+                            <HelpCircle size={20} strokeWidth={2} />
                         </div>
-                        <div>
-                            <h2 className="text-base leading-tight font-semibold text-slate-900">{user?.name || 'Customer'}</h2>
-                            <p className="text-slate-500 text-xs font-medium flex items-center gap-1 mt-0.5">
-                                <MapPin size={14} className="text-slate-400" />
-                                <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] uppercase">India</span> +91 {formatIndiaPhone(user?.phone)}
-                            </p>
+                        <span className="text-xs font-bold text-gray-800 text-center leading-tight">Support</span>
+                    </button>
+
+                    {/* Payments */}
+                    <button 
+                        onClick={() => navigate('/transactions')}
+                        className="flex flex-col items-center justify-center bg-white border border-gray-200/80 rounded-2xl p-3 shadow-sm hover:shadow-md active:scale-95 transition-all h-full gap-2 min-h-[90px]"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-800 flex-shrink-0">
+                            <CreditCard size={20} strokeWidth={2} />
                         </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Link to="/addresses" className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Manage locations">
-                            <MapPin size={16} />
-                        </Link>
-                        <Link to="/profile/edit" className="p-2.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors">
-                            <Edit2 size={16} />
-                        </Link>
-                    </div>
+                        <span className="text-xs font-bold text-gray-800 text-center leading-tight">Payments</span>
+                    </button>
                 </div>
+
 
                 {/* Menu Sections */}
                 <div className="space-y-4">

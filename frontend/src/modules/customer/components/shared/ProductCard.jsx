@@ -207,17 +207,17 @@ const ProductCard = React.memo(
             {/* Floating ADD Button - Fixed Clipping & Orange Border */}
             <div className="absolute bottom-0 right-0 z-20">
               {quantity > 0 ? (
-                <div className="flex items-center bg-white border-2 border-[#f59931] rounded-xl h-8 min-w-[70px] shadow-lg overflow-hidden">
-                  <button onClick={handleDecrement} className="px-2 py-1 text-[#f59931] hover:bg-orange-50 transition-colors"><Minus size={11} strokeWidth={3} /></button>
-                  <span className="flex-1 text-center text-[13px] font-bold text-[#f59931]">{quantity}</span>
-                  <button onClick={handleIncrement} className="px-2 py-1 text-[#f59931] hover:bg-orange-50 transition-colors"><Plus size={11} strokeWidth={3} /></button>
+                <div className="flex items-center bg-[#f59931] text-white rounded-xl h-8 min-w-[70px] shadow-lg overflow-hidden">
+                  <button onClick={handleDecrement} className="px-2 py-1 text-white hover:bg-orange-600 transition-colors"><Minus size={11} strokeWidth={3} /></button>
+                  <span className="flex-1 text-center text-[13px] font-bold text-white">{quantity}</span>
+                  <button onClick={handleIncrement} className="px-2 py-1 text-white hover:bg-orange-600 transition-colors"><Plus size={11} strokeWidth={3} /></button>
                 </div>
               ) : (
                 <button
                   onClick={handleAddToCart}
-                  className="bg-white text-[#f59931] border-2 border-[#f59931] h-6 w-6 rounded-lg shadow-md hover:bg-[#f59931] hover:text-white transition-all active:scale-95 flex items-center justify-center"
+                  className="bg-white text-[#f59931] border-2 border-[#f59931] h-8 px-3.5 font-bold text-xs rounded-xl shadow-md hover:bg-[#f59931] hover:text-white transition-all active:scale-95 flex items-center justify-center"
                 >
-                  <Plus size={12} strokeWidth={3} />
+                  Add
                 </button>
               )}
             </div>
@@ -439,20 +439,20 @@ const ProductCard = React.memo(
             {quantity > 0 ? (
               <div
                 className={cn(
-                  "flex items-center bg-white border-2 border-[#f59931] rounded-tl-xl p-0.5 justify-between shadow-md",
+                  "flex items-center bg-[#f59931] text-white rounded-tl-xl p-0.5 justify-between shadow-md",
                   storeWide ? "min-w-[84px]" : compact ? "min-w-[64px]" : "min-w-[90px]",
                 )}>
                 <button
                   onClick={handleDecrement}
-                  className="p-1 px-1.5 text-[#f59931] active:scale-90 transition-transform">
+                  className="p-1 px-1.5 text-white active:scale-90 transition-transform">
                   <Minus size={16} strokeWidth={3} />
                 </button>
-                <span className="text-[15px] font-black text-[#f59931] min-w-[24px] text-center">
+                <span className="text-[15px] font-black text-white min-w-[24px] text-center">
                   {quantity}
                 </span>
                 <button
                   onClick={handleIncrement}
-                  className="p-1 px-1.5 text-[#f59931] active:scale-90 transition-transform">
+                  className="p-1 px-1.5 text-white active:scale-90 transition-transform">
                   <Plus size={16} strokeWidth={3} />
                 </button>
               </div>
@@ -461,10 +461,10 @@ const ProductCard = React.memo(
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAddToCart}
                 className={cn(
-                  "bg-[#f59931] text-white rounded-tl-lg font-semibold shadow-md transition-all flex items-center justify-center",
-                  compact ? "h-6 w-6" : "h-8 w-8"
+                  "bg-white text-[#f59931] border-2 border-[#f59931] rounded-tl-xl font-bold shadow-md transition-all flex items-center justify-center",
+                  compact ? "h-7 px-2.5 text-xs" : "h-8 px-3.5 text-xs"
                 )}>
-                <Plus size={compact ? 12 : 16} strokeWidth={3} />
+                Add
               </motion.button>
             )}
           </div>

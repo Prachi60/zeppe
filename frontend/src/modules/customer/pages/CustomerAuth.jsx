@@ -84,10 +84,10 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
   const actualIsSignup = isModal ? isSignup : routeLocation.pathname === "/signup";
 
   const [isSignupMode, setIsSignupMode] = useState(actualIsSignup);
-  const [isLoading, setIsLoading]       = useState(false);
-  const [showOtp, setShowOtp]           = useState(false);
-  const [timer, setTimer]               = useState(0);
-  const [formData, setFormData]         = useState({ email: "", otp: "", name: "" });
+  const [isLoading, setIsLoading] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [formData, setFormData] = useState({ email: "", otp: "", name: "" });
   const otpRefs = useRef([]);
 
   useEffect(() => {
@@ -112,14 +112,14 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
     document.documentElement.style.cssText += ";overflow:hidden;height:100%;position:fixed;width:100%";
     document.body.style.cssText += ";overflow:hidden;height:100vh;position:fixed;width:100%";
     document.body.style.paddingRight = `${sw}px`;
-    document.addEventListener("wheel",     stop, { passive: false });
+    document.addEventListener("wheel", stop, { passive: false });
     document.addEventListener("touchmove", stop, { passive: false });
-    document.addEventListener("scroll",    stop, { passive: false });
+    document.addEventListener("scroll", stop, { passive: false });
     return () => {
-      document.removeEventListener("wheel",     stop);
+      document.removeEventListener("wheel", stop);
       document.removeEventListener("touchmove", stop);
-      document.removeEventListener("scroll",    stop);
-      ["overflow","height","position","width","top","left"].forEach(k => {
+      document.removeEventListener("scroll", stop);
+      ["overflow", "height", "position", "width", "top", "left"].forEach(k => {
         document.documentElement.style[k] = "";
         document.body.style[k] = "";
       });
