@@ -20,6 +20,7 @@ import {
   Sparkles,
   User,
   ShieldCheck,
+  Gift,
 } from "lucide-react";
 
 const Dashboard = React.lazy(() => import("../pages/Dashboard"));
@@ -92,6 +93,7 @@ const AdminSettings = React.lazy(() => import("../pages/AdminSettings"));
 const EnvSettings = React.lazy(() => import("../pages/EnvSettings"));
 const AdminProfile = React.lazy(() => import("../pages/AdminProfile"));
 const Subscriptions = React.lazy(() => import("../pages/Subscriptions"));
+const ScratchCardManagement = React.lazy(() => import("../pages/ScratchCardManagement"));
 
 const navItems = [
   {
@@ -131,6 +133,12 @@ const navItems = [
       { label: "Offer Sections", path: "/admin/offer-sections" },
       { label: "Shop by Store", path: "/admin/shop-by-store" },
     ],
+  },
+  {
+    label: "Scratch Cards",
+    path: "/admin/scratch-cards",
+    icon: Gift,
+    color: "violet",
   },
   {
     label: "Customer Support",
@@ -267,6 +275,7 @@ const AdminRoutes = () => {
         <Route path="/settings" element={<AdminSettings />} />
         <Route path="/env" element={<EnvSettings />} />
         <Route path="/subscriptions" element={<Subscriptions />} />
+        <Route path="/scratch-cards" element={<ScratchCardManagement />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </DashboardLayout>

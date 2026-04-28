@@ -22,6 +22,7 @@ import deliveryRiding from "@/assets/Delivery Riding.json";
 import { deliveryApi } from "../services/deliveryApi";
 import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
+import imgRider from "@/assets/delivery_login.png";
 import { toast } from "sonner";
 
 const VEHICLE_TYPES = [
@@ -187,6 +188,141 @@ const DeliveryAuth = () => {
     exit: { opacity: 0, x: -30, transition: { duration: 0.2 } },
   };
 
+  if (mode === "login") {
+    return (
+      <div className="min-h-screen bg-[#EBFDFF] flex flex-col items-center justify-start p-6 pt-0 font-['Outfit',_sans-serif]">
+        <div className="w-full max-w-[380px] flex flex-col items-center mt-0">
+          
+          {/* Rider Image */}
+          <div className="w-full flex justify-center mb-0">
+            <img 
+              src={imgRider} 
+              alt="Delivery Boy" 
+              className="w-[85%] max-w-[300px] h-auto object-contain pointer-events-none select-none" 
+            />
+          </div>
+
+          {/* Brand block */}
+          <div className="text-center flex flex-col items-center select-none mb-6 mt-[-30px]">
+            <h1 className="text-[54px] font-black tracking-tight text-gray-900 leading-none" style={{ letterSpacing: "-0.05em" }}>
+              zeppe
+            </h1>
+            <p className="text-[#0D1636] font-extrabold text-xl mt-2 tracking-tight">
+              India's Quickest App
+            </p>
+            <p className="text-slate-400 text-sm font-semibold mt-1">
+              {step === "otp" ? "Enter OTP Code" : "Delivery boy login"}
+            </p>
+          </div>
+
+          {step === "form" ? (
+            <div className="w-full flex flex-col items-center space-y-4">
+              {/* Input container */}
+              <div className="w-full bg-white rounded-xl border border-slate-200 flex items-center overflow-hidden h-[56px] shadow-sm">
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="Enter email address"
+                  className="w-full h-full px-4 text-slate-800 text-base font-semibold focus:outline-none placeholder:text-slate-400"
+                />
+              </div>
+
+              {/* Continue Button */}
+              <button
+                onClick={handleSendOtp}
+                disabled={loading}
+                className="w-full h-[54px] bg-[#0066FF] hover:bg-[#0052cc] text-white font-bold rounded-xl text-base flex items-center justify-center transition-all shadow-sm disabled:opacity-50"
+              >
+                {loading ? "Please wait..." : "Continue"}
+              </button>
+
+              <p className="text-center text-xs text-slate-400 max-w-[320px] leading-relaxed mt-2 select-none">
+                By continuing, you agree to our{" "}
+                <span className="underline cursor-pointer hover:text-slate-600">Terms of service</span> &amp;{" "}
+                <span className="underline cursor-pointer hover:text-slate-600">Privacy policy</span>
+              </p>
+
+              <div className="pt-6">
+                <button 
+                  onClick={() => switchMode("signup")} 
+                  className="text-xs font-bold text-[#0066FF] hover:underline"
+                >
+                  New delivery partner? Join Now
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full flex flex-col items-center space-y-5">
+              {/* OTP Boxes */}
+              <div className="flex justify-center gap-3 w-full">
+                {otp.map((digit, index) => (
+                  <input
+                    key={index}
+                    id={`otp-${index}`}
+                    type="tel"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    className="w-14 h-14 text-center text-2xl font-black border border-slate-200 rounded-xl focus:border-[#0066FF] focus:ring-4 focus:ring-blue-100 outline-none transition-all bg-white text-gray-900 shadow-sm"
+                  />
+                ))}
+              </div>
+
+              {/* Timer */}
+              <div className="text-center">
+                {timer > 0 ? (
+                  <p className="text-slate-400 text-xs font-semibold">
+                    Resend code in <span className="text-[#0066FF] font-bold">{timer}s</span>
+                  </p>
+                ) : (
+                  <button
+                    onClick={handleSendOtp}
+                    className="text-[#0066FF] font-bold text-xs uppercase tracking-wide hover:underline"
+                  >
+                    Resend OTP
+                  </button>
+                )}
+              </div>
+
+              {/* Terms Checkbox */}
+              <div className="flex items-start gap-3 bg-white rounded-xl p-4 border border-slate-200 w-full shadow-sm">
+                <input
+                  id="terms"
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-[#0066FF] cursor-pointer"
+                />
+                <label htmlFor="terms" className="text-xs text-slate-500 leading-relaxed cursor-pointer select-none">
+                  I confirm the details are correct and I agree to the{" "}
+                  <span className="text-[#0066FF] font-bold">Terms of Service</span>.
+                </label>
+              </div>
+
+              {/* Verify & Proceed */}
+              <button
+                onClick={handleVerifyOtp}
+                disabled={!agreed || otp.some((d) => !d) || loading}
+                className="w-full h-[54px] bg-[#0066FF] hover:bg-[#0052cc] text-white font-bold rounded-xl text-base flex items-center justify-center transition-all shadow-sm disabled:opacity-50"
+              >
+                {loading ? "Verifying..." : "Verify & Proceed"}
+              </button>
+
+              <button
+                onClick={() => { setStep("form"); setOtp(["", "", "", ""]); }}
+                className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors pt-2"
+              >
+                ← Edit Details
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F0F4FF] flex flex-col items-center justify-center p-5 font-['Outfit',_sans-serif]">
       {/* Background blobs */}
@@ -206,21 +342,9 @@ const DeliveryAuth = () => {
 
           {/* Header with Lottie */}
           <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-8 flex flex-col items-center relative">
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-              <div className="w-14 h-14 rounded-2xl bg-white/85 backdrop-blur-sm border border-indigo-100 shadow-sm flex items-center justify-center overflow-hidden">
-                {logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt={`${appName} logo`}
-                    className="w-10 h-10 object-contain"
-                  />
-                ) : (
-                  <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                )}
-              </div>
-            </div>
-            <div className="w-40 h-40">
-              <Lottie animationData={deliveryRiding} loop />
+
+            <div className="w-40 h-40 flex items-center justify-center">
+              <img src={imgRider} alt="Rider illustration" className="w-[120%] h-auto object-contain pointer-events-none select-none mt-4" />
             </div>
             <AnimatePresence mode="wait">
               <motion.div
