@@ -18,6 +18,9 @@ const ChatPage = React.lazy(() => import('../pages/ChatPage'));
 const TermsPage = React.lazy(() => import('../pages/TermsPage'));
 const PrivacyPage = React.lazy(() => import('../pages/PrivacyPage'));
 const AboutPage = React.lazy(() => import('../pages/AboutPage'));
+const RefundPolicyPage = React.lazy(() => import('../pages/RefundPolicyPage'));
+const ReturnPolicyPage = React.lazy(() => import('../pages/ReturnPolicyPage'));
+const ShippingPolicyPage = React.lazy(() => import('../pages/ShippingPolicyPage'));
 const EditProfilePage = React.lazy(() => import('../pages/EditProfilePage'));
 const OrderDetailPage = React.lazy(() => import('../pages/OrderDetailPage'));
 const ProductDetailPage = React.lazy(() => import('../pages/ProductDetailPage'));
@@ -51,6 +54,9 @@ const CustomerRoutes = () => {
                                 <Route path="terms" element={<TermsPage />} />
                                 <Route path="privacy" element={<PrivacyPage />} />
                                 <Route path="about" element={<AboutPage />} />
+                                <Route path="refund-policy" element={<RefundPolicyPage />} />
+                                <Route path="return-policy" element={<ReturnPolicyPage />} />
+                                <Route path="shipping-policy" element={<ShippingPolicyPage />} />
                                 <Route path="offers" element={<OffersPage />} />
                                 <Route path="shop-by-store" element={<Navigate to="/stores" replace />} />
                                 <Route path="stores" element={<ShopByStorePage />} />

@@ -138,6 +138,15 @@ const SupportPage = () => {
                         <Link to="/privacy" className="flex items-center gap-2.5 text-slate-700 hover:text-slate-900 font-medium">
                             <FileText size={18} /> Privacy Policy
                         </Link>
+                        <Link to="/refund-policy" className="flex items-center gap-2.5 text-slate-700 hover:text-slate-900 font-medium">
+                            <FileText size={18} /> Refund Policy
+                        </Link>
+                        <Link to="/return-policy" className="flex items-center gap-2.5 text-slate-700 hover:text-slate-900 font-medium">
+                            <FileText size={18} /> Return Policy
+                        </Link>
+                        <Link to="/shipping-policy" className="flex items-center gap-2.5 text-slate-700 hover:text-slate-900 font-medium">
+                            <FileText size={18} /> Shipping Policy
+                        </Link>
                     </div>
                 </div>
             </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     User, MapPin, Package, CreditCard, Wallet, ChevronRight,
-    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Phone, Trophy
+    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Phone, Trophy, RotateCcw, Truck
 } from 'lucide-react';
 import { useAuth } from '@core/context/AuthContext';
 import { useSettings } from '@core/context/SettingsContext';
@@ -249,6 +249,27 @@ const ProfilePage = () => {
                                 path="/privacy"
                                 color="#a855f7"
                                 bg="rgba(168,85,247,0.08)"
+                            />
+                            <MenuItem
+                                icon={RotateCcw}
+                                label="Refund Policy"
+                                path="/refund-policy"
+                                color="#ec4899"
+                                bg="rgba(236,72,153,0.08)"
+                            />
+                            <MenuItem
+                                icon={Package}
+                                label="Return Policy"
+                                path="/return-policy"
+                                color="#10b981"
+                                bg="rgba(16,185,129,0.10)"
+                            />
+                            <MenuItem
+                                icon={Truck}
+                                label="Shipping Policy"
+                                path="/shipping-policy"
+                                color="#3b82f6"
+                                bg="rgba(59,130,246,0.08)"
                             />
                             <MenuItem
                                 icon={Info}
