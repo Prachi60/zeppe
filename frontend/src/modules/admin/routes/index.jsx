@@ -227,57 +227,59 @@ const BillingCharges = React.lazy(() => import("../pages/BillingCharges"));
 const AdminRoutes = () => {
   return (
     <DashboardLayout navItems={navItems} title="Admin Center">
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/users" element={<UserManagement />} />
-        <Route path="/profile" element={<AdminProfile />} />
-        {/* Lazy routes for new sections */}
-        <Route
-          path="/categories"
-          element={<Navigate to="/admin/categories/header" replace />}
-        />
-        <Route path="/categories/header" element={<HeaderCategories />} />
-        <Route path="/categories/level2" element={<Level2Categories />} />
-        <Route path="/categories/sub" element={<SubCategories />} />
-        <Route path="/categories/hierarchy" element={<CategoryHierarchy />} />
-        <Route path="/products" element={<ProductManagement />} />
-        <Route path="/sellers/active" element={<ActiveSellers />} />
-        <Route path="/sellers/active/:id" element={<SellerDetail />} />
-        <Route path="/support-tickets" element={<SupportTickets />} />
-        <Route path="/moderation" element={<ReviewModeration />} />
-        <Route path="/experience-studio" element={<ContentManager />} />
-        <Route path="/hero-categories" element={<HeroCategoriesPerPage />} />
-        <Route path="/notifications" element={<NotificationComposer />} />
-        <Route path="/offers" element={<OffersManagement />} />
-        <Route path="/offer-sections" element={<OfferSectionsManagement />} />
-        <Route path="/shop-by-store" element={<ShopByStoreManagement />} />
-        <Route path="/coupons" element={<CouponManagement />} />
-        <Route path="/sellers/pending" element={<PendingSellers />} />
-        <Route path="/seller-locations" element={<SellerLocations />} />
-        <Route path="/delivery-boys/active" element={<ActiveDeliveryBoys />} />
-        <Route
-          path="/delivery-boys/pending"
-          element={<PendingDeliveryBoys />}
-        />
-        <Route path="/tracking" element={<FleetTracking />} />
-        <Route path="/delivery-funds" element={<DeliveryFunds />} />
-        <Route path="/wallet" element={<AdminWallet />} />
-        <Route path="/withdrawals" element={<WithdrawalRequests />} />
-        <Route path="/seller-transactions" element={<SellerTransactions />} />
-        <Route path="/cash-collection" element={<CashCollection />} />
-        <Route path="/customers" element={<CustomerManagement />} />
-        <Route path="/customers/:id" element={<CustomerDetail />} />
-        <Route path="/faqs" element={<FAQManagement />} />
-        <Route path="/orders/:status" element={<OrdersList />} />
-        <Route path="/orders/view/:orderId" element={<OrderDetail />} />
-        <Route path="/returns" element={<Returns />} />
-        <Route path="/billing" element={<BillingCharges />} />
-        <Route path="/settings" element={<AdminSettings />} />
-        <Route path="/env" element={<EnvSettings />} />
-        <Route path="/subscriptions" element={<Subscriptions />} />
-        <Route path="/scratch-cards" element={<ScratchCardManagement />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <React.Suspense fallback={<div className="flex h-[60vh] items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-400">Loading Section...</div>}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/users" element={<UserManagement />} />
+          <Route path="/profile" element={<AdminProfile />} />
+          {/* Lazy routes for new sections */}
+          <Route
+            path="/categories"
+            element={<Navigate to="/admin/categories/header" replace />}
+          />
+          <Route path="/categories/header" element={<HeaderCategories />} />
+          <Route path="/categories/level2" element={<Level2Categories />} />
+          <Route path="/categories/sub" element={<SubCategories />} />
+          <Route path="/categories/hierarchy" element={<CategoryHierarchy />} />
+          <Route path="/products" element={<ProductManagement />} />
+          <Route path="/sellers/active" element={<ActiveSellers />} />
+          <Route path="/sellers/active/:id" element={<SellerDetail />} />
+          <Route path="/support-tickets" element={<SupportTickets />} />
+          <Route path="/moderation" element={<ReviewModeration />} />
+          <Route path="/experience-studio" element={<ContentManager />} />
+          <Route path="/hero-categories" element={<HeroCategoriesPerPage />} />
+          <Route path="/notifications" element={<NotificationComposer />} />
+          <Route path="/offers" element={<OffersManagement />} />
+          <Route path="/offer-sections" element={<OfferSectionsManagement />} />
+          <Route path="/shop-by-store" element={<ShopByStoreManagement />} />
+          <Route path="/coupons" element={<CouponManagement />} />
+          <Route path="/sellers/pending" element={<PendingSellers />} />
+          <Route path="/seller-locations" element={<SellerLocations />} />
+          <Route path="/delivery-boys/active" element={<ActiveDeliveryBoys />} />
+          <Route
+            path="/delivery-boys/pending"
+            element={<PendingDeliveryBoys />}
+          />
+          <Route path="/tracking" element={<FleetTracking />} />
+          <Route path="/delivery-funds" element={<DeliveryFunds />} />
+          <Route path="/wallet" element={<AdminWallet />} />
+          <Route path="/withdrawals" element={<WithdrawalRequests />} />
+          <Route path="/seller-transactions" element={<SellerTransactions />} />
+          <Route path="/cash-collection" element={<CashCollection />} />
+          <Route path="/customers" element={<CustomerManagement />} />
+          <Route path="/customers/:id" element={<CustomerDetail />} />
+          <Route path="/faqs" element={<FAQManagement />} />
+          <Route path="/orders/:status" element={<OrdersList />} />
+          <Route path="/orders/view/:orderId" element={<OrderDetail />} />
+          <Route path="/returns" element={<Returns />} />
+          <Route path="/billing" element={<BillingCharges />} />
+          <Route path="/settings" element={<AdminSettings />} />
+          <Route path="/env" element={<EnvSettings />} />
+          <Route path="/subscriptions" element={<Subscriptions />} />
+          <Route path="/scratch-cards" element={<ScratchCardManagement />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </React.Suspense>
     </DashboardLayout>
   );
 };
