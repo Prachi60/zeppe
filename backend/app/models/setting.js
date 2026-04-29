@@ -147,6 +147,27 @@ const settingSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        // Donations
+        donationsEnabled: {
+            type: Boolean,
+            default: true,
+        },
+        suggestedDonationAmounts: {
+            type: [Number],
+            default: [10, 20, 50, 100],
+        },
+        roundOffDonationsEnabled: {
+            type: Boolean,
+            default: false,
+        },
+        donationCauses: [
+            {
+                id: { type: String, required: true },
+                title: { type: String, required: true },
+                description: { type: String, default: "" },
+                active: { type: Boolean, default: true },
+            }
+        ],
     },
     {
         timestamps: true,

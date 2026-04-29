@@ -21,9 +21,11 @@ import {
   User,
   ShieldCheck,
   Gift,
+  Heart,
 } from "lucide-react";
 
 const Dashboard = React.lazy(() => import("../pages/Dashboard"));
+const DonationsPage = React.lazy(() => import("../pages/DonationsPage"));
 const CategoryManagement = React.lazy(
   () => import("../pages/CategoryManagement"),
 );
@@ -190,6 +192,7 @@ const navItems = [
     color: "green",
   },
   { label: "Customers", path: "/admin/customers", icon: Users, color: "sky" },
+  { label: "Donations", path: "/admin/donations", icon: Heart, color: "rose" },
   { label: "FAQs", path: "/admin/faqs", icon: HelpCircle, color: "pink" },
   {
     label: "Orders",
@@ -269,6 +272,7 @@ const AdminRoutes = () => {
           <Route path="/customers" element={<CustomerManagement />} />
           <Route path="/customers/:id" element={<CustomerDetail />} />
           <Route path="/faqs" element={<FAQManagement />} />
+          <Route path="/donations" element={<DonationsPage />} />
           <Route path="/orders/:status" element={<OrdersList />} />
           <Route path="/orders/view/:orderId" element={<OrderDetail />} />
           <Route path="/returns" element={<Returns />} />

@@ -46,6 +46,13 @@ import {
     updateDeliverySettingsController,
 } from "../controller/adminFinanceController.js";
 
+import {
+    getDonationsDashboard,
+    updateDonationSettings,
+    addDonationCause,
+    updateDonationCause,
+} from "../controller/adminDonationController.js";
+
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
 import {
     adminBootstrapRateLimiter,
@@ -194,6 +201,12 @@ router.get("/seller-withdrawals", verifyToken, allowRoles("admin"), getSellerWit
 router.get("/delivery-withdrawals", verifyToken, allowRoles("admin"), getDeliveryWithdrawals);
 router.get("/seller-transactions", verifyToken, allowRoles("admin"), getSellerTransactions);
 router.put("/withdrawals/:id", verifyToken, allowRoles("admin"), updateWithdrawalStatus);
+
+// Donations Management
+router.get("/donations/dashboard", verifyToken, allowRoles("admin"), getDonationsDashboard);
+router.put("/donations/settings", verifyToken, allowRoles("admin"), updateDonationSettings);
+router.post("/donations/causes", verifyToken, allowRoles("admin"), addDonationCause);
+router.put("/donations/causes/:causeId", verifyToken, allowRoles("admin"), updateDonationCause);
 
 // Protected admin route example
 router.get(
