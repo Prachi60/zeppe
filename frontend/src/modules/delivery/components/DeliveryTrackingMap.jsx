@@ -277,35 +277,45 @@ const DeliveryTrackingMapComponent = ({
     return [];
   }, [decodedPath]);
 
-  const riderMarkerIcon = useMemo(() => {
-    if (!isLoaded || !window.google?.maps) return undefined;
+  const getRiderIcon = () => {
+    if (!isLoaded || !deliveryIcon) return undefined;
+    if (typeof window !== "undefined" && window.google?.maps?.Size) {
+      return {
+        url: deliveryIcon,
+        scaledSize: new window.google.maps.Size(44, 64),
+        anchor: new window.google.maps.Point(22, 64),
+      };
+    }
+    return deliveryIcon;
+  };
 
-    return {
-      url: deliveryIcon,
-      scaledSize: new window.google.maps.Size(44, 64),
-      anchor: new window.google.maps.Point(22, 64),
-    };
-  }, [isLoaded]);
+  const getCustomerIcon = () => {
+    if (!isLoaded || !customerPin) return undefined;
+    if (typeof window !== "undefined" && window.google?.maps?.Size) {
+      return {
+        url: customerPin,
+        scaledSize: new window.google.maps.Size(40, 40),
+        anchor: new window.google.maps.Point(20, 40),
+      };
+    }
+    return customerPin;
+  };
 
-  const customerMarkerIcon = useMemo(() => {
-    if (!isLoaded || !window.google?.maps) return undefined;
+  const getStoreIcon = () => {
+    if (!isLoaded || !storePin) return undefined;
+    if (typeof window !== "undefined" && window.google?.maps?.Size) {
+      return {
+        url: storePin,
+        scaledSize: new window.google.maps.Size(40, 40),
+        anchor: new window.google.maps.Point(20, 40),
+      };
+    }
+    return storePin;
+  };
 
-    return {
-      url: customerPin,
-      scaledSize: new window.google.maps.Size(40, 40),
-      anchor: new window.google.maps.Point(20, 40),
-    };
-  }, [isLoaded]);
-
-  const storeMarkerIcon = useMemo(() => {
-    if (!isLoaded || !window.google?.maps) return undefined;
-
-    return {
-      url: storePin,
-      scaledSize: new window.google.maps.Size(40, 40),
-      anchor: new window.google.maps.Point(20, 40),
-    };
-  }, [isLoaded]);
+  const riderMarkerIcon = getRiderIcon();
+  const customerMarkerIcon = getCustomerIcon();
+  const storeMarkerIcon = getStoreIcon();
 
   const mapCenter = useMemo(() => {
     if (rider) return rider;

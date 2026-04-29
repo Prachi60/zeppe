@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Lottie from "lottie-react";
-import sellerAnimation from "../../../assets/INSTANT_6.json";
+import riderImage from "../../../assets/delivery_login.png";
 import { sellerApi } from "../services/sellerApi";
 import MapPicker from "../../../shared/components/MapPicker";
 
@@ -416,11 +416,11 @@ const Auth = () => {
             transition={{ duration: 0.8 }}
             className="relative z-10 w-full flex flex-col items-center">
             {/* Lottie Animation for Seller */}
-            <div className="w-full max-w-[350px] drop-shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-              <Lottie
-                animationData={sellerAnimation}
-                loop={true}
-                className="w-full h-auto"
+            <div className="w-full max-w-[350px]">
+              <img
+                src={riderImage}
+                alt="Delivery Rider"
+                className="w-full h-auto object-contain rounded-2xl"
               />
             </div>
 

@@ -1,11 +1,11 @@
 import React from 'react';
 import { Facebook, Twitter, Instagram, Youtube, Mail, MapPin, Phone } from 'lucide-react';
-import Logo from '@/assets/Logo.png';
+import Logo from '@/assets/ZeppeAuthLogo.svg';
 import { useSettings } from '@core/context/SettingsContext';
 
 const Footer = () => {
     const { settings } = useSettings();
-    const logoUrl = settings?.logoUrl || Logo;
+    const logoUrl = Logo;
     const primaryColor = settings?.primaryColor || '#45B0E2';
 
     return (
@@ -29,7 +29,7 @@ const Footer = () => {
                     {/* Brand Info */}
                     <div className="space-y-4 md:space-y-8">
                         <div className="flex items-center">
-                            <img src={logoUrl} alt={`${settings?.appName || 'App'} Logo`} className="h-12 md:h-16 w-auto object-contain" />
+                            <span className="text-3xl md:text-4xl font-black tracking-tight text-white">zeppe</span>
                         </div>
                         <p className="text-sm leading-relaxed md:text-base md:leading-loose text-white/90 md:max-w-xs transition-opacity hover:opacity-100 font-medium">
                             Your daily dose of fresh, organic, and healthy products delivered straight to your door. Freshness guaranteed.

@@ -17,7 +17,7 @@ import {
 } from "../../utils/headerTheme";
 import { HeaderCategoryVisual } from "@/shared/constants/headerCategoryVisuals";
 import { getCategoryImage } from "@/shared/constants/categoryImageMap";
-import LogoImage from "../../../../assets/Logo.png";
+import LogoImage from "../../../../assets/ZeppeAuthLogo.svg";
 import shoppingCartAnimation from "../../../../assets/lottie/shopping-cart.json";
 import GuestProfilePrompt from "./GuestProfilePrompt";
 import CustomerAuth from "../../pages/CustomerAuth";
@@ -270,8 +270,8 @@ const MainLocationHeader = ({
   const { isOpen: isProductDetailOpen } = useProductDetail();
   const { settings } = useSettings();
   const { isAuthenticated } = useAuth();
-  const appName = settings?.appName || "zeppe";
-  const logoUrl = settings?.logoUrl || LogoImage;
+  const appName = "Zeppe";
+  const logoUrl = LogoImage;
   const navigate = useNavigate();
   const routeLocation = useRouteLocation();
   const [isGuestPromptOpen, setIsGuestPromptOpen] = useState(false);
@@ -611,11 +611,9 @@ const MainLocationHeader = ({
                 setIsLocationOpen(true);
               }}
               className="flex min-w-[320px] items-center gap-5 border-0 bg-transparent p-0 text-left transition-opacity hover:opacity-90">
-              <img
-                src={logoUrl}
-                alt={`${appName} Logo`}
-                className="h-11 w-auto object-contain"
-              />
+              <span className="text-[34px] font-black leading-none tracking-tight text-[#111827]">
+                zeppe
+              </span>
               <div className="border-l border-[#e5e7eb] pl-5">
                 <div className="text-[15px] font-extrabold leading-none text-[#111827]">
                   Delivery in {deliveryTimeText.replace(/\bmin\b/i, "minutes")}

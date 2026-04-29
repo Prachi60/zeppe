@@ -38,6 +38,9 @@ const ChatPage = lazy(() => import('../../modules/customer/pages/ChatPage'));
 const TermsPage = lazy(() => import('../../modules/customer/pages/TermsPage'));
 const PrivacyPage = lazy(() => import('../../modules/customer/pages/PrivacyPage'));
 const AboutPage = lazy(() => import('../../modules/customer/pages/AboutPage'));
+const RefundPolicyPage = lazy(() => import('../../modules/customer/pages/RefundPolicyPage'));
+const ReturnPolicyPage = lazy(() => import('../../modules/customer/pages/ReturnPolicyPage'));
+const ShippingPolicyPage = lazy(() => import('../../modules/customer/pages/ShippingPolicyPage'));
 const EditProfilePage = lazy(() => import('../../modules/customer/pages/EditProfilePage'));
 const OrderDetailPage = lazy(() => import('../../modules/customer/pages/OrderDetailPage'));
 const ProductDetailPage = lazy(() => import('../../modules/customer/pages/ProductDetailPage'));
@@ -148,6 +151,9 @@ const AppRouter = () => {
                         { path: 'terms', element: <TermsPage /> },
                         { path: 'privacy', element: <PrivacyPage /> },
                         { path: 'about', element: <AboutPage /> },
+                        { path: 'refund-policy', element: <RefundPolicyPage /> },
+                        { path: 'return-policy', element: <ReturnPolicyPage /> },
+                        { path: 'shipping-policy', element: <ShippingPolicyPage /> },
                         { path: 'offers', element: <OffersPage /> },
                         { path: 'shop-by-store', element: <Navigate to="/stores" replace /> },
                         { path: 'stores', element: <ShopByStorePage /> },
