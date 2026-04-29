@@ -40,8 +40,14 @@ export function getOrderSocket(getToken) {
       autoConnect: false,
       auth: { token },
       transports: ["websocket", "polling"],
+      upgrade: true,
       reconnection: true,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+      reconnectionAttempts: Infinity,
+      randomizationFactor: 0.5,
+      timeout: 20000,
+      withCredentials: true,
     });
 
     s.on("connect", () => {
@@ -50,6 +56,22 @@ export function getOrderSocket(getToken) {
 
     s.on("disconnect", (reason) => {
       console.log("[orderSocket] Socket disconnected, reason:", reason);
+    });
+
+    s.on("reconnect_attempt", (attempt) => {
+      console.log("[orderSocket] Reconnect attempt:", attempt);
+    });
+
+    s.on("reconnect", (attempt) => {
+      console.log("[orderSocket] Reconnected after attempts:", attempt);
+    });
+
+    s.on("reconnect_error", (error) => {
+      console.error("[orderSocket] Reconnect error:", error?.message || error);
+    });
+
+    s.on("reconnect_failed", () => {
+      console.error("[orderSocket] Reconnect failed");
     });
 
     s.on("connect_error", (error) => {

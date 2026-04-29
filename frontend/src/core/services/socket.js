@@ -10,16 +10,26 @@ class SocketService {
         if (this.socket) return this.socket;
 
         this.socket = io(SOCKET_URL, {
-            transports: ["websocket"],
+            transports: ["websocket", "polling"],
+            upgrade: true,
             reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 10000,
+            reconnectionAttempts: Infinity,
+            timeout: 20000,
+            withCredentials: true,
         });
 
         this.socket.on("connect", () => {
             console.log("[Socket] Connected to server");
         });
 
-        this.socket.on("disconnect", () => {
-            console.log("[Socket] Disconnected from server");
+        this.socket.on("disconnect", (reason) => {
+            console.log("[Socket] Disconnected from server:", reason);
+        });
+
+        this.socket.on("connect_error", (error) => {
+            console.error("[Socket] Connection error:", error?.message || error);
         });
 
         return this.socket;

@@ -21,6 +21,7 @@ export const initSocket = (io) => {
     }
     const user = verifySocketToken(token);
     if (!user) {
+      console.warn("[SocketManager] Unauthorized socket auth attempt");
       return next(new Error("Unauthorized"));
     }
     socket.user = user;
@@ -31,6 +32,8 @@ export const initSocket = (io) => {
     const { id: userId, role } = socket.user || {};
     if (!userId) {
       console.log('[SocketManager] Connection without userId, rejecting');
+      socket.emit("socket:error", { code: "UNAUTHORIZED", message: "Authentication required" });
+      socket.disconnect(true);
       return;
     }
 
@@ -75,8 +78,8 @@ export const initSocket = (io) => {
       }
     });
 
-    socket.on("disconnect", () => {
-      console.log(`[SocketManager] Socket ${socket.id} disconnected (userId=${userId}, role=${role})`);
+    socket.on("disconnect", (reason) => {
+      console.log(`[SocketManager] Socket ${socket.id} disconnected (userId=${userId}, role=${role}, reason=${reason})`);
       for (const [id, sid] of deliverySockets.entries()) {
         if (sid === socket.id) {
           deliverySockets.delete(id);
@@ -84,6 +87,10 @@ export const initSocket = (io) => {
           break;
         }
       }
+    });
+
+    socket.on("error", (err) => {
+      console.error(`[SocketManager] Socket error on ${socket.id}:`, err?.message || err);
     });
   });
 };

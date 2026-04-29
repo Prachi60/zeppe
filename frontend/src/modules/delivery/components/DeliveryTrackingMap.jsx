@@ -114,6 +114,7 @@ const DeliveryTrackingMapComponent = ({
   const lastFetchRef = useRef({ at: 0, phase: null, orderId: null });
   const routeOriginRef = useRef(null);
   const watchIdRef = useRef(null);
+  const visibilityHandlerRef = useRef(null);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
@@ -125,35 +126,63 @@ const DeliveryTrackingMapComponent = ({
 
   useEffect(() => {
     if (!navigator.geolocation) return undefined;
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const accuracy = pos.coords.accuracy;
-        const heading = pos.coords.heading;
-        const speed = pos.coords.speed;
-        
-        saveDeliveryPartnerLocation(lat, lng);
-        setRider({ lat, lng });
-        
-        // Send location update to backend
-        deliveryApi.postLocation({
-          lat,
-          lng,
-          accuracy,
-          heading,
-          speed,
-          orderId: orderId || null,
-        }).catch((err) => {
-          console.error("Failed to send location update:", err);
-        });
-      },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 },
-    );
+
+    const startWatch = () => {
+      if (watchIdRef.current != null) return;
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy;
+          const heading = pos.coords.heading;
+          const speed = pos.coords.speed;
+
+          saveDeliveryPartnerLocation(lat, lng);
+          setRider({ lat, lng });
+
+          // Send location update to backend
+          deliveryApi.postLocation({
+            lat,
+            lng,
+            accuracy,
+            heading,
+            speed,
+            orderId: orderId || null,
+          }).catch((err) => {
+            console.error("Failed to send location update:", err);
+          });
+        },
+        (err) => {
+          console.warn("Geolocation watch error:", err?.message || err);
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 },
+      );
+    };
+
+    const stopWatch = () => {
+      if (watchIdRef.current == null) return;
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    };
+
+    startWatch();
+
+    visibilityHandlerRef.current = () => {
+      if (document.visibilityState === "visible") {
+        startWatch();
+      } else {
+        stopWatch();
+      }
+    };
+
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", visibilityHandlerRef.current);
+    }
+
     return () => {
-      if (watchIdRef.current != null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
+      stopWatch();
+      if (typeof document !== "undefined" && visibilityHandlerRef.current) {
+        document.removeEventListener("visibilitychange", visibilityHandlerRef.current);
       }
     };
   }, [orderId]);

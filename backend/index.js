@@ -121,8 +121,15 @@ function createApp() {
   
   app.set("trust proxy", parseTrustProxy(process.env.TRUST_PROXY));
 
+  const corsOrigin = (origin, callback) => {
+    // Allow non-browser clients (curl, server-to-server).
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  };
+
   const corsOptions = {
-    origin: true,
+    origin: corsOrigin,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
@@ -211,10 +218,21 @@ async function startHttpServer() {
   const allowedOrigins = parseAllowedOrigins();
   const io = new Server(server, {
     cors: {
-      origin: true,
-      methods: ["GET", "POST"],
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error(`Socket.IO CORS blocked for origin: ${origin}`));
+      },
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       credentials: true,
     },
+    transports: ["websocket", "polling"],
+    allowEIO3: false,
+  });
+
+  logger.info("Socket.IO initialized", {
+    allowedOrigins,
+    transports: ["websocket", "polling"],
   });
   
   initSocket(io);
