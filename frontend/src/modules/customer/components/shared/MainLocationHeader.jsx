@@ -741,11 +741,11 @@ const MainLocationHeader = ({
             <>
               <div
                 className="no-scrollbar relative z-20 mt-0 flex min-h-[52px] items-center gap-2 overflow-x-auto pt-0 pb-0 scroll-smooth md:hidden border-t-0 border-b-0 shadow-none">
-                {categories.map((cat) => {
+                {categories.map((cat, index) => {
                   const isActive = (activeCategory?._id || activeCategory?.id) === (cat._id || cat.id);
                   return (
                     <CategoryNavColumn
-                      key={cat.id}
+                      key={cat._id || cat.id || index}
                       cat={cat}
                       isActive={isActive}
                       onCategorySelect={onCategorySelect}

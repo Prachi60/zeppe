@@ -1,4 +1,5 @@
 import express from "express";
+import compression from "compression";
 import dotenv from "dotenv";
 import http from "http";
 import dns from "node:dns";
@@ -148,6 +149,7 @@ function createApp() {
   app.use(trackInFlightRequests);
   app.use(helmet());
   app.use(cors(corsOptions));
+  app.use(compression());
   app.use(globalApiRateLimiter);
 
   // PhonePe webhook needs raw body for signature verification

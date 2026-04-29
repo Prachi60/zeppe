@@ -64,7 +64,7 @@ const CouponManagement = () => {
                 search: searchTerm.trim() || undefined,
             });
             if (res.data.success) {
-                const list = res.data.result || res.data.results || [];
+                const list = Array.isArray(res.data.result) ? res.data.result : (res.data.result?.items || res.data.results || []);
                 setCoupons(list);
             }
         } catch (error) {
@@ -159,7 +159,7 @@ const CouponManagement = () => {
             setEditingCoupon(null);
             const res = await adminApi.getCoupons();
             if (res.data.success) {
-                const list = res.data.result || res.data.results || [];
+                const list = Array.isArray(res.data.result) ? res.data.result : (res.data.result?.items || res.data.results || []);
                 setCoupons(list);
             }
         } catch (error) {

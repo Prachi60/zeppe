@@ -1,7 +1,8 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "@shared/layout/DashboardLayout";
-import Orders from "../pages/Orders";
+
+const Orders = React.lazy(() => import("../pages/Orders"));
 import {
   HiOutlineSquares2X2,
   HiOutlineCube,
@@ -97,21 +98,23 @@ const SellerRoutes = () => {
 
   return (
     <DashboardLayout navItems={navItems} title="Vendor Panel">
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/products" element={<ProductManagement />} />
-        <Route path="/products/add" element={<AddProduct />} />
-        <Route path="/inventory" element={<StockManagement />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/returns" element={<Returns />} />
-        <Route path="/tracking" element={<DeliveryTracking />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/transactions" element={<Transactions />} />
-        <Route path="/earnings" element={<Earnings />} />
-        <Route path="/withdrawals" element={<Withdrawals />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <React.Suspense fallback={<div className="flex h-[60vh] items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-400">Loading Section...</div>}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/products" element={<ProductManagement />} />
+          <Route path="/products/add" element={<AddProduct />} />
+          <Route path="/inventory" element={<StockManagement />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/returns" element={<Returns />} />
+          <Route path="/tracking" element={<DeliveryTracking />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/earnings" element={<Earnings />} />
+          <Route path="/withdrawals" element={<Withdrawals />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </React.Suspense>
     </DashboardLayout>
   );
 };

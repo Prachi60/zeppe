@@ -1,57 +1,66 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import DeliveryLayout from "../layout/DeliveryLayout";
-import Splash from "../pages/Splash";
-import DeliveryAuth from "../pages/DeliveryAuth";
-import Dashboard from "../pages/Dashboard";
-import OrderDetails from "../pages/OrderDetails";
-import Navigation from "../pages/Navigation";
-import DeliveryConfirmation from "../pages/DeliveryConfirmation";
-import EarningsPage from "../pages/EarningsPage";
-import CodCash from "../pages/CodCash";
-import OrderHistory from "../pages/OrderHistory";
-import Profile from "../pages/Profile";
-import PersonalDetails from "../pages/profile/PersonalDetails";
-import VehicleInfo from "../pages/profile/VehicleInfo";
-import BankAccount from "../pages/profile/BankAccount";
-import Documents from "../pages/profile/Documents";
-import SafetyPrivacy from "../pages/profile/SafetyPrivacy";
-import Settings from "../pages/profile/Settings";
-import HelpSupport from "../pages/profile/HelpSupport";
-import Withdrawals from "../pages/profile/Withdrawals";
-import SubscriptionStatus from "../pages/profile/SubscriptionStatus";
-import Notifications from "../pages/Notifications";
-import Subscription from "../pages/Subscription";
+
+const DeliveryLayout = lazy(() => import("../layout/DeliveryLayout"));
+const Splash = lazy(() => import("../pages/Splash"));
+const DeliveryAuth = lazy(() => import("../pages/DeliveryAuth"));
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const OrderDetails = lazy(() => import("../pages/OrderDetails"));
+const Navigation = lazy(() => import("../pages/Navigation"));
+const DeliveryConfirmation = lazy(() => import("../pages/DeliveryConfirmation"));
+const EarningsPage = lazy(() => import("../pages/EarningsPage"));
+const CodCash = lazy(() => import("../pages/CodCash"));
+const OrderHistory = lazy(() => import("../pages/OrderHistory"));
+const Profile = lazy(() => import("../pages/Profile"));
+const PersonalDetails = lazy(() => import("../pages/profile/PersonalDetails"));
+const VehicleInfo = lazy(() => import("../pages/profile/VehicleInfo"));
+const BankAccount = lazy(() => import("../pages/profile/BankAccount"));
+const Documents = lazy(() => import("../pages/profile/Documents"));
+const SafetyPrivacy = lazy(() => import("../pages/profile/SafetyPrivacy"));
+const Settings = lazy(() => import("../pages/profile/Settings"));
+const HelpSupport = lazy(() => import("../pages/profile/HelpSupport"));
+const Withdrawals = lazy(() => import("../pages/profile/Withdrawals"));
+const SubscriptionStatus = lazy(() => import("../pages/profile/SubscriptionStatus"));
+const Notifications = lazy(() => import("../pages/Notifications"));
+const Subscription = lazy(() => import("../pages/Subscription"));
+
+const LoadingFallback = () => (
+  <div className="flex h-screen w-full items-center justify-center bg-slate-50 text-xs font-bold uppercase tracking-widest text-slate-400">
+    Initializing...
+  </div>
+);
 
 const DeliveryRoutes = () => {
   return (
-    <Routes>
-      <Route element={<DeliveryLayout />}>
-        <Route path="splash" element={<Splash />} />
-        <Route path="subscription" element={<Subscription />} />
+    <Suspense fallback={<LoadingFallback />}>
+      <Routes>
+        <Route element={<DeliveryLayout />}>
+          <Route path="splash" element={<Splash />} />
+          <Route path="subscription" element={<Subscription />} />
 
-        <Route path="auth" element={<DeliveryAuth />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="order-details/:orderId" element={<OrderDetails />} />
-        <Route path="navigation" element={<Navigation />} />
-        <Route path="confirm-delivery/:orderId" element={<DeliveryConfirmation />} />
-        <Route path="earnings" element={<EarningsPage />} />
-        <Route path="cod-cash" element={<CodCash />} />
-        <Route path="history" element={<OrderHistory />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="profile/personal-details" element={<PersonalDetails />} />
-        <Route path="profile/vehicle-info" element={<VehicleInfo />} />
-        <Route path="profile/bank-account" element={<BankAccount />} />
-        <Route path="profile/documents" element={<Documents />} />
-        <Route path="profile/safety-privacy" element={<SafetyPrivacy />} />
-        <Route path="profile/settings" element={<Settings />} />
-        <Route path="profile/help-support" element={<HelpSupport />} />
-        <Route path="profile/withdrawals" element={<Withdrawals />} />
-        <Route path="profile/subscription" element={<SubscriptionStatus />} />
-        <Route path="notifications" element={<Notifications />} />
-        <Route path="/" element={<Navigate to="subscription" replace />} />
-      </Route>
-    </Routes>
+          <Route path="auth" element={<DeliveryAuth />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="order-details/:orderId" element={<OrderDetails />} />
+          <Route path="navigation" element={<Navigation />} />
+          <Route path="confirm-delivery/:orderId" element={<DeliveryConfirmation />} />
+          <Route path="earnings" element={<EarningsPage />} />
+          <Route path="cod-cash" element={<CodCash />} />
+          <Route path="history" element={<OrderHistory />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="profile/personal-details" element={<PersonalDetails />} />
+          <Route path="profile/vehicle-info" element={<VehicleInfo />} />
+          <Route path="profile/bank-account" element={<BankAccount />} />
+          <Route path="profile/documents" element={<Documents />} />
+          <Route path="profile/safety-privacy" element={<SafetyPrivacy />} />
+          <Route path="profile/settings" element={<Settings />} />
+          <Route path="profile/help-support" element={<HelpSupport />} />
+          <Route path="profile/withdrawals" element={<Withdrawals />} />
+          <Route path="profile/subscription" element={<SubscriptionStatus />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="/" element={<Navigate to="subscription" replace />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 };
 

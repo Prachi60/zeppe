@@ -211,6 +211,10 @@ const CheckoutPage = () => {
     : 0;
   const totalAmount = (pricingPreview?.grandTotal || 0) + (Number(donationAmount) || 0) + (isGiftPackaging ? 25 : 0);
 
+  const checkoutGrandTotal = pricingPreview?.grandTotal || 0;
+  const nextTen = Math.ceil((checkoutGrandTotal + 1) / 10) * 10;
+  const roundOffAmount = nextTen - checkoutGrandTotal;
+
   const CART_PREVIEW_LIMIT = 3;
   const displayCartItems = showAllCartItems ? cart : cart.slice(0, CART_PREVIEW_LIMIT);
 
@@ -1434,6 +1438,30 @@ const CheckoutPage = () => {
             <div className="bg-white/80 rounded-xl p-3 flex items-center justify-center relative min-h-[50px]">
               <span className="text-2xl select-none">👦</span>
             </div>
+
+            {checkoutGrandTotal > 0 && roundOffAmount > 0 && (
+              <div className="flex items-center justify-between bg-white/90 border border-rose-100 rounded-xl p-3 mt-1">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-800">Round up to ₹{nextTen}</span>
+                  <p className="text-[10px] text-slate-400 font-medium">Contribute ₹{roundOffAmount} to this cause</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setDonationAmount(roundOffAmount);
+                    setCustomDonation(String(roundOffAmount));
+                    showToast(`₹${roundOffAmount} round-off donation added!`, "success");
+                  }}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                    donationAmount === roundOffAmount 
+                      ? "bg-rose-500 text-white border border-rose-500" 
+                      : "bg-white border border-slate-200 text-slate-700 hover:border-rose-400 hover:text-rose-500"
+                  }`}
+                >
+                  {donationAmount === roundOffAmount ? "Added" : `+₹${roundOffAmount}`}
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mt-1">
               <span className="text-[11px] font-bold text-slate-600">Donation amount</span>
               <div className="flex items-center gap-2">

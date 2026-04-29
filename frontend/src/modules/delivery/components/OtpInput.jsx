@@ -85,7 +85,7 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
   const handlePaste = (e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text").trim();
-    
+
     // Only accept 4-digit numeric paste
     if (/^\d{4}$/.test(pastedData)) {
       const newOtp = pastedData.split("");
@@ -153,19 +153,19 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
       const response = isReturnDrop
         ? await deliveryApi.verifyReturnDropOtp(orderId, { code: otpString })
         : isReturn
-        ? await deliveryApi.verifyReturnOtp(orderId, { otp: otpString })
-        : await deliveryApi.validateDeliveryOtp(orderId, { otp: otpString });
+          ? await deliveryApi.verifyReturnOtp(orderId, { otp: otpString })
+          : await deliveryApi.validateDeliveryOtp(orderId, { otp: otpString });
 
       // Success
       toast.success(
         response.data?.message ||
-          (isReturnDrop
-            ? "Seller confirmed! Return complete."
-            : isReturn
+        (isReturnDrop
+          ? "Seller confirmed! Return complete."
+          : isReturn
             ? "Return pickup verified!"
             : "Order delivered successfully!")
       );
-      
+
       if (onSuccess) {
         onSuccess(response.data);
       }
@@ -260,13 +260,12 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={index === 0 ? handlePaste : undefined}
             disabled={isLoading}
-            className={`w-14 h-16 text-center text-2xl font-bold font-mono border-2 rounded-xl transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-offset-0 ${
-              error
+            className={`w-14 h-16 text-center text-2xl font-bold font-mono border-2 rounded-xl transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-offset-0 ${error
                 ? "border-red-300 bg-red-50 text-red-900 focus:border-red-500 focus:ring-red-500"
                 : digit
-                ? "border-primary bg-primary/10 text-slate-900 focus:border-primary focus:ring-primary"
-                : "border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
-            } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                  ? "border-primary bg-primary/10 text-slate-900 focus:border-primary focus:ring-primary"
+                  : "border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+              } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             aria-label={`Digit ${index + 1}`}
           />
         ))}
@@ -312,11 +311,10 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
       <button
         onClick={handleSubmit}
         disabled={!isComplete || isLoading || isGenerating}
-        className={`w-full h-12 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 outline-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-0 ${
-          !isComplete || isLoading || isGenerating
+        className={`w-full h-12 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 outline-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-0 ${!isComplete || isLoading || isGenerating
             ? "bg-gray-200 text-gray-600 cursor-not-allowed"
             : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 shadow-md hover:shadow-lg"
-        }`}
+          }`}
       >
         {isLoading ? (
           <>
