@@ -130,4 +130,11 @@ export const adminApi = {
     createCoupon: (data) => axiosInstance.post('/admin/coupons', data),
     updateCoupon: (id, data) => axiosInstance.put(`/admin/coupons/${id}`, data),
     deleteCoupon: (id) => axiosInstance.delete(`/admin/coupons/${id}`),
+
+    // Scratch Cards
+    getScratchCampaigns: (params) => axiosInstance.get('/admin/scratch-cards/campaigns', { params }),
+    createScratchCampaign: (data) => axiosInstance.post('/admin/scratch-cards/campaigns', data),
+    updateScratchCampaign: (id, data) => axiosInstance.put(`/admin/scratch-cards/campaigns/${id}`, data),
+    deleteScratchCampaign: (id) => axiosInstance.delete(`/admin/scratch-cards/campaigns/${id}`),
+    toggleScratchCampaign: (id) => axiosInstance.patch(`/admin/scratch-cards/campaigns/${id}/toggle`),
 };

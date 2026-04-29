@@ -23,6 +23,9 @@ import ProductDetailPage from '../pages/ProductDetailPage';
 import CheckoutPage from '../pages/CheckoutPage';
 import PaymentStatusPage from '../pages/PaymentStatusPage';
 import StoreDetailPage from '../pages/StoreDetailPage';
+import WalletPage from '../pages/WalletPage';
+import MyScratchCards from '../pages/MyScratchCards';
+
 import ScrollToTop from '../components/shared/ScrollToTop';
 import { WishlistProvider } from '../context/WishlistContext';
 import { CartProvider } from '../context/CartContext';
@@ -64,6 +67,9 @@ const CustomerRoutes = () => {
                             <Route path="payment-status" element={<ProtectedRoute><PaymentStatusPage /></ProtectedRoute>} />
                             <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                             <Route path="profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
+                            <Route path="wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+                            <Route path="rewards" element={<ProtectedRoute><MyScratchCards /></ProtectedRoute>} />
+
                         </Routes>
                     </CartAnimationProvider>
                 </CartProvider>

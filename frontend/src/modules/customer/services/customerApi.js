@@ -137,4 +137,8 @@ export const customerApi = {
   testPushNotification: () => axiosInstance.post("/push/test"),
   getTestPushNotificationStatus: (orderId) =>
     axiosInstance.get(`/push/test-status/${encodeURIComponent(String(orderId || "").trim())}`),
+
+  // Scratch Cards
+  getMyScratchCards: (params) => getWithDedupe("/customer/scratch-cards", params),
+  scratchCard: (cardId) => axiosInstance.post(`/customer/scratch-cards/${cardId}/scratch`),
 };
