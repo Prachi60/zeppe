@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     User, MapPin, Package, CreditCard, Wallet, ChevronRight,
-    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Phone
+    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Phone, Trophy
 } from 'lucide-react';
 import { useAuth } from '@core/context/AuthContext';
 import { useSettings } from '@core/context/SettingsContext';
@@ -210,6 +210,14 @@ const ProfilePage = () => {
                                 path="/wishlist"
                                 color="#fb7185"
                                 bg="rgba(248,113,113,0.08)"
+                            />
+                            <MenuItem
+                                icon={Trophy}
+                                label="My Rewards"
+                                sub="Scratch cards & earnings"
+                                path="/rewards"
+                                color="#8b5cf6"
+                                bg="rgba(139,92,246,0.10)"
                             />
                             <MenuItem
                                 icon={MapPin}

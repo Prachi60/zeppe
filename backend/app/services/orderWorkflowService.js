@@ -1075,6 +1075,14 @@ export async function verifyHandoffOtpAndDeliver(deliveryId, orderId, code) {
 
   await applyDeliveredSettlement(updated, orderId);
 
+  // Assign scratch card if eligible
+  try {
+    const { assignScratchCard } = await import("./scratchCardService.js");
+    await assignScratchCard(updated.customer, updated._id, updated.pricing?.total || updated.paymentBreakdown?.grandTotal || 0);
+  } catch (err) {
+    console.error("Error in assignScratchCard hook:", err);
+  }
+
   emitOrderStatusUpdate(orderId, { workflowStatus: WORKFLOW_STATUS.DELIVERED }, updated.customer);
   emitNotificationEvent(NOTIFICATION_EVENTS.ORDER_DELIVERED, {
     orderId: updated.orderId,

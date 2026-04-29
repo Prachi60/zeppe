@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+
 const Home = React.lazy(() => import('../pages/Home'));
 const CategoriesPage = React.lazy(() => import('../pages/CategoriesPage'));
 const CategoryProductsPage = React.lazy(() => import('../pages/CategoryProductsPage'));
@@ -23,6 +24,9 @@ const ProductDetailPage = React.lazy(() => import('../pages/ProductDetailPage'))
 const CheckoutPage = React.lazy(() => import('../pages/CheckoutPage'));
 const PaymentStatusPage = React.lazy(() => import('../pages/PaymentStatusPage'));
 const StoreDetailPage = React.lazy(() => import('../pages/StoreDetailPage'));
+const WalletPage = React.lazy(() => import('../pages/WalletPage'));
+const MyScratchCards = React.lazy(() => import('../pages/MyScratchCards'));
+
 import ScrollToTop from '../components/shared/ScrollToTop';
 import { WishlistProvider } from '../context/WishlistContext';
 import { CartProvider } from '../context/CartContext';
@@ -65,6 +69,8 @@ const CustomerRoutes = () => {
                                 <Route path="payment-status" element={<ProtectedRoute><PaymentStatusPage /></ProtectedRoute>} />
                                 <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                                 <Route path="profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
+                                <Route path="wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+                                <Route path="rewards" element={<ProtectedRoute><MyScratchCards /></ProtectedRoute>} />
                             </Routes>
                         </React.Suspense>
                     </CartAnimationProvider>
