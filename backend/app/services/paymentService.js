@@ -19,6 +19,7 @@ import { afterPlaceOrderV2 } from "./orderWorkflowService.js";
 import { releaseReservedStockForOrder } from "./stockService.js";
 import { emitNotificationEvent } from "../modules/notifications/notification.emitter.js";
 import { NOTIFICATION_EVENTS } from "../modules/notifications/notification.constants.js";
+import { updateDonationStatusByCheckoutGroup } from "./donationService.js";
 
 let phonePeClient = null;
 
@@ -378,6 +379,11 @@ async function handleOrderSideEffectsFromPaymentStatus(payment, nextStatus, reas
       });
     }
     await updateCheckoutGroupPaymentStatus(payment.checkoutGroupId, nextStatus);
+    await updateDonationStatusByCheckoutGroup(payment.checkoutGroupId, {
+      status: "PAID",
+      transactionId: payment.gatewayPaymentId || payment.gatewayOrderId,
+      donatedAt: new Date(),
+    });
     return;
   }
 
@@ -413,6 +419,10 @@ async function handleOrderSideEffectsFromPaymentStatus(payment, nextStatus, reas
       session.endSession();
     }
     await updateCheckoutGroupPaymentStatus(payment.checkoutGroupId, nextStatus);
+    await updateDonationStatusByCheckoutGroup(payment.checkoutGroupId, {
+      status: "FAILED",
+      transactionId: payment.gatewayPaymentId || payment.gatewayOrderId || null,
+    });
     for (const order of orders) {
       emitNotificationEvent(NOTIFICATION_EVENTS.ORDER_CANCELLED, {
         orderId: order.orderId,

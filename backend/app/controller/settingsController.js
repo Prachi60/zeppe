@@ -43,6 +43,10 @@ const ALLOWED_KEYS = [
   "handlingFeeStrategy",
   "codEnabled",
   "onlineEnabled",
+  "donationsEnabled",
+  "suggestedDonationAmounts",
+  "roundOffDonationsEnabled",
+  "donationCauses",
 ];
 
 /** Joi schema for validating settings update payload */
@@ -90,6 +94,17 @@ const updateSettingsSchema = Joi.object({
   ),
   codEnabled: Joi.boolean(),
   onlineEnabled: Joi.boolean(),
+  donationsEnabled: Joi.boolean(),
+  suggestedDonationAmounts: Joi.array().items(Joi.number().min(0)).max(20),
+  roundOffDonationsEnabled: Joi.boolean(),
+  donationCauses: Joi.array().items(
+    Joi.object({
+      id: Joi.string().required(),
+      title: Joi.string().required(),
+      description: Joi.string().allow("").optional(),
+      active: Joi.boolean().optional(),
+    }),
+  ).max(100),
 }).unknown(false);
 
 /**
@@ -111,7 +126,7 @@ export const getPublicSettings = async (req, res) => {
       async () => {
         const existing = await Setting.findOne(filter)
           .select(
-            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled createdAt",
+            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled donationsEnabled suggestedDonationAmounts roundOffDonationsEnabled donationCauses createdAt",
           )
           .lean();
         return existing || null;

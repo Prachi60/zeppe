@@ -30,6 +30,11 @@ import { buildCheckoutPricingSnapshot } from "./checkoutPricingService.js";
 import { emitNotificationEvent } from "../modules/notifications/notification.emitter.js";
 import { NOTIFICATION_EVENTS } from "../modules/notifications/notification.constants.js";
 import * as logger from "./logger.js";
+import {
+  createDonationEntry,
+  attachDonationOrderReference,
+  parseDonationInput,
+} from "./donationService.js";
 
 const IDEMPOTENCY_RECORD_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -288,6 +293,10 @@ export async function placeOrderAtomic({
     const source = placementSource(normalizedPayload);
     const walletAmount = Math.max(0, Number(normalizedPayload.walletAmount || 0));
     const tipAmount = Math.max(0, Number(normalizedPayload.tipAmount || 0));
+    const donationInput = parseDonationInput({
+      ...(normalizedPayload.donation || {}),
+      donationAmount: normalizedPayload.donationAmount,
+    });
 
     // 1. Fetch user and validate wallet
     const user = await User.findById(customerId).session(session);
@@ -340,10 +349,31 @@ export async function placeOrderAtomic({
       metadata: {
         timeSlot: normalizedPayload.timeSlot || "now",
         tipAmount,
+        donation: donationInput.amount > 0 ? donationInput : undefined,
         appliedCoupon: pricingSnapshot.aggregateBreakdown?.appliedCoupon || undefined,
       },
     });
     await checkoutGroup.save({ session });
+
+    if (donationInput.amount > 0) {
+      await createDonationEntry({
+        customer: user?._id || customerId,
+        donorName: user?.name || "Anonymous",
+        donorEmail: user?.email || "",
+        checkoutGroupId,
+        amount: donationInput.amount,
+        source: donationInput.source,
+        causeId: donationInput.causeId,
+        causeTitle: donationInput.causeTitle,
+        message: donationInput.message,
+        status: paymentMode === "ONLINE" ? "PENDING" : "PENDING",
+        meta: {
+          paymentMode,
+          createdFrom: resolvedSource || source,
+          checkoutGroupId,
+        },
+      }, { session });
+    }
 
     const orders = [];
     const sellerTimeoutMs = DEFAULT_SELLER_TIMEOUT_MS();
@@ -437,6 +467,9 @@ export async function placeOrderAtomic({
       grandTotal: Number(order.paymentBreakdown?.grandTotal || 0),
     }));
     await checkoutGroup.save({ session });
+    if (donationInput.amount > 0 && orders[0]?._id) {
+      await attachDonationOrderReference(checkoutGroupId, orders[0]._id, { session });
+    }
 
     // Deduct wallet balance if used
     if (walletAmount > 0) {

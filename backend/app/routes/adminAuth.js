@@ -48,6 +48,8 @@ import {
 
 import {
     getDonationsDashboard,
+    getAllDonations,
+    updateDonationStatus,
     updateDonationSettings,
     addDonationCause,
     updateDonationCause,
@@ -204,6 +206,8 @@ router.put("/withdrawals/:id", verifyToken, allowRoles("admin"), updateWithdrawa
 
 // Donations Management
 router.get("/donations/dashboard", verifyToken, allowRoles("admin"), getDonationsDashboard);
+router.get("/donations", verifyToken, allowRoles("admin"), getAllDonations);
+router.patch("/donations/:id/status", verifyToken, allowRoles("admin"), updateDonationStatus);
 router.put("/donations/settings", verifyToken, allowRoles("admin"), updateDonationSettings);
 router.post("/donations/causes", verifyToken, allowRoles("admin"), addDonationCause);
 router.put("/donations/causes/:causeId", verifyToken, allowRoles("admin"), updateDonationCause);
