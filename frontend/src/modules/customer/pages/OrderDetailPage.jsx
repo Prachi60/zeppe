@@ -728,44 +728,39 @@ const OrderDetailPage = () => {
         />
 
         {/* Delivery Partner Card - Redesigned */}
-        {order.deliveryBoy && status !== "delivered" && status !== "cancelled" && (
+        {(order.deliveryBoy || order.deliveryPartner) && status !== "cancelled" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-3xl p-5 shadow-lg text-white"
+            className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100"
           >
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="h-14 w-14 rounded-full bg-white/20 backdrop-blur-sm overflow-hidden border-2 border-white/40 shadow-lg">
+              <div className="relative flex-shrink-0">
+                <div className="h-14 w-14 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
                   <img
                     src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60"
                     alt="Rider"
                     className="h-full w-full object-cover"
                   />
                 </div>
-                <div className="absolute -bottom-1 -right-1 bg-white text-brand-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-md">
-                  4.8 ★
-                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-white/80 uppercase tracking-wider">Your Courier</p>
-                <h3 className="font-bold text-white text-lg">{order.deliveryBoy?.name || "Delivery Partner"}</h3>
-                <p className="text-xs text-white/90 mt-0.5">On the way to you</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Your Courier</p>
+                <h3 className="font-extrabold text-slate-800 text-base">
+                  {order.deliveryBoy?.name || order.deliveryPartner?.name || "Delivery Partner"}
+                </h3>
+                <p className="text-xs font-medium text-slate-400 mt-0.5">On the way to you</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => window.open(`sms:${order.deliveryBoy?.phone}`)}
-                  className="h-11 w-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors border border-white/30"
-                >
-                  <MessageSquare size={20} className="text-white" />
-                </button>
-                <button 
-                  onClick={() => window.open(`tel:${order.deliveryBoy?.phone}`)}
-                  className="h-11 w-11 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors border border-white/30"
-                >
-                  <Phone size={20} className="text-white" />
-                </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {(order.deliveryBoy?.phone || order.deliveryPartner?.phone) && (
+                  <button 
+                    onClick={() => window.open(`tel:${order.deliveryBoy?.phone || order.deliveryPartner?.phone}`)}
+                    className="h-11 w-11 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 hover:bg-slate-100 transition-colors"
+                  >
+                    <Phone size={18} className="text-slate-700" />
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>
@@ -889,37 +884,50 @@ const OrderDetailPage = () => {
           className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100"
         >
           <h3 className="text-base font-bold text-slate-800 mb-4">Bill Summary</h3>
-          <div className="space-y-2.5 text-sm">
-            <div className="flex justify-between text-slate-600">
-              <span>Item Total</span>
-              <span className="font-semibold">₹{order.pricing.subtotal}</span>
-            </div>
-            <div className="flex justify-between text-slate-600">
-              <span>Delivery Fee</span>
-              <span
-                className={
-                  order.pricing.deliveryFee === 0 ? "text-brand-600 font-bold" : "font-semibold"
-                }>
-                {order.pricing.deliveryFee === 0
-                  ? "FREE"
-                  : `₹${order.pricing.deliveryFee}`}
-              </span>
-            </div>
-            {order.pricing.tip > 0 && (
-              <div className="flex justify-between text-slate-600">
-                <span>Tip</span>
-                <span className="font-semibold">₹{order.pricing.tip}</span>
+          {(() => {
+            const donationKey = `donation_${order?.orderId || order?.checkoutGroupId || 'latest'}`;
+            const localDonationAmount = Number(localStorage.getItem(donationKey)) || Number(localStorage.getItem('latest_donation_amount')) || 0;
+            
+            return (
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between text-slate-600">
+                  <span>Item Total</span>
+                  <span className="font-semibold">₹{order.pricing.subtotal}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Delivery Fee</span>
+                  <span
+                    className={
+                      order.pricing.deliveryFee === 0 ? "text-brand-600 font-bold" : "font-semibold"
+                    }>
+                    {order.pricing.deliveryFee === 0
+                      ? "FREE"
+                      : `₹${order.pricing.deliveryFee}`}
+                  </span>
+                </div>
+                {order.pricing.tip > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Tip</span>
+                    <span className="font-semibold">₹{order.pricing.tip}</span>
+                  </div>
+                )}
+                {localDonationAmount > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Donation</span>
+                    <span className="font-semibold">₹{localDonationAmount}</span>
+                  </div>
+                )}
+                <div className="border-t border-slate-100 mt-3 pt-3 flex justify-between items-center">
+                  <span className="text-base font-bold text-slate-900">
+                    Total Amount
+                  </span>
+                  <span className="text-xl font-black text-brand-600">
+                    ₹{order.pricing.total + localDonationAmount}
+                  </span>
+                </div>
               </div>
-            )}
-            <div className="border-t border-slate-100 mt-3 pt-3 flex justify-between items-center">
-              <span className="text-base font-bold text-slate-900">
-                Total Amount
-              </span>
-              <span className="text-xl font-black text-brand-600">
-                ₹{order.pricing.total}
-              </span>
-            </div>
-          </div>
+            );
+          })()}
           
           {/* Payment Method */}
           <div className="mt-4 bg-slate-50 rounded-2xl p-3.5 flex items-center justify-between">

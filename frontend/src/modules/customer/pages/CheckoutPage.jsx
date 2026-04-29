@@ -740,6 +740,12 @@ const CheckoutPage = () => {
         const mainOrderId = mainOrder?.orderId || result.orderId;
         const paymentRef = result.paymentRef || result.checkoutGroupId || mainOrderId;
         
+        if (Number(donationAmount) > 0) {
+          const donationKey = `donation_${mainOrderId || paymentRef || 'latest'}`;
+          localStorage.setItem(donationKey, String(donationAmount));
+          localStorage.setItem('latest_donation_amount', String(donationAmount));
+        }
+        
         console.log("[CheckoutPage] Order placed. Result:", result, "Target ID:", mainOrderId);
         
         if (!mainOrderId) {

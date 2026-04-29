@@ -80,15 +80,32 @@ const InvoiceModal = ({ isOpen, onClose, order }) => {
                                 <div className="space-y-2 pt-2 border-t border-slate-100">
                                     <div className="flex justify-between text-sm text-slate-500">
                                         <span>Subtotal</span>
-                                        <span>₹{order.bill.itemTotal}</span>
+                                        <span>₹{order.pricing?.subtotal || order.bill?.itemTotal || 0}</span>
                                     </div>
                                     <div className="flex justify-between text-sm text-slate-500">
                                         <span>Tax</span>
-                                        <span>₹{order.bill.tax}</span>
+                                        <span>₹{order.pricing?.tax || order.bill?.tax || 0}</span>
                                     </div>
+                                    {(() => {
+                                        const donationKey = `donation_${order?.orderId || order?.id || 'latest'}`;
+                                        const localDonationAmount = Number(localStorage.getItem(donationKey)) || Number(localStorage.getItem('latest_donation_amount')) || 0;
+                                        
+                                        if (localDonationAmount > 0) {
+                                            return (
+                                                <div className="flex justify-between text-sm text-slate-500">
+                                                    <span>Donation</span>
+                                                    <span>₹{localDonationAmount}</span>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
                                     <div className="flex justify-between text-base font-black text-slate-800 pt-2 border-t border-slate-100">
                                         <span>Total Paid</span>
-                                        <span>₹{order.bill.grandTotal}</span>
+                                        <span>
+                                            ₹{(order.pricing?.total || order.bill?.grandTotal || 0) + 
+                                              (Number(localStorage.getItem(`donation_${order?.orderId || order?.id || 'latest'}`)) || Number(localStorage.getItem('latest_donation_amount')) || 0)}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

@@ -94,9 +94,13 @@ const LiveTrackingMap = memo(({
     map.fitBounds(bounds, 24);
   }, []);
 
+  const effectiveRiderLocation = riderLocation || 
+    (hasValidLatLng(sellerLocation) ? sellerLocation : 
+    (hasValidLatLng(destinationLocation) ? destinationLocation : null));
+
   const activeTargetLocation = routePhase === "delivery" ? destinationLocation : sellerLocation;
   const shouldShowStoreMarker =
-    routePhase === "pickup" && hasValidLatLng(sellerLocation);
+    routePhase === "pickup" && hasValidLatLng(sellerLocation) && !(!riderLocation && hasValidLatLng(sellerLocation));
   const shouldShowCustomerMarker =
     routePhase === "delivery" && hasValidLatLng(destinationLocation);
 
@@ -118,50 +122,60 @@ const LiveTrackingMap = memo(({
     }
   }, [routePolyline, isLoaded]);
 
-  const riderMarkerIcon = useMemo(() => {
-    if (!isLoaded || !window.google?.maps) return undefined;
+  const getRiderIcon = () => {
+    if (!isLoaded || !deliveryIcon) return undefined;
+    if (typeof window !== "undefined" && window.google?.maps?.Size) {
+      return {
+        url: deliveryIcon,
+        scaledSize: new window.google.maps.Size(44, 64),
+        anchor: new window.google.maps.Point(22, 64),
+      };
+    }
+    return deliveryIcon;
+  };
 
-    return {
-      url: deliveryIcon,
-      scaledSize: new window.google.maps.Size(44, 64),
-      anchor: new window.google.maps.Point(22, 64),
-    };
-  }, [isLoaded]);
+  const getCustomerIcon = () => {
+    if (!isLoaded || !customerPin) return undefined;
+    if (typeof window !== "undefined" && window.google?.maps?.Size) {
+      return {
+        url: customerPin,
+        scaledSize: new window.google.maps.Size(40, 40),
+        anchor: new window.google.maps.Point(20, 40),
+      };
+    }
+    return customerPin;
+  };
 
-  const customerMarkerIcon = useMemo(() => {
-    if (!isLoaded || !window.google?.maps) return undefined;
+  const getStoreIcon = () => {
+    if (!isLoaded || !storePin) return undefined;
+    if (typeof window !== "undefined" && window.google?.maps?.Size) {
+      return {
+        url: storePin,
+        scaledSize: new window.google.maps.Size(40, 40),
+        anchor: new window.google.maps.Point(20, 40),
+      };
+    }
+    return storePin;
+  };
 
-    return {
-      url: customerPin,
-      scaledSize: new window.google.maps.Size(40, 40),
-      anchor: new window.google.maps.Point(20, 40),
-    };
-  }, [isLoaded]);
-
-  const storeMarkerIcon = useMemo(() => {
-    if (!isLoaded || !window.google?.maps) return undefined;
-
-    return {
-      url: storePin,
-      scaledSize: new window.google.maps.Size(40, 40),
-      anchor: new window.google.maps.Point(20, 40),
-    };
-  }, [isLoaded]);
+  const riderMarkerIcon = getRiderIcon();
+  const customerMarkerIcon = getCustomerIcon();
+  const storeMarkerIcon = getStoreIcon();
 
   // Calculate map center and bounds
   const mapCenter = useMemo(() => {
-    if (riderLocation) return riderLocation;
+    if (effectiveRiderLocation) return effectiveRiderLocation;
     if (hasValidLatLng(activeTargetLocation)) return activeTargetLocation;
     return { lat: 20.5937, lng: 78.9629 };
-  }, [activeTargetLocation, riderLocation]);
+  }, [activeTargetLocation, effectiveRiderLocation]);
 
   // Fit bounds when locations or route change
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.google) return;
 
-    if (hasValidLatLng(riderLocation)) {
-      focusOnRider500m(map, riderLocation);
+    if (hasValidLatLng(effectiveRiderLocation)) {
+      focusOnRider500m(map, effectiveRiderLocation);
       return;
     }
     
@@ -360,11 +374,15 @@ const LiveTrackingMap = memo(({
         }}
       >
         {/* Rider Location Marker */}
-        {riderLocation && (
+        {effectiveRiderLocation && (
           <Marker
-            position={riderLocation}
+            position={effectiveRiderLocation}
             title="Delivery Partner"
-            icon={riderMarkerIcon}
+            icon={`data:image/svg+xml;utf8,${encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+                <text x="50%" y="50%" font-size="30" text-anchor="middle" dominant-baseline="central">🛩️</text>
+              </svg>`
+            )}`}
           />
         )}
 
@@ -397,9 +415,9 @@ const LiveTrackingMap = memo(({
               geodesic: false,
             }}
           />
-        ) : riderLocation && hasValidLatLng(activeTargetLocation) ? (
+        ) : effectiveRiderLocation && hasValidLatLng(activeTargetLocation) ? (
           <Polyline
-            path={[riderLocation, activeTargetLocation]}
+            path={[effectiveRiderLocation, activeTargetLocation]}
             options={{
               strokeColor: "#45B0E2",
               strokeOpacity: 0.6,
@@ -442,52 +460,9 @@ const LiveTrackingMap = memo(({
         </button>
       </div>
 
-      {/* 4. Rider Info Card (Compact Bottom) */}
-      {riderName && (
-        <div className="absolute bottom-2 left-2 right-2 z-40">
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg border border-white/50">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="h-10 w-10 rounded-full bg-gray-100 overflow-hidden border-2 border-white shadow-sm">
-                  <img
-                    src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=100&auto=format&fit=crop&q=60"
-                    alt="Rider"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 bg-[#45B0E2] text-white text-[7px] font-bold px-1 py-0.5 rounded-full flex items-center gap-0.5">
-                  4.8 <Star size={5} fill="white" />
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-900 text-xs truncate">{riderName}</h3>
-                <p className="text-[10px] text-gray-500 flex items-center gap-1">
-                  <Shield size={8} />
-                  Vaccinated
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button className="h-8 w-8 rounded-full bg-brand-50 flex items-center justify-center text-[#45B0E2] hover:bg-brand-100 transition-colors">
-                  <Phone size={14} />
-                </button>
-                <button className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 hover:bg-blue-100 transition-colors">
-                  <MessageSquare size={14} />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {/* 4. Rider Info Card removed */}
 
-      {/* Location status indicator */}
-      {!riderLocation && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-amber-50/95 text-amber-900 text-xs px-3 py-2 rounded-lg border border-amber-200 shadow-sm">
-          Waiting for rider location...
-        </div>
-      )}
+      {/* Location status indicator removed */}
 
       {/* Route cache indicator */}
       {routePolyline && (

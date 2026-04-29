@@ -358,6 +358,7 @@ export const getOrderDetails = async (req, res) => {
       .populate("customer", "name email phone")
       .populate("items.product", "name mainImage price salePrice")
       .populate("deliveryBoy", "name phone")
+      .populate("deliveryPartner", "name phone")
       .populate("returnDeliveryBoy", "name phone")
       .populate("seller", "shopName name address phone location")
       .lean();
