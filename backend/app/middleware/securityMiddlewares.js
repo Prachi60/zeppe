@@ -30,6 +30,11 @@ const CART_RATE_LIMIT_WINDOW_MS = () =>
 const CART_RATE_LIMIT_MAX = () =>
   parseInt(process.env.CART_RATE_LIMIT_MAX || "60", 10);
 
+const FINANCE_MUTATION_RATE_LIMIT_WINDOW_MS = () =>
+  parseInt(process.env.FINANCE_RATE_LIMIT_WINDOW_MS || "60000", 10);
+const FINANCE_MUTATION_RATE_LIMIT_MAX = () =>
+  parseInt(process.env.FINANCE_RATE_LIMIT_MAX || "20", 10);
+
 export const globalApiRateLimiter = createRateLimiter({
   namespace: "global",
   windowMs: GLOBAL_RATE_LIMIT_WINDOW_MS(),
@@ -76,6 +81,15 @@ export const cartRouteRateLimiter = createRateLimiter({
   max: CART_RATE_LIMIT_MAX(),
   keyGenerator: byUserOrIp,
   message: "Too many cart requests. Please wait before retrying.",
+});
+
+// Rate limiter for financial state-mutation endpoints (settle cash, bulk settle, etc.)
+export const financialMutationRateLimiter = createRateLimiter({
+  namespace: "finance_mutation",
+  windowMs: FINANCE_MUTATION_RATE_LIMIT_WINDOW_MS(),
+  max: FINANCE_MUTATION_RATE_LIMIT_MAX(),
+  keyGenerator: byUserOrIp,
+  message: "Too many financial operations. Please slow down and retry.",
 });
 
 export function createContentLengthGuard(maxBytes, message = "Payload too large") {

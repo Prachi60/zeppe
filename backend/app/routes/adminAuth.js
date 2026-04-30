@@ -59,6 +59,7 @@ import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
 import {
     adminBootstrapRateLimiter,
     authRouteRateLimiter,
+    financialMutationRateLimiter,
     createContentLengthGuard,
 } from "../middleware/securityMiddlewares.js";
 
@@ -122,6 +123,7 @@ router.post(
     "/finance/payouts/process",
     verifyToken,
     allowRoles("admin"),
+    financialMutationRateLimiter,
     processAdminFinancePayoutsController,
 );
 router.get(
@@ -189,13 +191,13 @@ router.get("/wallet-data", verifyToken, allowRoles("admin"), getAdminWalletData)
 
 // Delivery Payouts / Funds
 router.get("/delivery-transactions", verifyToken, allowRoles('admin'), getDeliveryTransactions);
-router.put("/transactions/:id/settle", verifyToken, allowRoles("admin"), settleTransaction);
-router.put("/transactions/bulk-settle-delivery", verifyToken, allowRoles("admin"), bulkSettleDelivery);
+router.put("/transactions/:id/settle", verifyToken, allowRoles("admin"), financialMutationRateLimiter, settleTransaction);
+router.put("/transactions/bulk-settle-delivery", verifyToken, allowRoles("admin"), financialMutationRateLimiter, bulkSettleDelivery);
 
 // Cash Collection Hub
 router.get("/delivery-cash", verifyToken, allowRoles("admin"), getDeliveryCashBalances);
 router.get("/rider-cash-details/:id", verifyToken, allowRoles("admin"), getRiderCashDetails);
-router.post("/settle-cash", verifyToken, allowRoles("admin"), settleRiderCash);
+router.post("/settle-cash", verifyToken, allowRoles("admin"), financialMutationRateLimiter, settleRiderCash);
 router.get("/cash-history", verifyToken, allowRoles("admin"), getCashSettlementHistory);
 
 // Seller Withdrawal Management
