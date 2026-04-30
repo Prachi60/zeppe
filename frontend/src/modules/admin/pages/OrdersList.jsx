@@ -45,6 +45,7 @@ const OrdersList = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
     const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+    const [backendStats, setBackendStats] = useState(null);
 
     const escapeCSV = (val) => {
         const str = String(val || "");
@@ -138,6 +139,7 @@ const OrdersList = () => {
                     payment: o.payment?.method === 'cod' ? 'COD' : 'Digital',
                 }));
                 setOrders(formatted);
+                setBackendStats(payload.stats || null);
                 if (typeof payload.total === 'number') {
                     setTotal(payload.total);
                 } else {
@@ -181,15 +183,13 @@ const OrdersList = () => {
     );
 
     const stats = useMemo(() => {
-        const totalEarnings = safeOrders.reduce((sum, o) => sum + o.amount, 0);
-        const activeOrders = safeOrders.filter(o =>
-            ['pending', 'confirmed', 'packed', 'out_for_delivery'].includes(o.status),
-        ).length;
-
+        const totalEarnings = backendStats?.totalRevenue || safeOrders.reduce((sum, o) => sum + o.amount, 0);
+        const activeOrders = (backendStats?.totalPending || 0) + (backendStats?.totalConfirmed || 0);
+        
         return [
             { label: 'Total Earnings', value: `₹${totalEarnings.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'emerald' },
-            { label: 'Orders Shown', value: safeOrders.length, icon: ShoppingBag, color: 'blue' },
-            { label: 'Active in View', value: activeOrders, icon: Clock, color: 'amber' },
+            { label: 'Orders Found', value: total, icon: ShoppingBag, color: 'blue' },
+            { label: 'Pending/Confirmed', value: activeOrders, icon: Clock, color: 'amber' },
         ];
     }, [safeOrders]);
 
