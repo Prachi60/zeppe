@@ -117,7 +117,7 @@ export async function issueCustomerOtp({
     "+otpHash +otpExpiresAt +otpFailedAttempts +otpLockedUntil +otpLastSentAt +otpSessionVersion +otp +otpExpiry",
   );
 
-  if (flow === "login" && (!customer || !customer.isVerified)) {
+  if (flow === "login" && !customer) {
     if (useRealEmail()) {
       otpAuditLog("customer_otp_login_generic_response", {
         email: maskEmail(email),
