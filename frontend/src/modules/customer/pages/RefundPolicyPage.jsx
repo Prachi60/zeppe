@@ -36,7 +36,7 @@ const RefundPolicyPage = () => {
 
                     <div className="prose prose-slate prose-sm max-w-none text-slate-600 space-y-4">
                         <p>
-                            At {appName}, we strive to ensure your satisfaction with every order. If you are not entirely satisfied with your purchase, we are here to help.
+                            At Zeppe, we strive to ensure your satisfaction with every order. If you are not entirely satisfied with your purchase, we are here to help.
                         </p>
 
                         <h3 className="text-slate-800 font-bold text-base mt-6">1. Eligibility for Refunds</h3>

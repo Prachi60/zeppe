@@ -35,7 +35,7 @@ const ShippingPolicyPage = () => {
 
                     <div className="prose prose-slate prose-sm max-w-none text-slate-600 space-y-4">
                         <p>
-                            At {appName}, we are committed to delivering your orders as quickly and efficiently as possible. Learn more about our shipping procedures below.
+                            At Zeppe, we are committed to delivering your orders as quickly and efficiently as possible. Learn more about our shipping procedures below.
                         </p>
 
                         <h3 className="text-slate-800 font-bold text-base mt-6">1. Delivery Timelines</h3>

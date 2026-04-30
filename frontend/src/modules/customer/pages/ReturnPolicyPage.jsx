@@ -35,7 +35,7 @@ const ReturnPolicyPage = () => {
 
                     <div className="prose prose-slate prose-sm max-w-none text-slate-600 space-y-4">
                         <p>
-                            We want you to love what you ordered from {appName}. If something isn't right, our return policy is designed to make things easy for you.
+                            We want you to love what you ordered from Zeppe. If something isn't right, our return policy is designed to make things easy for you.
                         </p>
 
                         <h3 className="text-slate-800 font-bold text-base mt-6">1. Return Guidelines</h3>

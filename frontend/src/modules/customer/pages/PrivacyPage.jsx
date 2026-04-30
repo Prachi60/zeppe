@@ -34,7 +34,7 @@ const PrivacyPage = () => {
 
                     <div className="prose prose-slate prose-sm max-w-none text-slate-600 space-y-4">
                         <p>
-                            At {appName}, we take your privacy seriously. This Privacy Policy explains how we collect, use, and protect your personal information.
+                            At Zeppe, we take your privacy seriously. This Privacy Policy explains how we collect, use, and protect your personal information.
                         </p>
 
                         <h3 className="text-slate-800 font-bold text-base mt-6">1. Information We Collect</h3>
