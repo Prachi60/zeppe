@@ -101,22 +101,9 @@ Expires In: ${expiresInMinutes} mins
   }
 
   if (!smtp.hasCredentials) {
-    const warning = "Real email mode is enabled but SMTP credentials are missing.";
-    if (process.env.NODE_ENV === "production") {
-      throw new Error(`${warning} Set SMTP_USER/SMTP_PASS (or EMAIL_USER/EMAIL_PASS).`);
-    }
-
-    console.warn(`${warning} Falling back to mock OTP email in non-production.`);
-    console.log(`
----------------------------------------
-[MOCK EMAIL OTP - SMTP MISCONFIGURED]
-To: ${to}
-OTP: ${otp}
-Purpose: ${purposeText}
-Expires In: ${expiresInMinutes} mins
----------------------------------------
-    `);
-    return;
+    throw new Error(
+      "Real email mode is enabled but SMTP credentials are missing. Set SMTP_USER/SMTP_PASS (or EMAIL_USER/EMAIL_PASS).",
+    );
   }
 
   const from = process.env.SMTP_FROM || `"${appName}" <${smtp.auth.user}>`;
