@@ -84,6 +84,8 @@ export const createOrderWithFinancialSnapshot = async (req, res) => {
       taxTotal: validated.taxTotal || 0,
       tipAmount: validated.tipAmount || 0,
       walletAmount: validated.walletAmount || 0,
+      donationAmount: validated.donationAmount || 0,
+      donation: validated.donation || undefined,
     };
     const idempotencyKey = String(req.headers["idempotency-key"] || "").trim() || null;
 

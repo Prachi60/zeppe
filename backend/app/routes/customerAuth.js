@@ -7,6 +7,10 @@ import {
     updateCustomerProfile,
     getCustomerTransactions,
 } from "../controller/customerAuthController.js";
+import {
+    getMyDonationHistory,
+    submitDirectDonation,
+} from "../controller/adminDonationController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import {
     authRouteRateLimiter,
@@ -29,5 +33,7 @@ router.put("/profile", verifyToken, updateCustomerProfile);
 
 // Wallet
 router.get("/transactions", verifyToken, getCustomerTransactions);
+router.get("/donations/history", verifyToken, getMyDonationHistory);
+router.post("/donations", verifyToken, submitDirectDonation);
 
 export default router;

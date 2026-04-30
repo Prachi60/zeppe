@@ -18,6 +18,7 @@ import {
   updateCashInHand,
 } from "./walletService.js";
 import { createPendingPayoutForOrder } from "./payoutService.js";
+import { updateDonationStatusByOrderId } from "../donationService.js";
 
 function toOrderIdQuery(orderOrId) {
   if (!orderOrId) return null;
@@ -231,6 +232,11 @@ export async function releaseHeldSellerPayout(orderOrId, { actorId = null } = {}
     }
 
     await order.save({ session });
+    await updateDonationStatusByOrderId(order._id, {
+      status: "PAID",
+      transactionId: `COD-${order.orderId}`,
+      donatedAt: new Date(),
+    });
     await session.commitTransaction();
     return payout;
   } catch (error) {

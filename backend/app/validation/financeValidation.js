@@ -42,6 +42,15 @@ export const createFinanceOrderSchema = checkoutPreviewSchema.keys({
   items: Joi.array().items(orderItemSchema).min(1).optional(),
   paymentMode: Joi.string().valid("ONLINE", "COD").required(),
   walletAmount: Joi.number().min(0).default(0),
+  donationAmount: Joi.number().min(0).default(0),
+  donation: Joi.object({
+    amount: Joi.number().min(0).optional(),
+    source: Joi.string().valid("ROUND_OFF", "DIRECT", "FIXED").optional(),
+    causeId: Joi.string().allow("", null).optional(),
+    causeTitle: Joi.string().allow("", null).optional(),
+    message: Joi.string().allow("", null).max(500).optional(),
+    isRoundOff: Joi.boolean().optional(),
+  }).optional(),
 });
 
 export const verifyOnlinePaymentSchema = Joi.object({
