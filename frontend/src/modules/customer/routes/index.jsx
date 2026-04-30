@@ -18,6 +18,7 @@ const ChatPage = React.lazy(() => import('../pages/ChatPage'));
 const TermsPage = React.lazy(() => import('../pages/TermsPage'));
 const PrivacyPage = React.lazy(() => import('../pages/PrivacyPage'));
 const AboutPage = React.lazy(() => import('../pages/AboutPage'));
+const AccountPrivacyPage = React.lazy(() => import('../pages/AccountPrivacyPage'));
 const RefundPolicyPage = React.lazy(() => import('../pages/RefundPolicyPage'));
 const ReturnPolicyPage = React.lazy(() => import('../pages/ReturnPolicyPage'));
 const ShippingPolicyPage = React.lazy(() => import('../pages/ShippingPolicyPage'));
@@ -53,6 +54,7 @@ const CustomerRoutes = () => {
                                 <Route path="product/:id" element={<ProductDetailPage />} />
                                 <Route path="terms" element={<TermsPage />} />
                                 <Route path="privacy" element={<PrivacyPage />} />
+                                <Route path="account-privacy" element={<AccountPrivacyPage />} />
                                 <Route path="about" element={<AboutPage />} />
                                 <Route path="refund-policy" element={<RefundPolicyPage />} />
                                 <Route path="return-policy" element={<ReturnPolicyPage />} />
