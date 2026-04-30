@@ -245,6 +245,13 @@ const ProfilePage = () => {
                             />
                             <MenuItem
                                 icon={ShieldCheck}
+                                label="Account Privacy"
+                                path="/account-privacy"
+                                color="#45B0E2"
+                                bg="rgba(69,176,226,0.1)"
+                            />
+                            <MenuItem
+                                icon={ShieldCheck}
                                 label="Privacy Policy"
                                 path="/privacy"
                                 color="#a855f7"

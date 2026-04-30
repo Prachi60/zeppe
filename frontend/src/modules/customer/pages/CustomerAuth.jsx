@@ -211,7 +211,7 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
         className="relative flex-shrink-0 overflow-hidden pt-6"
         style={{
           background: "white",
-          height: shouldShowAsModal ? 300 : "48vh",
+          height: shouldShowAsModal ? 300 : "38vh",
         }}
       >
         {/* Skip / Close */}
@@ -235,9 +235,9 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
       </div>
 
       {/* ── FORM PANEL ───────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto bg-white px-6 pt-2 pb-8">
+      <div className="flex-1 overflow-y-auto bg-white px-6 pt-1 pb-6">
         {/* App name */}
-        <div className="mb-6 text-center">
+        <div className="mb-4 text-center">
           <h2
             className="text-4xl font-black italic tracking-tight text-gray-900"
             style={{ letterSpacing: "-0.04em" }}
@@ -247,7 +247,6 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
           <h1 className="mt-1 text-[22px] font-black tracking-tight text-gray-900">
             India&apos;s Quickest App
           </h1>
-          <p className="mt-1 text-sm font-bold text-slate-500">Log In or Sign Up</p>
         </div>
 
         {/* ── AUTH FORM ───────────────────────────── */}
@@ -344,7 +343,7 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-black text-sm font-black text-white transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed"
+                className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-black text-sm font-black text-white transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoading
                   ? <LoaderCircle size={18} className="animate-spin" />
@@ -367,7 +366,7 @@ const CustomerAuth = ({ isModal = false, isSignup = false, onClose = null }) => 
           )}
         </AnimatePresence>
 
-        <p className="mt-6 text-center text-[10px] font-medium leading-4 text-slate-400">
+        <p className="mt-4 text-center text-[10px] font-medium leading-4 text-slate-400">
           By continuing, you agree to our{" "}
           <Link to="/terms" className="font-semibold text-slate-500 underline underline-offset-2">Terms of service</Link>
           {" "}&amp;{" "}

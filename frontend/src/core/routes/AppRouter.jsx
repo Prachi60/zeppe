@@ -37,6 +37,7 @@ const SupportPage = lazy(() => import('../../modules/customer/pages/SupportPage'
 const ChatPage = lazy(() => import('../../modules/customer/pages/ChatPage'));
 const TermsPage = lazy(() => import('../../modules/customer/pages/TermsPage'));
 const PrivacyPage = lazy(() => import('../../modules/customer/pages/PrivacyPage'));
+const AccountPrivacyPage = lazy(() => import('../../modules/customer/pages/AccountPrivacyPage'));
 const AboutPage = lazy(() => import('../../modules/customer/pages/AboutPage'));
 const RefundPolicyPage = lazy(() => import('../../modules/customer/pages/RefundPolicyPage'));
 const ReturnPolicyPage = lazy(() => import('../../modules/customer/pages/ReturnPolicyPage'));
@@ -150,6 +151,7 @@ const AppRouter = () => {
                         { path: 'product/:id', element: <ProductDetailPage /> },
                         { path: 'terms', element: <TermsPage /> },
                         { path: 'privacy', element: <PrivacyPage /> },
+                        { path: 'account-privacy', element: <AccountPrivacyPage /> },
                         { path: 'about', element: <AboutPage /> },
                         { path: 'refund-policy', element: <RefundPolicyPage /> },
                         { path: 'return-policy', element: <ReturnPolicyPage /> },
