@@ -6,7 +6,7 @@ import { useSettings } from '@core/context/SettingsContext';
 const AboutPage = () => {
     const navigate = useNavigate();
     const { settings } = useSettings();
-    const appName = settings?.appName || 'App';
+    const appName = settings?.appName || 'Zeppe'
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-24">
             <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm px-4 pt-0 pb-0 border-b-0 mb-0 flex items-center gap-2">
@@ -27,7 +27,7 @@ const AboutPage = () => {
                         <div className="bg-slate-100 p-3 rounded-lg mb-3">
                             <ShoppingBag size={24} className="text-slate-700" />
                         </div>
-                        <h2 className="text-3xl font-bold mb-1 tracking-tight text-slate-900">{appName}</h2>
+                        <h2 className="text-3xl font-bold mb-1 tracking-tight text-slate-900">Zeppe</h2>
                         <p className="text-slate-600 text-sm max-w-sm mx-auto">Delivering happiness to your doorstep in minutes.</p>
                     </div>
                 </div>
