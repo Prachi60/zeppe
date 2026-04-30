@@ -1,15 +1,35 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Trash2, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@core/context/AuthContext';
+import { customerApi } from '../services/customerApi';
+import { toast } from 'sonner';
 
 const AccountPrivacyPage = () => {
     const navigate = useNavigate();
+    const { logout } = useAuth();
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleDeleteAccount = () => {
-        // Logic for account deletion request would go here
-        setShowDeleteModal(false);
-        // Maybe navigate to a success page or show a success message
+    const handleDeleteAccount = async () => {
+        setIsDeleting(true);
+        try {
+            const response = await customerApi.deleteAccount();
+            if (response.data.success) {
+                toast.success('Account deleted successfully');
+                setShowDeleteModal(false);
+                // Clear local session
+                logout();
+                // Redirect to login or home
+                navigate('/');
+            } else {
+                toast.error(response.data.message || 'Failed to delete account');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error deleting account');
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     return (
@@ -87,10 +107,11 @@ const AccountPrivacyPage = () => {
                             
                             <div className="w-full space-y-3">
                                 <button 
+                                    disabled={isDeleting}
                                     onClick={handleDeleteAccount}
-                                    className="w-full bg-red-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-red-600 transition-all shadow-lg shadow-red-200 active:scale-[0.98]"
+                                    className="w-full bg-red-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-red-600 transition-all shadow-lg shadow-red-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Yes, Delete Account
+                                    {isDeleting ? 'Deleting...' : 'Yes, Delete Account'}
                                 </button>
                                 <button 
                                     onClick={() => setShowDeleteModal(false)}
