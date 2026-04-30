@@ -1,8 +1,8 @@
 /** Default fallbacks when settings are not yet loaded or API fails */
 export const DEFAULT_SETTINGS = {
   appName: "Zeppe",
-  supportEmail: "",
-  supportPhone: "",
+  supportEmail: "zeppegrocery@gmail.com",
+  supportPhone: "6203858268",
   currencySymbol: "\u20B9",
   currencyCode: "INR",
   timezone: "Asia/Kolkata",
@@ -10,9 +10,9 @@ export const DEFAULT_SETTINGS = {
   faviconUrl: "",
   primaryColor: "#45B0E2",
   secondaryColor: "#64748b",
-  companyName: "",
+  companyName: "Zeppe",
   taxId: "",
-  address: "",
+  address: "Jaitpur Mohalla, Pupri, Bihar 843320",
   facebook: "",
   twitter: "",
   instagram: "",
