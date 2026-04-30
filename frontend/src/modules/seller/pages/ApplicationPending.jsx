@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2, Clock3, ShieldAlert, Store } from "lucide-react";
 import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
+import zeppeLogo from "../../../assets/ZeppeAuthLogo.svg";
 
 const ApplicationPending = () => {
   const location = useLocation();
@@ -51,7 +52,7 @@ const ApplicationPending = () => {
               {logoUrl ? (
                 <img src={logoUrl} alt={`${appName} logo`} className="h-8 w-8 object-contain" />
               ) : (
-                <Store className="h-5 w-5 text-white/80" />
+                <img src={zeppeLogo} alt="Zeppe Logo" className="h-5 w-5 object-contain" />
               )}
               <span className="text-sm font-bold text-white/90">{appName} Seller</span>
             </div>

@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import Lottie from "lottie-react";
 import riderImage from "../../../assets/delivery_login.png";
+import zeppeLogo from "../../../assets/ZeppeAuthLogo.svg";
 import { sellerApi } from "../services/sellerApi";
 import MapPicker from "../../../shared/components/MapPicker";
 
@@ -462,7 +463,11 @@ const Auth = () => {
                   className="w-14 h-14 object-contain"
                 />
               ) : (
-                <Store size={30} className="text-slate-700" />
+                <img
+                  src={zeppeLogo}
+                  alt="Zeppe Logo"
+                  className="w-14 h-14 object-contain"
+                />
               )}
             </div>
           </div>
