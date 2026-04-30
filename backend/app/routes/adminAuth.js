@@ -163,7 +163,7 @@ router.get("/sellers/locations", verifyToken, allowRoles("admin"), getSellerLoca
 router.get("/sellers/active", verifyToken, allowRoles("admin"), getActiveSellers);
 router.get("/sellers/pending", verifyToken, allowRoles("admin"), getPendingSellers);
 router.patch("/sellers/approve/:id", verifyToken, allowRoles("admin"), approveSellerApplication);
-router.delete("/sellers/reject/:id", verifyToken, allowRoles("admin"), rejectSellerApplication);
+router.patch("/sellers/reject/:id", verifyToken, allowRoles("admin"), rejectSellerApplication);
 
 router.get(
     "/delivery-partners",
@@ -179,7 +179,7 @@ router.patch(
     approveDeliveryPartner
 );
 
-router.delete(
+router.patch(
     "/delivery-partners/reject/:id",
     verifyToken,
     allowRoles("admin"),
