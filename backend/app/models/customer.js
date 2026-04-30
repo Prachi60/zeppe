@@ -113,6 +113,13 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        },
+        deletedAt: {
+            type: Date,
+        },
 
         lastLogin: Date,
 
@@ -129,7 +136,7 @@ const userSchema = new mongoose.Schema(
     }
 );
 
-userSchema.index({ role: 1, isActive: 1 });
+userSchema.index({ role: 1, isActive: 1, isDeleted: 1 });
 
 
 

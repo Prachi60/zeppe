@@ -11,7 +11,7 @@ export const adminApi = {
     getSellerLocations: (params) => axiosInstance.get('/admin/sellers/locations', { params }),
     getPendingSellers: (params) => axiosInstance.get('/admin/sellers/pending', { params }),
     approveSeller: (id) => axiosInstance.patch(`/admin/sellers/approve/${id}`),
-    rejectSeller: (id, data) => axiosInstance.delete(`/admin/sellers/reject/${id}`, { data }),
+    rejectSeller: (id, data) => axiosInstance.patch(`/admin/sellers/reject/${id}`, data),
     getAdminWalletData: (params) => axiosInstance.get('/admin/wallet-data', { params }),
     getReports: () => axiosInstance.get('/admin/reports'),
     getProfile: () => axiosInstance.get('/admin/profile'),
@@ -72,7 +72,7 @@ export const adminApi = {
     // Delivery Partners
     getDeliveryPartners: (params) => axiosInstance.get('/admin/delivery-partners', { params }),
     approveDeliveryPartner: (id) => axiosInstance.patch(`/admin/delivery-partners/approve/${id}`),
-    rejectDeliveryPartner: (id) => axiosInstance.delete(`/admin/delivery-partners/reject/${id}`),
+    rejectDeliveryPartner: (id) => axiosInstance.patch(`/admin/delivery-partners/reject/${id}`),
     getActiveFleet: (params) => axiosInstance.get('/admin/active-fleet', { params }),
 
     // Delivery Payouts / Funds

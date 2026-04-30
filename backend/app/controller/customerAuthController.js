@@ -135,6 +135,37 @@ export const updateCustomerProfile = async (req, res) => {
 };
 
 /* ===============================
+   DELETE ACCOUNT (Soft Delete)
+ ================================ */
+export const deleteCustomerAccount = async (req, res) => {
+    try {
+        const customer = await Customer.findById(req.user.id);
+        if (!customer) {
+            return handleResponse(res, 404, "Customer not found");
+        }
+
+        // Soft delete logic with unique credential renaming to allow reuse
+        const timestamp = Date.now();
+        if (customer.email) {
+            customer.email = `deleted_${timestamp}_${customer.email}`;
+        }
+        if (customer.phone) {
+            customer.phone = `deleted_${timestamp}_${customer.phone}`;
+        }
+        
+        customer.isDeleted = true;
+        customer.deletedAt = new Date();
+        customer.isActive = false; // Deactivate
+        
+        await customer.save();
+
+        return handleResponse(res, 200, "Account deleted successfully. We're sorry to see you go.");
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+/* ===============================
    GET WALLET TRANSACTIONS
 ================================ */
 export const getCustomerTransactions = async (req, res) => {

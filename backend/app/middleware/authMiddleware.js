@@ -49,11 +49,15 @@ export const verifyToken = async (req, res, next) => {
     }
 
     const principal = await AuthModel.findById(decoded.id)
-      .select("_id role isActive isVerified")
+      .select("_id role isActive isDeleted isVerified")
       .lean();
 
     if (!principal) {
       return unauthorized(res, "User account not found");
+    }
+
+    if (principal.isDeleted === true) {
+      return handleResponse(res, 403, "This account has been deleted.");
     }
 
     if (principal.isActive === false) {

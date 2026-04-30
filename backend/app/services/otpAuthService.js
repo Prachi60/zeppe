@@ -113,7 +113,7 @@ export async function issueCustomerOtp({
     throw err;
   }
 
-  let customer = await Customer.findOne({ email }).select(
+  let customer = await Customer.findOne({ email, isDeleted: { $ne: true } }).select(
     "+otpHash +otpExpiresAt +otpFailedAttempts +otpLockedUntil +otpLastSentAt +otpSessionVersion +otp +otpExpiry",
   );
 
@@ -225,7 +225,7 @@ export async function verifyCustomerOtpCode({
     throw err;
   }
 
-  const customer = await Customer.findOne({ email }).select(
+  const customer = await Customer.findOne({ email, isDeleted: { $ne: true } }).select(
     "+otpHash +otpExpiresAt +otpFailedAttempts +otpLockedUntil +otpSessionVersion +otp +otpExpiry",
   );
   if (!customer) {

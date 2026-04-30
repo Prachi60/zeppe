@@ -45,32 +45,66 @@ const OrdersList = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
     const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+    const [backendStats, setBackendStats] = useState(null);
 
-    const handleCSVExport = () => {
+    const escapeCSV = (val) => {
+        const str = String(val || "");
+        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
+
+    const handleExport = () => {
+        if (safeOrders.length === 0) {
+            showToast("No data to export", "warning");
+            return;
+        }
+
         setIsExporting(true);
         try {
-            const headers = ["Order ID", "Customer", "Seller", "Status", "Amount", "Date", "Payment"];
-            const rows = orders.map(o => [
-                o.id,
-                o.customer,
-                o.seller,
-                o.status.toUpperCase(),
-                `₹${o.amount}`,
-                o.date,
-                o.payment
-            ]);
-            
-            const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
+            const headers = [
+                "Order ID",
+                "Date",
+                "Customer",
+                "Seller",
+                "Items",
+                "Amount",
+                "Status",
+                "Payment",
+            ];
+            const csvContent = [
+                headers.join(","),
+                ...safeOrders.map((o) =>
+                    [
+                        escapeCSV(o.id),
+                        escapeCSV(o.date),
+                        escapeCSV(o.customer),
+                        escapeCSV(o.seller),
+                        o.items,
+                        o.amount,
+                        escapeCSV(o.status.toUpperCase()),
+                        escapeCSV(o.payment),
+                    ].join(",")
+                ),
+            ].join("\n");
+
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
             const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
             link.setAttribute("href", url);
-            link.setAttribute("download", `orders_${status}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute(
+                "download",
+                `orders-${status}-${new Date().toISOString().split("T")[0]}.csv`
+            );
+            link.style.visibility = "hidden";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            showToast("CSV Exported successfully", "success");
+
+            showToast("Order ledger exported successfully", "success");
         } catch (error) {
+            console.error("Export error:", error);
             showToast("Export failed", "error");
         } finally {
             setIsExporting(false);
@@ -105,6 +139,7 @@ const OrdersList = () => {
                     payment: o.payment?.method === 'cod' ? 'COD' : 'Digital',
                 }));
                 setOrders(formatted);
+                setBackendStats(payload.stats || null);
                 if (typeof payload.total === 'number') {
                     setTotal(payload.total);
                 } else {
@@ -148,16 +183,13 @@ const OrdersList = () => {
     );
 
     const stats = useMemo(() => {
-        const totalEarnings = safeOrders.reduce((sum, o) => sum + o.amount, 0);
-        const activeOrders = safeOrders.filter(o =>
-            ['pending', 'confirmed', 'packed', 'out_for_delivery'].includes(o.status),
-        ).length;
-
+        const totalEarnings = backendStats?.totalRevenue || safeOrders.reduce((sum, o) => sum + o.amount, 0);
+        const activeOrders = (backendStats?.totalPending || 0) + (backendStats?.totalConfirmed || 0);
+        
         return [
-            { label: 'Total Earnings', value: `₹${totalEarnings.toLocaleString('en-IN')}`, trend: '+12.5%', icon: IndianRupee, color: 'emerald' },
-            { label: 'Active Orders', value: activeOrders, trend: '+5', icon: ShoppingBag, color: 'blue' },
-            { label: 'Average Prep Time', value: '18m', trend: '-2m', icon: Clock, color: 'amber' },
-            { label: 'Delivery Rate', value: '98.2%', trend: '+0.4%', icon: CheckCircle2, color: 'fuchsia' },
+            { label: 'Total Earnings', value: `₹${totalEarnings.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'emerald' },
+            { label: 'Orders Found', value: total, icon: ShoppingBag, color: 'blue' },
+            { label: 'Pending/Confirmed', value: activeOrders, icon: Clock, color: 'amber' },
         ];
     }, [safeOrders]);
 
@@ -201,39 +233,7 @@ const OrdersList = () => {
         }
     };
 
-    const handleExport = () => {
-        if (safeOrders.length === 0) {
-            showToast('No data to export', 'warning');
-            return;
-        }
-        
-        const headers = ['Order ID', 'Date', 'Customer', 'Seller', 'Items', 'Amount', 'Status', 'Payment'];
-        const csvContent = [
-            headers.join(','),
-            ...safeOrders.map(o => [
-                String(o.id || ''),
-                String(o.date || '').replace(/,/g, ''),
-                String(o.customer || '').replace(/,/g, ''),
-                String(o.seller || '').replace(/,/g, ''),
-                o.items,
-                o.amount,
-                o.status,
-                o.payment
-            ].join(','))
-        ].join('\n');
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `noyo-orders-${status}-${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        showToast('Order ledger exported successfully', 'success');
-    };
 
     const pageTitle = status === 'all' ? 'All Orders' : status.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
@@ -339,7 +339,7 @@ const OrdersList = () => {
                     <div className="flex items-center gap-3">
                         {status === 'processed' && (
                             <button 
-                                onClick={handleCSVExport}
+                                onClick={handleExport}
                                 disabled={isExporting}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-fuchsia-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-700 transition-all shadow-lg shadow-fuchsia-100 disabled:opacity-50"
                             >

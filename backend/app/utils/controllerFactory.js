@@ -153,8 +153,10 @@ export const createSellerController = (Model, options = {}) => {
         getAll: async (req, res) => {
             try {
                 const query = buildQuery(req.query, Model.schema);
-                // Force seller scoping
-                query[sellerField] = req.user.id;
+                // Force seller scoping unless the user is an admin
+                if (req.user.role !== 'admin') {
+                    query[sellerField] = req.user.id;
+                }
                 
                 const sort = buildSort(req.query.sort, defaultSort);
                 const { page, limit, skip } = getPaginationOptions(req);
@@ -189,7 +191,11 @@ export const createSellerController = (Model, options = {}) => {
         // GET BY ID
         getById: async (req, res) => {
             try {
-                const query = { _id: req.params.id, [sellerField]: req.user.id };
+                const query = { _id: req.params.id };
+                // Force seller scoping unless the user is an admin
+                if (req.user.role !== 'admin') {
+                    query[sellerField] = req.user.id;
+                }
                 let dbQuery = Model.findOne(query).lean();
                 
                 if (populateFields.length > 0) {
@@ -210,7 +216,12 @@ export const createSellerController = (Model, options = {}) => {
         // CREATE
         create: async (req, res) => {
             try {
-                let data = { ...req.body, [sellerField]: req.user.id };
+                let data = { ...req.body };
+                // Assign sellerId unless provided (admins might create for a specific seller)
+                if (req.user.role === 'seller') {
+                    data[sellerField] = req.user.id;
+                }
+                
                 if (beforeCreate) data = await beforeCreate(req, data) || data;
 
                 const item = await Model.create(data);
@@ -232,8 +243,11 @@ export const createSellerController = (Model, options = {}) => {
                 let data = req.body;
                 if (beforeUpdate) data = await beforeUpdate(req, data) || data;
 
-                // Ensure data belongs to seller
-                const query = { _id: req.params.id, [sellerField]: req.user.id };
+                // Ensure data belongs to seller unless user is admin
+                const query = { _id: req.params.id };
+                if (req.user.role !== 'admin') {
+                    query[sellerField] = req.user.id;
+                }
                 const item = await Model.findOneAndUpdate(
                     query, 
                     { $set: data }, 
@@ -252,7 +266,10 @@ export const createSellerController = (Model, options = {}) => {
         // DELETE
         delete: async (req, res) => {
             try {
-                const query = { _id: req.params.id, [sellerField]: req.user.id };
+                const query = { _id: req.params.id };
+                if (req.user.role !== 'admin') {
+                    query[sellerField] = req.user.id;
+                }
                 if (beforeDelete) await beforeDelete(req);
 
                 const item = await Model.findOneAndDelete(query);

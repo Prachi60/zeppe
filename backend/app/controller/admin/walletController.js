@@ -13,17 +13,14 @@ import {
 
 export const getAdminWalletData = async (req, res) => {
   try {
-    console.log('[WalletService] Fetching admin wallet data for ID:', req.user?.id);
     const { page, limit } = getPagination(req, {
       defaultLimit: 25,
       maxLimit: 100,
     });
 
     const data = await getAdminWalletOverview({ page, limit });
-    console.log('[WalletService] Successfully fetched wallet data');
     return handleResponse(res, 200, "Admin wallet data fetched", data);
   } catch (error) {
-    console.error('[WalletService] FATAL ERROR:', error);
     return handleResponse(res, 500, error.message);
   }
 };
@@ -84,10 +81,21 @@ export const getDeliveryWithdrawals = async (req, res) => {
   }
 };
 
+const VALID_WITHDRAWAL_STATUSES = ["approved", "rejected", "processing"];
+
 export const updateWithdrawalStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, reason } = req.body;
+
+    if (!status || !VALID_WITHDRAWAL_STATUSES.includes(String(status).toLowerCase())) {
+      return handleResponse(
+        res,
+        400,
+        `Invalid status. Must be one of: ${VALID_WITHDRAWAL_STATUSES.join(", ")}`
+      );
+    }
+
     const transaction = await updateWithdrawalStatusById({ id, status, reason });
 
     if (!transaction) {
@@ -96,8 +104,7 @@ export const updateWithdrawalStatus = async (req, res) => {
 
     return handleResponse(res, 200, `Withdrawal ${status} successfully`);
   } catch (error) {
-    const statusCode = error.message === "Invalid status" ? 400 : 500;
-    return handleResponse(res, statusCode, error.message);
+    return handleResponse(res, 500, error.message);
   }
 };
 

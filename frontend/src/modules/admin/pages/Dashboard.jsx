@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 const AdminDashboard = () => {
     const [statsData, setStatsData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [lastUpdated, setLastUpdated] = useState(null);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -39,6 +40,7 @@ const AdminDashboard = () => {
                 const res = await adminApi.getStats();
                 if (res.data.success) {
                     setStatsData(res.data.result);
+                    setLastUpdated(new Date());
                 }
             } catch (error) {
                 console.error("Dashboard Stats Error:", error);
@@ -52,9 +54,25 @@ const AdminDashboard = () => {
 
     if (loading) {
         return (
-            <div className="h-[80vh] flex flex-col items-center justify-center space-y-4">
-                <Loader2 className="h-10 w-10 text-primary animate-spin" />
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Synchronizing Data...</p>
+            <div className="ds-section-spacing animate-pulse">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 px-1">
+                    <div className="space-y-3">
+                        <div className="h-10 w-48 bg-gray-200 rounded-2xl" />
+                        <div className="h-4 w-72 bg-gray-100 rounded-xl" />
+                    </div>
+                    <div className="h-8 w-32 bg-gray-100 rounded-xl" />
+                </div>
+
+                <div className="ds-grid-stats mb-10">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-32 bg-gray-50 rounded-[2rem] border border-gray-100" />
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 h-[350px] bg-gray-50 rounded-[2.5rem] border border-gray-100" />
+                    <div className="lg:col-span-1 h-[350px] bg-gray-50 rounded-[2.5rem] border border-gray-100" />
+                </div>
             </div>
         );
     }
@@ -68,8 +86,8 @@ const AdminDashboard = () => {
             icon: Users,
             color: 'text-blue-600',
             bg: 'bg-blue-50',
-            trend: '+12.5%',
-            description: 'Active this month'
+            trend: overview.userTrend || null,
+            description: 'Active across platform'
         },
         {
             label: 'Active Sellers',
@@ -77,7 +95,7 @@ const AdminDashboard = () => {
             icon: Store,
             color: 'text-purple-600',
             bg: 'bg-purple-50',
-            trend: '+5.2%',
+            trend: overview.sellerTrend || null,
             description: 'Verified stores'
         },
         {
@@ -86,8 +104,8 @@ const AdminDashboard = () => {
             icon: Truck,
             color: 'text-orange-600',
             bg: 'bg-orange-50',
-            trend: '+18.4%',
-            description: 'Last 30 days'
+            trend: overview.orderTrend || null,
+            description: 'Platform total'
         },
         {
             label: 'Revenue',
@@ -95,7 +113,7 @@ const AdminDashboard = () => {
             icon: BarChart3,
             color: 'text-brand-600',
             bg: 'bg-brand-50',
-            trend: '+8.2%',
+            trend: overview.revenueTrend || null,
             description: 'Net earnings'
         },
     ];
@@ -113,7 +131,7 @@ const AdminDashboard = () => {
                 actions={
                     <>
                         <Badge variant="outline" className="ds-badge ds-badge-gray">
-                            Last Update: Today, 12:45 PM
+                            Last Update: {lastUpdated ? lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
                         </Badge>
                     </>
                 }
@@ -218,8 +236,10 @@ const AdminDashboard = () => {
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-2xl font-bold text-gray-900">72%</span>
-                                <span className="text-[10px] text-gray-400 font-semibold uppercase">Growth</span>
+                                <span className="text-2xl font-bold text-gray-900">
+                                    {categoryData.length > 0 ? `${Math.round((categoryData[0].value / categoryData.reduce((acc, c) => acc + c.value, 0)) * 100)}%` : '0%'}
+                                </span>
+                                <span className="text-[10px] text-gray-400 font-semibold uppercase">Market Share</span>
                             </div>
                         </div>
                         <div className="space-y-3 mt-4">

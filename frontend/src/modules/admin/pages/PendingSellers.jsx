@@ -37,6 +37,8 @@ const PendingSellers = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [viewingSeller, setViewingSeller] = useState(null);
+    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
 
     const fetchPendingSellers = async () => {
@@ -113,22 +115,28 @@ const PendingSellers = () => {
         }
     };
 
-    const handleReject = async (id) => {
-        if (window.confirm('Are you sure you want to reject this application?')) {
-            setIsProcessing(true);
-            try {
-                const reason = window.prompt('Optional rejection reason (leave blank if not needed):') || '';
-                await adminApi.rejectSeller(id, { reason });
-                setIsReviewModalOpen(false);
-                setViewingSeller(null);
-                toast.success('Seller application rejected');
-                await fetchPendingSellers();
-            } catch (error) {
-                console.error('Failed to reject seller', error);
-                toast.error(error.response?.data?.message || 'Failed to reject seller');
-            } finally {
-                setIsProcessing(false);
-            }
+    const handleReject = (seller) => {
+        setViewingSeller(seller);
+        setRejectionReason('');
+        setIsRejectModalOpen(true);
+    };
+
+    const confirmReject = async () => {
+        if (!viewingSeller) return;
+        setIsProcessing(true);
+        try {
+            await adminApi.rejectSeller(viewingSeller.id, { reason: rejectionReason });
+            setIsRejectModalOpen(false);
+            setIsReviewModalOpen(false);
+            setViewingSeller(null);
+            setRejectionReason('');
+            toast.success('Seller application rejected');
+            await fetchPendingSellers();
+        } catch (error) {
+            console.error('Failed to reject seller', error);
+            toast.error(error.response?.data?.message || 'Failed to reject seller');
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -252,7 +260,7 @@ const PendingSellers = () => {
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => handleReject(s.id)}
+                                                onClick={() => handleReject(s)}
                                                 className="h-8 w-8 flex items-center justify-center rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all ring-1 ring-rose-100"
                                                 title="Quick Reject"
                                             >
@@ -442,7 +450,7 @@ const PendingSellers = () => {
                                             <div className="flex items-center gap-4 pt-6">
                                                 <button
                                                     disabled={isProcessing}
-                                                    onClick={() => handleReject(viewingSeller.id)}
+                                                    onClick={() => handleReject(viewingSeller)}
                                                     className="flex-1 py-4 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-2xl text-[10px] font-bold tracking-widest transition-all uppercase"
                                                 >
                                                     REJECT APPLICATION
@@ -468,6 +476,72 @@ const PendingSellers = () => {
                                                 )}
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    </div>
+                )}
+            </AnimatePresence>
+            {/* Rejection Reason Modal */}
+            <AnimatePresence>
+                {isRejectModalOpen && (
+                    <div className="fixed inset-0 z-[110] overflow-y-auto">
+                        <div className="min-h-full flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+                                onClick={() => !isProcessing && setIsRejectModalOpen(false)}
+                            />
+
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                className="w-full max-w-md relative z-10 bg-white rounded-3xl shadow-2xl p-8"
+                            >
+                                <div className="text-center mb-6">
+                                    <div className="h-16 w-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <HiOutlineXCircle className="h-8 w-8 text-rose-500" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-slate-900">Reject Application?</h3>
+                                    <p className="text-sm text-slate-500 mt-2">
+                                        Are you sure you want to reject <span className="font-bold text-slate-700">{viewingSeller?.shopName}</span>? This action cannot be undone.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Rejection Reason</label>
+                                        <textarea
+                                            value={rejectionReason}
+                                            onChange={(e) => setRejectionReason(e.target.value)}
+                                            placeholder="e.g. Invalid documents, Out of service area..."
+                                            className="w-full mt-1.5 p-4 bg-slate-50 border-none rounded-2xl text-xs font-medium placeholder:text-slate-300 outline-none focus:ring-2 focus:ring-rose-500/10 min-h-[100px] resize-none"
+                                        />
+                                    </div>
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            disabled={isProcessing}
+                                            onClick={() => setIsRejectModalOpen(false)}
+                                            className="flex-1 py-3.5 bg-slate-50 text-slate-500 rounded-2xl text-[10px] font-bold tracking-widest hover:bg-slate-100 transition-all uppercase"
+                                        >
+                                            CANCEL
+                                        </button>
+                                        <button
+                                            disabled={isProcessing}
+                                            onClick={confirmReject}
+                                            className="flex-[2] py-3.5 bg-rose-600 text-white rounded-2xl text-[10px] font-bold tracking-widest shadow-lg shadow-rose-100 hover:bg-rose-700 transition-all uppercase flex items-center justify-center gap-2"
+                                        >
+                                            {isProcessing ? (
+                                                <HiOutlineArrowPath className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                "CONFIRM REJECTION"
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
                             </motion.div>
