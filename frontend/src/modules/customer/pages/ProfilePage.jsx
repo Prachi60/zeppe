@@ -97,7 +97,7 @@ const ProfilePage = () => {
                 >
                     <ChevronLeft size={24} className="text-slate-900 stroke-[2.5]" />
                 </button>
-                
+
                 <div className="flex-1 min-w-0">
                     <h1 className="text-2xl font-black text-gray-900 tracking-tight">Your Account</h1>
                     <div className="flex items-center gap-2 text-gray-700 mt-1 font-bold text-sm">
@@ -137,7 +137,7 @@ const ProfilePage = () => {
                 {/* Quick Action Tiles */}
                 <div className="grid grid-cols-3 gap-3 pt-2 items-stretch">
                     {/* Zeppe Money */}
-                    <button 
+                    <button
                         onClick={() => navigate('/wallet')}
                         className="flex flex-col items-center justify-center bg-white border border-gray-200/80 rounded-2xl p-3 shadow-sm hover:shadow-md active:scale-95 transition-all h-full gap-2 min-h-[90px]"
                     >
@@ -148,7 +148,7 @@ const ProfilePage = () => {
                     </button>
 
                     {/* Support */}
-                    <button 
+                    <button
                         onClick={() => navigate('/support')}
                         className="flex flex-col items-center justify-center bg-white border border-gray-200/80 rounded-2xl p-3 shadow-sm hover:shadow-md active:scale-95 transition-all h-full gap-2 min-h-[90px]"
                     >
@@ -159,7 +159,7 @@ const ProfilePage = () => {
                     </button>
 
                     {/* Payments */}
-                    <button 
+                    <button
                         onClick={() => navigate('/transactions')}
                         className="flex flex-col items-center justify-center bg-white border border-gray-200/80 rounded-2xl p-3 shadow-sm hover:shadow-md active:scale-95 transition-all h-full gap-2 min-h-[90px]"
                     >
@@ -292,7 +292,7 @@ const ProfilePage = () => {
                 </button>
 
                 <div className="text-center pb-8">
-                    <p className="text-[10px] text-slate-400 font-medium">Version 2.4.0 - {appName}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">Version 2.4.0 - Zeppe</p>
                 </div>
 
             </div>

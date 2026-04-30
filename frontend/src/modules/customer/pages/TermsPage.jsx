@@ -35,7 +35,7 @@ const TermsPage = () => {
 
                     <div className="prose prose-slate prose-sm max-w-none text-slate-600 space-y-4">
                         <p>
-                            Welcome to {appName}. By accessing or using our mobile application and services, you agree to be bound by these Terms and Conditions.
+                            Welcome to Zeppe. By accessing or using our mobile application and services, you agree to be bound by these Terms and Conditions.
                         </p>
 
                         <h3 className="text-slate-800 font-bold text-base mt-6">1. Acceptance of Terms</h3>

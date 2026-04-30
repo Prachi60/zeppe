@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import Lottie from 'lottie-react';
 import backendAnimation from '../../../assets/Backend Icon.json';
+import zeppeLogo from '../../../assets/ZeppeAuthLogo.svg';
 import { adminApi } from '../services/adminApi';
 
 const AdminAuth = () => {
@@ -249,7 +250,7 @@ const AdminAuth = () => {
                                     className="w-14 h-14 object-contain"
                                 />
                             ) : (
-                                <ShieldCheck size={30} className="text-indigo-600" />
+                                <img src={zeppeLogo} alt="Zeppe Logo" className="w-14 h-14 object-contain" />
                             )}
                         </div>
                     </div>

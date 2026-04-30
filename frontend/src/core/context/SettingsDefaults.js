@@ -1,6 +1,6 @@
 /** Default fallbacks when settings are not yet loaded or API fails */
 export const DEFAULT_SETTINGS = {
-  appName: "App",
+  appName: "Zeppe",
   supportEmail: "",
   supportPhone: "",
   currencySymbol: "\u20B9",
@@ -48,7 +48,7 @@ export function applyThemeVariables(settings) {
   const root = document.documentElement;
   const primary = settings.primaryColor || DEFAULT_SETTINGS.primaryColor;
   const secondary = settings.secondaryColor || DEFAULT_SETTINGS.secondaryColor;
-  
+
   root.style.setProperty("--primary", primary);
   root.style.setProperty("--secondary", secondary);
   root.style.setProperty("--primary-color", primary);
