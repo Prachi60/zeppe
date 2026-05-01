@@ -6,8 +6,6 @@ import { useSettings } from '@core/context/SettingsContext';
 const RefundPolicyPage = () => {
     const navigate = useNavigate();
     const { settings } = useSettings();
-    const appName = settings?.appName || 'Zeppe';
-    const companyName = settings?.companyName || appName;
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans pb-10">
@@ -34,47 +32,84 @@ const RefundPolicyPage = () => {
                         </div>
                     </div>
 
-                    <div className="prose prose-slate prose-sm max-w-none text-slate-600 space-y-4">
+                    <div className="prose prose-slate prose-sm max-w-none text-slate-600 space-y-6 leading-relaxed">
                         <p>
-                            At Zeppe, we strive to ensure your satisfaction with every order. If you are not entirely satisfied with your purchase, we are here to help.
+                            This refund and cancellation policy outlines how you can cancel or seek a refund for a product / service that you have purchased through the Platform.
                         </p>
 
-                        <h3 className="text-slate-800 font-bold text-base mt-6">1. Eligibility for Refunds</h3>
-                        <p>
-                            You may be eligible for a refund or replacement if:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1">
-                            <li>The items received are damaged or defective.</li>
-                            <li>The items received do not match your order.</li>
-                            <li>Items are missing from your delivery.</li>
-                        </ul>
-                        <p>
-                            Issues must be reported within 24 hours of delivery.
-                        </p>
+                        <div className="space-y-4">
+                            <div className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div className="h-10 w-10 shrink-0 rounded-xl bg-white shadow-sm flex items-center justify-center text-[#45B0E2]">
+                                    <span className="font-bold">01</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-slate-800 font-bold text-base m-0">Cancellations</h3>
+                                    <p className="m-0">
+                                        Cancellations will only be considered if the request is made <span className="font-bold text-slate-800">1 day</span> of placing the order. However, cancellation requests may not be entertained if the orders have been communicated to such sellers / merchant(s) listed on the Platform and they have initiated the process of shipping them, or the product is out for delivery. In such an event, you may choose to reject the product at the doorstep.
+                                    </p>
+                                </div>
+                            </div>
 
-                        <h3 className="text-slate-800 font-bold text-base mt-6">2. Return Process</h3>
-                        <p>
-                            To initiate a return, please go to your Orders page, select the relevant order, and click on "Return & Refund". You will be asked to provide details and photos of the items.
-                        </p>
+                            <div className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div className="h-10 w-10 shrink-0 rounded-xl bg-white shadow-sm flex items-center justify-center text-rose-500">
+                                    <span className="font-bold">02</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-slate-800 font-bold text-base m-0">Perishable Items</h3>
+                                    <p className="m-0">
+                                        Zeppe does not accept cancellation requests for perishable items like flowers, eatables, etc. However, the refund / replacement can be made if the user establishes that the quality of the product delivered is not good.
+                                    </p>
+                                </div>
+                            </div>
 
-                        <h3 className="text-slate-800 font-bold text-base mt-6">3. Refund Timeline</h3>
-                        <p>
-                            Once your return is approved, refunds are processed immediately.
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1">
-                            <li><strong>Online Payments:</strong> Refunded to your original payment method within 5-7 business days.</li>
-                            <li><strong>Cash on Delivery:</strong> Refunded to your {appName} Wallet instantly.</li>
-                        </ul>
+                            <div className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div className="h-10 w-10 shrink-0 rounded-xl bg-white shadow-sm flex items-center justify-center text-amber-500">
+                                    <span className="font-bold">03</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-slate-800 font-bold text-base m-0">Damaged or Defective Items</h3>
+                                    <p className="m-0">
+                                        In case of receipt of damaged or defective items, please report to our customer service team. The request would be entertained once the seller/ merchant listed on the Platform, has checked and determined the same at its own end. This should be reported within <span className="font-bold text-slate-800">1 day</span> of receipt of products.
+                                    </p>
+                                </div>
+                            </div>
 
-                        <h3 className="text-slate-800 font-bold text-base mt-6">4. Cancellation Policy</h3>
-                        <p>
-                            Orders cannot be cancelled once they have been packed for delivery. If you need to cancel before packing, you can do so from the order tracking screen.
-                        </p>
+                            <div className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div className="h-10 w-10 shrink-0 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500">
+                                    <span className="font-bold">04</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-slate-800 font-bold text-base m-0">Expectations Mismatch</h3>
+                                    <p className="m-0">
+                                        In case you feel that the product received is not as shown on the site or as per your expectations, you must bring it to the notice of our customer service within <span className="font-bold text-slate-800">1 day</span> of receiving the product. The customer service team after looking into your complaint will take an appropriate decision.
+                                    </p>
+                                </div>
+                            </div>
 
-                        <h3 className="text-slate-800 font-bold text-base mt-6">5. Contact Us</h3>
-                        <p>
-                            If you have any questions about our Refund Policy, please visit our Support page or contact customer service.
-                        </p>
+                            <div className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div className="h-10 w-10 shrink-0 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-500">
+                                    <span className="font-bold">05</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-slate-800 font-bold text-base m-0">Manufacturer Warranty</h3>
+                                    <p className="m-0">
+                                        In case of complaints regarding the products that come with a warranty from the manufacturers, please refer the issue to them.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 p-4 rounded-2xl bg-[#45B0E2]/5 border border-[#45B0E2]/10">
+                                <div className="h-10 w-10 shrink-0 rounded-xl bg-[#45B0E2] shadow-sm flex items-center justify-center text-white">
+                                    <span className="font-bold">06</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-[#45B0E2] font-bold text-base m-0">Refund Processing</h3>
+                                    <p className="m-0 text-slate-700">
+                                        In case of any refunds approved by Zeppe, it will take <span className="font-bold">7 days</span> for the refund to be processed to you.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
