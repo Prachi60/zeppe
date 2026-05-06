@@ -25,6 +25,7 @@ const DISPLAY_TYPES = [
     { id: 'categories', label: 'Categories' },
     { id: 'subcategories', label: 'Sub Categories' },
     { id: 'products', label: 'Products' },
+    { id: 'brands', label: 'Brands' },
 ];
 
 const ContentManager = () => {
@@ -60,9 +61,12 @@ const ContentManager = () => {
         productRows: 1,
         productColumns: 2,
         singleRowScrollable: false,
+        // brands
+        brandItems: [{ name: '', image: '', linkValue: '', isUploading: false }],
     });
 
     const bannerFileInputsRef = useRef([]);
+    const brandFileInputsRef = useRef([]);
 
     const selectedHeader = useMemo(
         () => headerCategories.find(h => h._id === selectedHeaderId) || null,
@@ -151,9 +155,9 @@ const ContentManager = () => {
             productCategoryIds: [],
             productSubCategoryIds: [],
             productIds: [],
-            productRows: 1,
             productColumns: 2,
             singleRowScrollable: false,
+            brandItems: [{ name: '', image: '', linkValue: '', isUploading: false }],
         });
         setActiveTab('banners');
     };
@@ -186,6 +190,9 @@ const ContentManager = () => {
             productRows: config.products?.rows || 1,
             productColumns: config.products?.columns || 2,
             singleRowScrollable: !!config.products?.singleRowScrollable,
+            brandItems: config.brands?.items?.length
+                ? config.brands.items.map(b => ({ ...b, isUploading: false }))
+                : [{ name: '', image: '', linkValue: '', isUploading: false }],
         };
         setFormData(next);
         setActiveTab(displayType);
@@ -272,6 +279,23 @@ const ContentManager = () => {
                 rows: formData.singleRowScrollable ? 1 : (Number(formData.productRows) || 1),
                 columns: Number(formData.productColumns) || 2,
                 singleRowScrollable: !!formData.singleRowScrollable,
+            };
+        } else if (displayType === 'brands') {
+            if ((formData.brandItems || []).some(b => b.isUploading)) {
+                showToast('Please wait for all brand logos to finish uploading', 'warning');
+                return;
+            }
+            const items = (formData.brandItems || []).filter(b => b.image && b.name);
+            if (!items.length) {
+                showToast('Please add at least one brand with a logo and name', 'warning');
+                return;
+            }
+            config = {
+                items: items.map(b => ({
+                    name: b.name,
+                    image: b.image,
+                    linkValue: b.linkValue || '',
+                })),
             };
         }
 
@@ -361,6 +385,50 @@ const ContentManager = () => {
         setFormData(prev => ({
             ...prev,
             bannerItems: prev.bannerItems.filter((_, i) => i !== idx),
+        }));
+    };
+
+    const updateBrandItem = (idx, changes) => {
+        setFormData(prev => {
+            const items = [...prev.brandItems];
+            items[idx] = { ...items[idx], ...changes };
+            return { ...prev, brandItems: items };
+        });
+    };
+
+    const handleBrandFileChange = async (idx, file) => {
+        if (!file) return;
+        updateBrandItem(idx, { isUploading: true });
+        try {
+            const fd = new FormData();
+            fd.append('image', file);
+            // Reuse the same upload endpoint as banners
+            const res = await adminApi.uploadExperienceBanner(fd);
+            const url = res.data?.result?.url || res.data?.url;
+            if (!url) throw new Error('Upload failed');
+            updateBrandItem(idx, { image: url, isUploading: false });
+            showToast('Brand logo uploaded', 'success');
+        } catch (e) {
+            console.error(e);
+            updateBrandItem(idx, { isUploading: false });
+            showToast('Failed to upload brand logo', 'error');
+        }
+    };
+
+    const addBrandItem = () => {
+        setFormData(prev => ({
+            ...prev,
+            brandItems: [
+                ...prev.brandItems,
+                { name: '', image: '', linkValue: '', isUploading: false },
+            ],
+        }));
+    };
+
+    const removeBrandItem = (idx) => {
+        setFormData(prev => ({
+            ...prev,
+            brandItems: prev.brandItems.filter((_, i) => i !== idx),
         }));
     };
 
@@ -484,6 +552,7 @@ const ContentManager = () => {
                                                     {section.displayType === 'categories' && `${section.config?.categories?.categoryIds?.length || 0} categories • ${section.config?.categories?.rows || 1} rows`}
                                                     {section.displayType === 'subcategories' && `${section.config?.subcategories?.subcategoryIds?.length || 0} subcategories • ${section.config?.subcategories?.rows || 1} rows`}
                                                     {section.displayType === 'products' && `${section.config?.products?.productIds?.length || 0} products • ${section.config?.products?.rows || 1}x${section.config?.products?.columns || 2}${section.config?.products?.singleRowScrollable ? ' • Single row scroll' : ''}`}
+                                                    {section.displayType === 'brands' && `${section.config?.brands?.items?.length || 0} brands configured`}
                                                 </p>
                                             </div>
                                             <div className="flex flex-col gap-2 items-end">
@@ -985,6 +1054,93 @@ const ContentManager = () => {
                                 <p className="text-[10px] text-slate-400">
                                     You can later extend this to select specific products.
                                 </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {formData.displayType === 'brands' && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    Brand Items
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={addBrandItem}
+                                    className="flex items-center gap-1 text-[10px] font-black text-primary"
+                                >
+                                    <HiOutlinePlus className="h-3 w-3" />
+                                    Add brand
+                                </button>
+                            </div>
+                            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                                {formData.brandItems.map((item, idx) => (
+                                    <Card key={idx} className="p-3 bg-white border-slate-100">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex-1 space-y-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-200 overflow-hidden flex items-center justify-center">
+                                                        {item.image ? (
+                                                            <img
+                                                                src={item.image}
+                                                                alt={item.name || `Brand ${idx + 1}`}
+                                                                className="w-full h-full object-contain p-1"
+                                                            />
+                                                        ) : (
+                                                            <HiOutlinePhoto className="h-6 w-6 text-slate-300" />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 space-y-1">
+                                                        <input
+                                                            ref={(el) => {
+                                                                brandFileInputsRef.current[idx] = el;
+                                                            }}
+                                                            type="file"
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            onChange={(e) =>
+                                                                handleBrandFileChange(idx, e.target.files?.[0])
+                                                            }
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                brandFileInputsRef.current[idx]?.click()
+                                                            }
+                                                            className="inline-flex items-center px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+                                                        >
+                                                            {item.image ? 'Change logo' : 'Choose logo'}
+                                                        </button>
+                                                        <p className="text-[10px] text-slate-400">
+                                                            {item.isUploading ? 'Uploading...' : 'Logo uploaded'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <input
+                                                    value={item.name || ''}
+                                                    onChange={(e) => updateBrandItem(idx, { name: e.target.value })}
+                                                    className="w-full p-2.5 bg-slate-50 rounded-xl text-xs font-bold border-none outline-none"
+                                                    placeholder="Brand name"
+                                                />
+                                                <input
+                                                    value={item.linkValue || ''}
+                                                    onChange={(e) => updateBrandItem(idx, { linkValue: e.target.value })}
+                                                    className="w-full p-2.5 bg-slate-50 rounded-xl text-xs font-bold border-none outline-none"
+                                                    placeholder="Search query (optional)"
+                                                />
+                                            </div>
+                                            {formData.brandItems.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeBrandItem(idx)}
+                                                    className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                                >
+                                                    <HiOutlineXMark className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </Card>
+                                ))}
                             </div>
                         </div>
                     )}

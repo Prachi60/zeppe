@@ -285,6 +285,14 @@ function eventDefinition(eventType) {
             payload.data?.note ? " Note: " + payload.data.note : ""
           }`,
       };
+    case NOTIFICATION_EVENTS.CASH_OVER_LIMIT:
+      return {
+        role: NOTIFICATION_ROLES.DELIVERY,
+        recipientIds: (payload) => normalizeIdList(payload.userId || payload.deliveryId),
+        title: () => "Cash Limit Exceeded! ⚠️",
+        body: (payload) =>
+          `Your cash in hand (₹${payload.data?.cashAmount || 0}) has exceeded the safety limit. Please visit the hub to deposit cash immediately.`,
+      };
     default:
       return null;
   }

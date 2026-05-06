@@ -106,6 +106,7 @@ export const createOfferSection = async (req, res) => {
       title: title.trim(),
       backgroundColor: backgroundColor || "#FCD34D",
       sideImageKey: sideImageKey || "hair-care",
+      sideImageUrl: req.body.sideImageUrl || null,
       categoryIds: catIds,
       sellerIds: Array.isArray(sellerIds) ? sellerIds.filter(Boolean) : [],
       productIds: Array.isArray(productIds) ? productIds : [],
@@ -131,6 +132,8 @@ export const updateOfferSection = async (req, res) => {
       section.backgroundColor = payload.backgroundColor;
     if (payload.sideImageKey !== undefined)
       section.sideImageKey = payload.sideImageKey;
+    if (payload.sideImageUrl !== undefined)
+      section.sideImageUrl = payload.sideImageUrl;
     if (Array.isArray(payload.categoryIds))
       section.categoryIds = payload.categoryIds.filter(Boolean);
     if (Array.isArray(payload.sellerIds))
@@ -173,6 +176,26 @@ export const reorderOfferSections = async (req, res) => {
       }));
     if (bulkOps.length) await OfferSection.bulkWrite(bulkOps);
     return handleResponse(res, 200, "Sections reordered");
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
+export const uploadOfferSectionImage = async (req, res) => {
+  try {
+    let url = null;
+    if (req.file) {
+      const { uploadToCloudinary } = await import("../services/mediaService.js");
+      url = await uploadToCloudinary(req.file.buffer, "offer-sections");
+    } else if (req.body?.url || req.body?.imageUrl) {
+      url = String(req.body.url || req.body.imageUrl).trim();
+    }
+
+    if (!url) {
+      return handleResponse(res, 400, "A valid image file or URL is required");
+    }
+
+    return handleResponse(res, 200, "Offer section image uploaded", { url });
   } catch (error) {
     return handleResponse(res, 500, error.message);
   }

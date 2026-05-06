@@ -94,7 +94,7 @@ export const verifyDeliveryOtp = async (req, res) => {
     const result = await verifyHandoffOtpAndDeliver(req.user.id, orderId, code || otp);
     return handleResponse(res, 200, "Order delivered", result);
   } catch (e) {
-    return handleResponse(res, e.statusCode || 500, e.message);
+    return handleResponse(res, e.statusCode || 500, e.message, { code: e.code });
   }
 };
 

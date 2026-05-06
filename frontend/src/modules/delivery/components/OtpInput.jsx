@@ -171,10 +171,11 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
       }
     } catch (err) {
       // Handle validation errors
-      const errorData = err.response?.data?.error;
-      const errorCode = errorData?.code;
-      const errorMessage = errorData?.message || "Failed to validate OTP";
-      const remainingAttempts = errorData?.attemptsRemaining;
+      const data = err.response?.data;
+      const errorData = data?.error;
+      const errorCode = typeof errorData === "object" ? errorData?.code : data?.code;
+      const errorMessage = (typeof errorData === "object" ? errorData?.message : data?.message) || "Failed to validate OTP";
+      const remainingAttempts = typeof errorData === "object" ? errorData?.attemptsRemaining : data?.attemptsRemaining;
 
       setLastErrorCode(errorCode || null);
 

@@ -434,6 +434,36 @@ const ShopByStoreManagement = () => {
                   {opt.label}
                 </button>
               ))}
+
+              {/* Custom Color Selector */}
+              <div className="relative group">
+                <input
+                  type="color"
+                  id="customStoreColor"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  value={BACKGROUND_COLOR_OPTIONS.some(o => o.value === formData.backgroundColor) ? "#ffffff" : formData.backgroundColor}
+                  onChange={(e) => setFormData(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-2xl text-[11px] font-bold border-2 transition-all",
+                    !BACKGROUND_COLOR_OPTIONS.some(o => o.value === formData.backgroundColor)
+                      ? "border-slate-900 ring-2 ring-offset-2 ring-slate-400"
+                      : "border-slate-200 hover:border-slate-300"
+                  )}
+                >
+                  <span
+                    className="w-5 h-5 rounded-full border border-slate-200"
+                    style={{ 
+                      backgroundColor: BACKGROUND_COLOR_OPTIONS.some(o => o.value === formData.backgroundColor) 
+                        ? "#ffffff" 
+                        : formData.backgroundColor 
+                    }}
+                  />
+                  Custom
+                </button>
+              </div>
             </div>
           </div>
 

@@ -1,10 +1,17 @@
 import { createAdminController } from "../utils/controllerFactory.js";
 import Review from "../models/review.js";
+import Product from "../models/product.js";
+import User from "../models/customer.js";
+import Seller from "../models/seller.js";
 
 const reviewController = createAdminController(Review, {
     searchFields: ["comment", "rating"],
     populateFields: [
-        { path: "productId", select: "name mainImage" },
+        { 
+            path: "productId", 
+            select: "name mainImage sellerId",
+            populate: { path: "sellerId", select: "shopName" }
+        },
         { path: "userId", select: "name email avatar" }
     ]
 });
@@ -15,20 +22,14 @@ export const updateReview = reviewController.update;
 export const deleteReview = reviewController.delete;
 
 export const getProductReviews = async (req, res) => {
-    req.query = {
-        ...req.query,
-        productId: req.params.productId,
-        status: "approved",
-    };
+    req.query.productId = req.params.productId;
+    req.query.status = "approved";
 
     return reviewController.getAll(req, res);
 };
 
 export const getPendingReviews = async (req, res) => {
-    req.query = {
-        ...req.query,
-        status: "pending",
-    };
+    req.query.status = "pending";
 
     return reviewController.getAll(req, res);
 };

@@ -12,6 +12,8 @@ export const adminApi = {
     getPendingSellers: (params) => axiosInstance.get('/admin/sellers/pending', { params }),
     approveSeller: (id) => axiosInstance.patch(`/admin/sellers/approve/${id}`),
     rejectSeller: (id, data) => axiosInstance.patch(`/admin/sellers/reject/${id}`, data),
+    updateSeller: (id, data) => axiosInstance.put(`/admin/sellers/${id}`, data),
+    deleteSeller: (id) => axiosInstance.delete(`/admin/sellers/${id}`),
     getAdminWalletData: (params) => axiosInstance.get('/admin/wallet-data', { params }),
     getReports: () => axiosInstance.get('/admin/reports'),
     getProfile: () => axiosInstance.get('/admin/profile'),
@@ -73,6 +75,9 @@ export const adminApi = {
     getDeliveryPartners: (params) => axiosInstance.get('/admin/delivery-partners', { params }),
     approveDeliveryPartner: (id) => axiosInstance.patch(`/admin/delivery-partners/approve/${id}`),
     rejectDeliveryPartner: (id) => axiosInstance.patch(`/admin/delivery-partners/reject/${id}`),
+    updateDeliveryPartner: (id, data) => axiosInstance.put(`/admin/delivery-partners/${id}`, data),
+    deleteDeliveryPartner: (id) => axiosInstance.delete(`/admin/delivery-partners/${id}`),
+    createDeliveryPartner: (data) => axiosInstance.post('/admin/delivery-partners', data),
     getActiveFleet: (params) => axiosInstance.get('/admin/active-fleet', { params }),
 
     // Delivery Payouts / Funds
@@ -89,6 +94,7 @@ export const adminApi = {
     getDeliveryCashBalances: (params) => axiosInstance.get('/admin/delivery-cash', { params }),
     getRiderCashDetails: (id) => axiosInstance.get(`/admin/rider-cash-details/${id}`),
     settleRiderCash: (data) => axiosInstance.post('/admin/settle-cash', data),
+    notifyRiderCashLimit: (data) => axiosInstance.post('/admin/notify-cash-limit', data),
     getCashSettlementHistory: (params) => axiosInstance.get('/admin/cash-history', { params }),
 
     // FAQ Management
@@ -124,6 +130,7 @@ export const adminApi = {
     updateOfferSection: (id, data) => axiosInstance.put(`/admin-offer-sections/${id}`, data),
     deleteOfferSection: (id) => axiosInstance.delete(`/admin-offer-sections/${id}`),
     reorderOfferSections: (items) => axiosInstance.put('/admin-offer-sections/reorder', { items }),
+    uploadOfferSectionImage: (formData) => axiosInstance.post('/admin-offer-sections/upload', formData),
 
     // Coupons & Promos
     getCoupons: (params) => axiosInstance.get('/admin/coupons', { params }),
@@ -137,4 +144,8 @@ export const adminApi = {
     updateScratchCampaign: (id, data) => axiosInstance.put(`/admin/scratch-cards/campaigns/${id}`, data),
     deleteScratchCampaign: (id) => axiosInstance.delete(`/admin/scratch-cards/campaigns/${id}`),
     toggleScratchCampaign: (id) => axiosInstance.patch(`/admin/scratch-cards/campaigns/${id}/toggle`),
+
+    // Notifications
+    broadcastNotification: (data) => axiosInstance.post('/push/broadcast', data),
+    getNotificationStats: () => axiosInstance.get('/push/stats'),
 };

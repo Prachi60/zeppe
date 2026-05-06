@@ -12,7 +12,9 @@ import {
     HiOutlineCalendarDays,
     HiOutlineMapPin,
     HiOutlineEnvelope,
-    HiOutlinePhone
+    HiOutlinePhone,
+    HiOutlinePencilSquare,
+    HiOutlineTrash
 } from 'react-icons/hi2';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -25,6 +27,9 @@ const ActiveSellers = () => {
         totalOrders: 0,
         newThisMonth: 0
     });
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingSeller, setEditingSeller] = useState(null);
+    const [refreshTable, setRefreshTable] = useState(0);
 
     const columns = [
         {
@@ -91,19 +96,65 @@ const ActiveSellers = () => {
         },
         {
             header: "Actions",
-            width: "20%",
+            width: "25%",
             align: "right",
             cell: (row) => (
-                <button 
-                    onClick={() => setSelectedSeller(row)}
-                    className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2"
-                >
-                    <HiOutlineEye className="h-3.5 w-3.5" />
-                    Profile
-                </button>
+                <div className="flex items-center justify-end gap-2">
+                    <button 
+                        onClick={() => setSelectedSeller(row)}
+                        className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all shadow-sm"
+                        title="View Profile"
+                    >
+                        <HiOutlineEye className="h-4 w-4" />
+                    </button>
+                    <button 
+                        onClick={() => {
+                            setEditingSeller({ ...row });
+                            setIsEditModalOpen(true);
+                        }}
+                        className="p-2.5 bg-brand-50 text-brand-600 rounded-xl hover:bg-brand-100 transition-all shadow-sm"
+                        title="Edit Seller"
+                    >
+                        <HiOutlinePencilSquare className="h-4 w-4" />
+                    </button>
+                    <button 
+                        onClick={() => handleDeleteSeller(row.id)}
+                        className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all shadow-sm"
+                        title="Delete Seller"
+                    >
+                        <HiOutlineTrash className="h-4 w-4" />
+                    </button>
+                </div>
             )
         }
     ];
+
+    const handleDeleteSeller = async (id) => {
+        if (!window.confirm('Are you sure you want to PERMANENTLY delete this seller? This action cannot be undone.')) return;
+        try {
+            const res = await adminApi.deleteSeller(id);
+            if (res.data.success) {
+                setRefreshTable(prev => prev + 1);
+            }
+        } catch (error) {
+            console.error("Delete Seller Error:", error);
+            alert("Failed to delete seller");
+        }
+    };
+
+    const handleUpdateSeller = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await adminApi.updateSeller(editingSeller.id, editingSeller);
+            if (res.data.success) {
+                setIsEditModalOpen(false);
+                setRefreshTable(prev => prev + 1);
+            }
+        } catch (error) {
+            console.error("Update Seller Error:", error);
+            alert("Failed to update seller");
+        }
+    };
 
     const handleDataFetched = (data) => {
         if (data?.stats) {
@@ -144,6 +195,7 @@ const ActiveSellers = () => {
                 endpoint="/admin/sellers/active"
                 columns={columns}
                 onDataFetched={handleDataFetched}
+                refreshSelected={refreshTable}
                 searchPlaceholder="Search store name, owner, email or location..."
             />
 
@@ -155,6 +207,7 @@ const ActiveSellers = () => {
                         title={selectedSeller.shopName}
                         size="xl"
                     >
+                        {/* Profile content stays the same */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 text-left">
                             <div className="lg:col-span-4 space-y-6">
                                 <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
@@ -224,6 +277,99 @@ const ActiveSellers = () => {
                                 </div>
                             </div>
                         </div>
+                    </Modal>
+                )}
+
+                {isEditModalOpen && editingSeller && (
+                    <Modal
+                        isOpen={isEditModalOpen}
+                        onClose={() => setIsEditModalOpen(false)}
+                        title="Edit Seller Information"
+                        size="lg"
+                    >
+                        <form onSubmit={handleUpdateSeller} className="space-y-6 text-left">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Shop Name</label>
+                                    <input 
+                                        type="text"
+                                        value={editingSeller.shopName}
+                                        onChange={(e) => setEditingSeller({ ...editingSeller, shopName: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Owner Name</label>
+                                    <input 
+                                        type="text"
+                                        value={editingSeller.ownerName}
+                                        onChange={(e) => setEditingSeller({ ...editingSeller, ownerName: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone Number</label>
+                                    <input 
+                                        type="text"
+                                        value={editingSeller.phone}
+                                        onChange={(e) => setEditingSeller({ ...editingSeller, phone: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</label>
+                                    <input 
+                                        type="email"
+                                        value={editingSeller.email}
+                                        onChange={(e) => setEditingSeller({ ...editingSeller, email: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</label>
+                                    <input 
+                                        type="text"
+                                        value={editingSeller.category}
+                                        onChange={(e) => setEditingSeller({ ...editingSeller, category: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service Radius (KM)</label>
+                                    <input 
+                                        type="number"
+                                        value={editingSeller.serviceRadius}
+                                        onChange={(e) => setEditingSeller({ ...editingSeller, serviceRadius: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Address</label>
+                                <textarea 
+                                    value={editingSeller.location}
+                                    onChange={(e) => setEditingSeller({ ...editingSeller, location: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10 min-h-[100px]"
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="flex-1 py-4 bg-slate-100 text-slate-400 text-[10px] font-black uppercase rounded-2xl"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-4 bg-slate-900 text-white text-[10px] font-black uppercase rounded-2xl shadow-xl shadow-slate-200"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
                     </Modal>
                 )}
             </AnimatePresence>

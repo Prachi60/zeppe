@@ -32,6 +32,7 @@ const Withdrawals = React.lazy(() => import("../pages/Withdrawals"));
 const VendorSubscription = React.lazy(() => import("../pages/VendorSubscription"));
 
 import { useAuth } from "@core/context/AuthContext";
+import { useSettings } from "@core/context/SettingsContext";
 import { useLocation } from "react-router-dom";
 
 const navItems = [
@@ -79,7 +80,9 @@ const SellerRoutes = () => {
   // We check for seller role and ensure we don't redirect if already on the subscription page
   // If subscriptionStatus is missing or not active, we treat it as inactive
   const isDemoActive = localStorage.getItem('demo_subscription_active') === 'true';
-  const isSubscribed = user?.subscriptionStatus === "active" || isDemoActive;
+  const { settings } = useSettings();
+  const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+  const isSubscribed = user?.subscriptionStatus === "active" || isDemoActive || !isGlobalEnabled;
   
   if (user?.role === "seller" && !isSubscribed && !isSubscriptionPage) {
     return <Navigate to="/seller/subscription" replace />;

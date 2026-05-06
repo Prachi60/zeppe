@@ -31,7 +31,7 @@ export const handleResponse = (res, statusCode, message, data = {}) => {
 
   const responsePayload = {
     success,
-    error: !success,
+    error: success ? false : { message, code: data?.code || (statusCode === 400 ? "BAD_REQUEST" : statusCode === 404 ? "NOT_FOUND" : "ERROR") },
     message,
   };
 

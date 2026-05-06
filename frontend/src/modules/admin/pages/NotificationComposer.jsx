@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
 import PageHeader from '@shared/components/ui/PageHeader';
@@ -22,6 +22,8 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useSettings } from '@core/context/SettingsContext';
 
+import { adminApi } from '../services/adminApi';
+
 const NotificationComposer = () => {
     const { showToast } = useToast();
     const { settings } = useSettings();
@@ -31,27 +33,97 @@ const NotificationComposer = () => {
     const [selectedSegment, setSelectedSegment] = useState('all');
     const [deepLink, setDeepLink] = useState('');
     const [imageUrl, setImageUrl] = useState('');
-    const [location, setLocation] = useState('all');
-    const [lastOrder, setLastOrder] = useState('any');
+    const [isSending, setIsSending] = useState(false);
+    const [stats, setStats] = useState({
+        totalUsers: 0,
+        reachableUsers: 0,
+        recentUsers: 0,
+        lapsedUsers: 0,
+        powerUsers: 0
+    });
+
+    useEffect(() => {
+        fetchStats();
+    }, []);
+
+    const fetchStats = async () => {
+        try {
+            const response = await adminApi.getNotificationStats();
+            if (response.data?.success) {
+                setStats(response.data.result || {});
+            }
+        } catch (error) {
+            console.error('Failed to fetch stats:', error);
+        }
+    };
 
     const segments = [
-        { id: 'all', label: 'All Users', count: '12,504', description: 'Universal Reach', icon: HiOutlineUsers, color: 'blue' },
-        { id: 'lapsed', label: 'Lapsed Customers', count: '3,210', description: 'No order in 30 days', icon: HiOutlineClock, color: 'amber' },
-        { id: 'power', label: 'Power Users', count: '850', description: '10+ orders monthly', icon: HiOutlineSparkles, color: 'purple' },
-        { id: 'new', label: 'Recent Signups', count: '1,420', description: 'Last 7 days', icon: HiOutlineCheckCircle, color: 'emerald' },
+        { 
+            id: 'all', 
+            label: 'All Users', 
+            count: stats?.totalUsers?.toLocaleString() || '0', 
+            subCount: `REACHABLE: ${stats?.reachableUsers || 0}`,
+            description: 'Universal Reach', 
+            icon: HiOutlineUsers, 
+            color: 'blue' 
+        },
+        { 
+            id: 'lapsed', 
+            label: 'Lapsed Customers', 
+            count: stats?.lapsedUsers?.toLocaleString() || '0', 
+            description: 'No order in 30 days', 
+            icon: HiOutlineClock, 
+            color: 'amber' 
+        },
+        { 
+            id: 'power', 
+            label: 'Power Users', 
+            count: stats?.powerUsers?.toLocaleString() || '0', 
+            description: '10+ orders monthly', 
+            icon: HiOutlineSparkles, 
+            color: 'purple' 
+        },
+        { 
+            id: 'new', 
+            label: 'Recent Signups', 
+            count: stats?.recentUsers?.toLocaleString() || '0', 
+            description: 'Last 7 days', 
+            icon: HiOutlineCheckCircle, 
+            color: 'emerald' 
+        },
     ];
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (!title || !message) {
             showToast('Please complete the notification broadcast fields', 'warning');
             return;
         }
-        showToast(`Broadcasting to ${segments.find(s => s.id === selectedSegment)?.count} users...`, 'info');
-        setTimeout(() => {
-            showToast('Campaign launched successfully!', 'success');
-            setTitle('');
-            setMessage('');
-        }, 1500);
+
+        setIsSending(true);
+        try {
+            const res = await adminApi.broadcastNotification({
+                title,
+                message,
+                segment: selectedSegment,
+                imageUrl,
+                deepLink
+            });
+
+            if (res.data.success) {
+                const { successCount } = res.data.result || {};
+                showToast(`Campaign launched! Successfully reached ${successCount} users.`, 'success');
+                setTitle('');
+                setMessage('');
+                setDeepLink('');
+                setImageUrl('');
+            } else {
+                showToast(res.data.message || 'Failed to launch campaign', 'error');
+            }
+        } catch (error) {
+            showToast(error.response?.data?.message || 'Error connecting to push engine', 'error');
+        } finally {
+            setIsSending(false);
+        }
     };
 
     return (
@@ -155,11 +227,20 @@ const NotificationComposer = () => {
                             {/* Send Button */}
                             <button
                                 onClick={handleSend}
-                                disabled={!title || !message}
+                                disabled={!title || !message || isSending}
                                 className="ds-btn ds-btn-lg w-full bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                <HiOutlineBolt className="ds-icon-md text-amber-400" />
-                                BLAST SIGNAL
+                                {isSending ? (
+                                    <>
+                                        <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                        <span>LAUNCHING...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <HiOutlineBolt className="ds-icon-md text-amber-400" />
+                                        <span>BLAST SIGNAL</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </Card>
@@ -259,11 +340,19 @@ const NotificationComposer = () => {
                                                 </span>
                                             </div>
                                             <p className={cn(
-                                                "ds-caption",
+                                                "ds-caption uppercase tracking-wider",
                                                 selectedSegment === seg.id ? "text-white/60" : "text-slate-400"
                                             )}>
                                                 {seg.description}
                                             </p>
+                                            {seg.subCount && (
+                                                <p className={cn(
+                                                    "ds-caption font-bold mt-1",
+                                                    selectedSegment === seg.id ? "text-blue-300" : "text-blue-600"
+                                                )}>
+                                                    {seg.subCount}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </button>

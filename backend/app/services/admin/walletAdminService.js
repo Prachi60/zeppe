@@ -1,7 +1,7 @@
 import Transaction from "../../models/transaction.js";
 import Notification from "../../models/notification.js";
 import { getAdminFinanceSummary } from "../finance/walletService.js";
-import { getLedgerEntries } from "../finance/ledgerService.js";
+import { getLedgerEntries, createLedgerEntry } from "../finance/ledgerService.js";
 
 export async function getAdminWalletOverview({ page, limit }) {
   const stats = await getAdminFinanceSummary();
@@ -152,6 +152,30 @@ export async function updateWithdrawalStatusById({ id, status, reason }) {
   }
 
   await transaction.save();
+
+  // If the withdrawal is settled, record it in the ledger so it shows up in Admin Wallet History
+  if (status === "Settled") {
+    try {
+      await createLedgerEntry({
+        transactionId: transaction.reference || `WDR-${transaction._id}`,
+        actorType: transaction.userModel === "Seller" ? "SELLER" : "DELIVERY_PARTNER",
+        actorId: transaction.user._id,
+        type: "WITHDRAWAL",
+        direction: "DEBIT",
+        amount: Math.abs(transaction.amount),
+        status: "COMPLETED",
+        description: `Withdrawal settled for ${transaction.user?.name || transaction.userModel}`,
+        reference: transaction.reference,
+        metadata: {
+            transactionId: transaction._id
+        }
+      });
+    } catch (ledgerError) {
+      console.error("Failed to create ledger entry for withdrawal settlement:", ledgerError);
+      // We don't throw here to avoid failing the status update, but we log it
+    }
+  }
+
   return transaction;
 }
 

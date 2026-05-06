@@ -44,7 +44,7 @@ const ActiveDeliveryBoys = () => {
 
     // Form states
     const [formState, setFormState] = useState({
-        name: '', phone: '', email: '', vehicle: '', vehicleNum: '', location: ''
+        name: '', phone: '', email: '', vehicleType: '', vehicleNumber: '', currentArea: ''
     });
 
     // Fetch Riders
@@ -108,38 +108,54 @@ const handleAction = (type, rider) => {
     if (type === 'view') {
         setViewingRider(rider);
     } else if (type === 'edit') {
-        setFormState(rider);
+        setFormState({
+            name: rider.name || '',
+            phone: rider.phone || '',
+            email: rider.email || '',
+            vehicleType: rider.vehicle || 'bike',
+            vehicleNumber: rider.vehicleNum || '',
+            currentArea: rider.location || ''
+        });
         setSelectedRider(rider);
         setIsEditModalOpen(true);
     } else if (type === 'delete') {
-        if (window.confirm(`Are you sure you want to deactivate ${rider.name}?`)) {
-            setRiders(riders.filter(r => r.id !== rider.id));
+        if (window.confirm(`Are you sure you want to PERMANENTLY delete ${rider.name}? This action cannot be undone.`)) {
+            adminApi.deleteDeliveryPartner(rider.id)
+                .then(() => {
+                    toast.success('Rider deleted successfully');
+                    fetchRiders(page);
+                })
+                .catch(() => toast.error('Failed to delete rider'));
         }
     }
 };
 
-const handleOnboardSubmit = (e) => {
+const handleOnboardSubmit = async (e) => {
     e.preventDefault();
-    const newRider = {
-        ...formState,
-        id: 'r' + (riders.length + 1),
-        status: 'offline',
-        rating: 5.0,
-        totalOrders: 0,
-        todayEarnings: 0,
-        lastSync: 'Just now',
-        joinDate: new Date().toLocaleDateString()
-    };
-    setRiders([newRider, ...riders]);
-    setIsOnboardModalOpen(false);
-    setFormState({ name: '', phone: '', email: '', vehicle: '', vehicleNum: '', location: '' });
+    try {
+        await adminApi.createDeliveryPartner(formState);
+        toast.success('Rider added successfully');
+        setIsOnboardModalOpen(false);
+        setFormState({ name: '', phone: '', email: '', vehicleType: '', vehicleNumber: '', currentArea: '' });
+        fetchRiders(1);
+    } catch (error) {
+        console.error('Onboard Error:', error);
+        toast.error('Failed to add rider');
+    }
 };
 
-const handleEditSubmit = (e) => {
+const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setRiders(riders.map(r => r.id === selectedRider.id ? { ...r, ...formState } : r));
-    setIsEditModalOpen(false);
-    setSelectedRider(null);
+    try {
+        await adminApi.updateDeliveryPartner(selectedRider.id, formState);
+        toast.success('Rider updated successfully');
+        setIsEditModalOpen(false);
+        setSelectedRider(null);
+        fetchRiders(page);
+    } catch (error) {
+        console.error('Edit Error:', error);
+        toast.error('Failed to update rider');
+    }
 };
 
 const stats = [
@@ -484,12 +500,25 @@ return (
                         exit={{ opacity: 0, scale: 0.9, y: 30 }}
                         className="w-full max-w-lg relative z-[120] bg-white rounded-2xl p-5 shadow-3xl"
                     >
-                        <h3 className="ds-h2 mb-2">
-                            {isEditModalOpen ? 'Edit Rider' : 'Add New Rider'}
-                        </h3>
-                        <p className="ds-label mt-1 text-slate-500">
-                            {isEditModalOpen ? 'Update rider details below.' : 'Enter details to register a new delivery partner.'}
-                        </p>
+                        <div className="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 className="ds-h2">
+                                    {isEditModalOpen ? 'Edit Rider' : 'Add New Rider'}
+                                </h3>
+                                <p className="ds-label mt-1 text-slate-500">
+                                    {isEditModalOpen ? 'Update rider details below.' : 'Enter details to register a new delivery partner.'}
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setIsOnboardModalOpen(false);
+                                    setIsEditModalOpen(false);
+                                }}
+                                className="p-2 hover:bg-slate-100 rounded-xl transition-all"
+                            >
+                                <X className="h-5 w-5 text-slate-400" />
+                            </button>
+                        </div>
 
                         <form onSubmit={isEditModalOpen ? handleEditSubmit : handleOnboardSubmit} className="space-y-5">
                             <div className="grid grid-cols-1 gap-5">
@@ -520,25 +549,35 @@ return (
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Work Vehicle</label>
                                         <select
                                             required
-                                            value={formState.vehicle}
-                                            onChange={(e) => setFormState({ ...formState, vehicle: e.target.value })}
+                                            value={formState.vehicleType}
+                                            onChange={(e) => setFormState({ ...formState, vehicleType: e.target.value })}
                                             className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none"
                                         >
                                             <option value="">Select Vehicle</option>
-                                            <option>Two Wheeler</option>
-                                            <option>Electric Scooter</option>
-                                            <option>Cycle</option>
-                                            <option>Three Wheeler</option>
+                                            <option value="bike">Two Wheeler</option>
+                                            <option value="scooter">Electric Scooter</option>
+                                            <option value="cycle">Cycle</option>
                                         </select>
                                     </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                                    <input
+                                        required
+                                        type="email"
+                                        value={formState.email}
+                                        onChange={(e) => setFormState({ ...formState, email: e.target.value })}
+                                        className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+                                        placeholder="e.g. rahul@example.com"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Registration Vehicle No.</label>
                                     <input
                                         required
                                         type="text"
-                                        value={formState.vehicleNum}
-                                        onChange={(e) => setFormState({ ...formState, vehicleNum: e.target.value })}
+                                        value={formState.vehicleNumber}
+                                        onChange={(e) => setFormState({ ...formState, vehicleNumber: e.target.value })}
                                         className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all"
                                         placeholder="e.g. MH-12-AB-0000"
                                     />
@@ -548,8 +587,8 @@ return (
                                     <input
                                         required
                                         type="text"
-                                        value={formState.location}
-                                        onChange={(e) => setFormState({ ...formState, location: e.target.value })}
+                                        value={formState.currentArea}
+                                        onChange={(e) => setFormState({ ...formState, currentArea: e.target.value })}
                                         className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all"
                                         placeholder="e.g. Bandra West, Mumbai"
                                     />

@@ -339,7 +339,8 @@ const Auth = () => {
         });
         toast.success("Welcome back, Partner!");
 
-        if (seller.subscriptionStatus === "active") {
+        const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+        if (seller.subscriptionStatus === "active" || !isGlobalEnabled) {
           navigate("/seller");
         } else {
           navigate("/seller/subscription");

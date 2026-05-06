@@ -47,6 +47,7 @@ const ALLOWED_KEYS = [
   "suggestedDonationAmounts",
   "roundOffDonationsEnabled",
   "donationCauses",
+  "subscriptionsEnabled",
 ];
 
 /** Joi schema for validating settings update payload */
@@ -105,6 +106,7 @@ const updateSettingsSchema = Joi.object({
       active: Joi.boolean().optional(),
     }),
   ).max(100),
+  subscriptionsEnabled: Joi.boolean(),
 }).unknown(false);
 
 /**
@@ -126,7 +128,7 @@ export const getPublicSettings = async (req, res) => {
       async () => {
         const existing = await Setting.findOne(filter)
           .select(
-            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled donationsEnabled suggestedDonationAmounts roundOffDonationsEnabled donationCauses createdAt",
+            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled donationsEnabled suggestedDonationAmounts roundOffDonationsEnabled donationCauses subscriptionsEnabled createdAt",
           )
           .lean();
         return existing || null;

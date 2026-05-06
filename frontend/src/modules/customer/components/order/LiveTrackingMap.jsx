@@ -13,7 +13,6 @@ import {
   Loader2,
 } from "lucide-react";
 import customerPin from "@/assets/customer-pin.png";
-import deliveryIcon from "@/assets/deliveryIcon.png";
 import storePin from "@/assets/store-pin.png";
 
 const libraries = ["geometry"];
@@ -23,10 +22,13 @@ const containerStyle = {
   height: "100%",
   minHeight: "350px",
 };
-const RECENTER_INTERVAL_MS = 15000;
-const RIDER_FOCUS_RADIUS_M = 500;
 
-/** Delivery / rider search — not the same as waiting for seller acceptance */
+// Significantly faster recenter for smoother "follow" feeling
+const RECENTER_INTERVAL_MS = 4000; 
+const RIDER_FOCUS_RADIUS_M = 500;
+const INTERPOLATION_STEP_MS = 30; // 33fps for interpolation
+
+/** Delivery / rider search statuses */
 const SEARCHING_STATUSES = [
   "pending",
   "confirmed",
@@ -48,6 +50,33 @@ function hasValidLatLng(location) {
   );
 }
 
+/**
+ * Custom Airplane Emoji Pin - Premium Marker Style
+ */
+const getAirplaneEmojiPin = (heading = 0) => {
+  // We wrap the 🛩️ emoji in a high-end white circular pin with shadows and brand-blue accents.
+  // The plane itself rotates inside the pin.
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+      <!-- Shadow and base glow -->
+      <circle cx="32" cy="32" r="28" fill="white" />
+      <circle cx="32" cy="32" r="28" stroke="#45B0E2" stroke-width="3" />
+      
+      <!-- Subtle internal ring -->
+      <circle cx="32" cy="32" r="24" stroke="#45B0E2" stroke-width="1" stroke-dasharray="4 4" opacity="0.4" />
+      
+      <!-- Directional Indicator (Small blue triangle pointing where the plane is facing) -->
+      <g transform="rotate(${heading} 32 32)">
+        <path d="M32 4 L36 12 L28 12 Z" fill="#45B0E2" />
+        
+        <!-- The Emoji itself -->
+        <text x="32" y="38" font-size="34" text-anchor="middle" dominant-baseline="middle" style="font-family: Arial, sans-serif;">🛩️</text>
+      </g>
+    </svg>
+  `;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
 const LiveTrackingMap = memo(({
   status = "out for delivery",
   eta = "8 mins",
@@ -64,6 +93,11 @@ const LiveTrackingMap = memo(({
   const isSearching = SEARCHING_STATUSES.includes(status?.toLowerCase());
   const [progress, setProgress] = useState(0);
   const [dots, setDots] = useState("");
+  
+  // Interpolation state
+  const [interpolatedRider, setInterpolatedRider] = useState(riderLocation);
+  const riderRef = useRef(riderLocation);
+  const interpTimerRef = useRef(null);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
@@ -94,44 +128,86 @@ const LiveTrackingMap = memo(({
     map.fitBounds(bounds, 24);
   }, []);
 
-  const effectiveRiderLocation = riderLocation || 
+  // Handle interpolation when riderLocation changes
+  useEffect(() => {
+    if (!hasValidLatLng(riderLocation)) return;
+    
+    if (!hasValidLatLng(riderRef.current)) {
+      setInterpolatedRider(riderLocation);
+      riderRef.current = riderLocation;
+      return;
+    }
+
+    if (interpTimerRef.current) clearInterval(interpTimerRef.current);
+
+    const startPos = { ...riderRef.current };
+    const endPos = { ...riderLocation };
+    
+    const duration = 1500;
+    const steps = duration / INTERPOLATION_STEP_MS;
+    let currentStep = 0;
+
+    interpTimerRef.current = setInterval(() => {
+      currentStep++;
+      if (currentStep >= steps) {
+        setInterpolatedRider(endPos);
+        riderRef.current = endPos;
+        clearInterval(interpTimerRef.current);
+        return;
+      }
+
+      const ratio = currentStep / steps;
+      const nextLat = startPos.lat + (endPos.lat - startPos.lat) * ratio;
+      const nextLng = startPos.lng + (endPos.lng - startPos.lng) * ratio;
+      
+      const nextPos = {
+        ...endPos,
+        lat: nextLat,
+        lng: nextLng,
+      };
+      
+      setInterpolatedRider(nextPos);
+      riderRef.current = nextPos;
+    }, INTERPOLATION_STEP_MS);
+
+    return () => {
+      if (interpTimerRef.current) clearInterval(interpTimerRef.current);
+    };
+  }, [riderLocation?.lat, riderLocation?.lng]);
+
+  const effectiveRiderLocation = interpolatedRider || 
     (hasValidLatLng(sellerLocation) ? sellerLocation : 
     (hasValidLatLng(destinationLocation) ? destinationLocation : null));
 
   const activeTargetLocation = routePhase === "delivery" ? destinationLocation : sellerLocation;
   const shouldShowStoreMarker =
-    routePhase === "pickup" && hasValidLatLng(sellerLocation) && !(!riderLocation && hasValidLatLng(sellerLocation));
+    routePhase === "pickup" && hasValidLatLng(sellerLocation) && !(!interpolatedRider && hasValidLatLng(sellerLocation));
   const shouldShowCustomerMarker =
     routePhase === "delivery" && hasValidLatLng(destinationLocation);
 
-  // Decode polyline from Firebase
   const decodedPath = useMemo(() => {
     if (!routePolyline?.polyline || !isLoaded || !window.google?.maps?.geometry?.encoding) {
-      if (routePolyline && !routePolyline.polyline) {
-        console.log("[LiveTrackingMap] Route data exists but no polyline:", routePolyline);
-      }
       return null;
     }
     try {
-      const decoded = window.google.maps.geometry.encoding.decodePath(routePolyline.polyline);
-      console.log(`[LiveTrackingMap] ✓ Decoded polyline with ${decoded.length} points`);
-      return decoded;
+      return window.google.maps.geometry.encoding.decodePath(routePolyline.polyline);
     } catch (err) {
       console.error("[LiveTrackingMap] Error decoding polyline:", err);
       return null;
     }
   }, [routePolyline, isLoaded]);
 
-  const getRiderIcon = () => {
-    if (!isLoaded || !deliveryIcon) return undefined;
+  const getRiderIcon = (heading) => {
+    if (!isLoaded) return undefined;
+    const url = getAirplaneEmojiPin(heading || 0);
     if (typeof window !== "undefined" && window.google?.maps?.Size) {
       return {
-        url: deliveryIcon,
-        scaledSize: new window.google.maps.Size(44, 64),
-        anchor: new window.google.maps.Point(22, 64),
+        url,
+        scaledSize: new window.google.maps.Size(48, 48),
+        anchor: new window.google.maps.Point(24, 24),
       };
     }
-    return deliveryIcon;
+    return url;
   };
 
   const getCustomerIcon = () => {
@@ -158,24 +234,22 @@ const LiveTrackingMap = memo(({
     return storePin;
   };
 
-  const riderMarkerIcon = getRiderIcon();
+  const riderMarkerIcon = useMemo(() => getRiderIcon(interpolatedRider?.heading), [isLoaded, interpolatedRider?.heading]);
   const customerMarkerIcon = getCustomerIcon();
   const storeMarkerIcon = getStoreIcon();
 
-  // Calculate map center and bounds
   const mapCenter = useMemo(() => {
     if (effectiveRiderLocation) return effectiveRiderLocation;
     if (hasValidLatLng(activeTargetLocation)) return activeTargetLocation;
     return { lat: 20.5937, lng: 78.9629 };
   }, [activeTargetLocation, effectiveRiderLocation]);
 
-  // Fit bounds when locations or route change
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !window.google) return;
 
-    if (hasValidLatLng(effectiveRiderLocation)) {
-      focusOnRider500m(map, effectiveRiderLocation);
+    if (hasValidLatLng(interpolatedRider)) {
+      focusOnRider500m(map, interpolatedRider);
       return;
     }
     
@@ -183,14 +257,12 @@ const LiveTrackingMap = memo(({
       const bounds = new window.google.maps.LatLngBounds();
       let hasPoints = false;
       
-      // Add route points if available
       if (decodedPath && decodedPath.length > 0) {
         decodedPath.forEach((point) => bounds.extend(point));
         hasPoints = true;
       } else {
-        // Fallback to rider and current phase destination
-        if (riderLocation) {
-          bounds.extend(riderLocation);
+        if (interpolatedRider) {
+          bounds.extend(interpolatedRider);
           hasPoints = true;
         }
         if (hasValidLatLng(activeTargetLocation)) {
@@ -205,21 +277,20 @@ const LiveTrackingMap = memo(({
     } catch (err) {
       console.error("Error fitting bounds:", err);
     }
-  }, [activeTargetLocation, riderLocation, decodedPath, focusOnRider500m]);
+  }, [activeTargetLocation, interpolatedRider, decodedPath, focusOnRider500m]);
 
-  // Keep rider centered during live tracking with a smooth map pan.
   useEffect(() => {
-    if (!isLoaded || !mapRef.current || !hasValidLatLng(riderLocation)) return undefined;
+    if (!isLoaded || !mapRef.current || !hasValidLatLng(interpolatedRider)) return undefined;
 
     const intervalId = setInterval(() => {
       const map = mapRef.current;
-      if (!map || !hasValidLatLng(riderLocation)) return;
-      map.panTo(riderLocation);
-      focusOnRider500m(map, riderLocation);
+      if (!map || !hasValidLatLng(interpolatedRider)) return;
+      map.panTo(interpolatedRider);
+      focusOnRider500m(map, interpolatedRider);
     }, RECENTER_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
-  }, [isLoaded, riderLocation?.lat, riderLocation?.lng, focusOnRider500m]);
+  }, [isLoaded, interpolatedRider?.lat, interpolatedRider?.lng, focusOnRider500m]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -274,11 +345,9 @@ const LiveTrackingMap = memo(({
     );
   }
 
-  // ─── SEARCHING STATE ───────────────────────────────────────────────────
   if (isSearching) {
     return (
       <div className="relative w-full h-[320px] bg-gradient-to-br from-[#f0faf4] to-[#e8f5e9] overflow-hidden rounded-b-[2rem] flex flex-col items-center justify-center gap-4">
-        {/* Animated radar rings */}
         {[1, 2, 3].map((i) => (
           <motion.div
             key={i}
@@ -294,7 +363,6 @@ const LiveTrackingMap = memo(({
           />
         ))}
 
-        {/* Center dot */}
         <motion.div
           animate={{ scale: [1, 1.1, 1] }}
           transition={{ duration: 1.5, repeat: Infinity }}
@@ -302,7 +370,6 @@ const LiveTrackingMap = memo(({
           <Search size={28} className="text-white" />
         </motion.div>
 
-        {/* Text */}
         <div className="relative z-10 text-center px-6">
           <h3 className="text-lg font-black text-gray-800">
             Searching for delivery partner{dots}
@@ -312,7 +379,6 @@ const LiveTrackingMap = memo(({
           </p>
         </div>
 
-        {/* Status pill */}
         <motion.div
           animate={{ y: [0, -4, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
@@ -328,9 +394,6 @@ const LiveTrackingMap = memo(({
     );
   }
 
-  // ─── LIVE TRACKING STATE ───────────────────────────────────────────────
-  
-  // If Google Maps is not loaded or no API key
   if (!apiKey) {
     return (
       <div className="relative w-full h-[350px] bg-slate-100 rounded-b-[2rem] flex items-center justify-center text-center px-4">
@@ -359,7 +422,6 @@ const LiveTrackingMap = memo(({
 
   return (
     <div className="relative w-full h-[350px] bg-[#E5E3DF] overflow-hidden rounded-b-[2rem] shadow-md border-b border-gray-200">
-      {/* Google Map */}
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={mapCenter}
@@ -373,20 +435,14 @@ const LiveTrackingMap = memo(({
           fullscreenControl: false,
         }}
       >
-        {/* Rider Location Marker */}
         {effectiveRiderLocation && (
           <Marker
             position={effectiveRiderLocation}
             title="Delivery Partner"
-            icon={`data:image/svg+xml;utf8,${encodeURIComponent(
-              `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-                <text x="50%" y="50%" font-size="30" text-anchor="middle" dominant-baseline="central">🛩️</text>
-              </svg>`
-            )}`}
+            icon={riderMarkerIcon}
           />
         )}
 
-        {/* Store Marker */}
         {shouldShowStoreMarker && (
           <Marker
             position={sellerLocation}
@@ -395,7 +451,6 @@ const LiveTrackingMap = memo(({
           />
         )}
 
-        {/* Destination Marker */}
         {shouldShowCustomerMarker && (
           <Marker
             position={destinationLocation}
@@ -404,7 +459,6 @@ const LiveTrackingMap = memo(({
           />
         )}
 
-        {/* Line connecting rider to destination - use cached polyline if available */}
         {decodedPath && decodedPath.length > 0 ? (
           <Polyline
             path={decodedPath}
@@ -428,7 +482,6 @@ const LiveTrackingMap = memo(({
         ) : null}
       </GoogleMap>
 
-      {/* 3. Floating Overlay Cards */}
       <div className="absolute top-4 left-4 right-4 z-40 flex justify-between items-start">
         <motion.div
           initial={{ y: -20, opacity: 0 }}
@@ -460,27 +513,21 @@ const LiveTrackingMap = memo(({
         </button>
       </div>
 
-      {/* 4. Rider Info Card removed */}
-
-      {/* Location status indicator removed */}
-
-      {/* Route cache indicator */}
       {routePolyline && (
         <div className="absolute bottom-2 right-2 bg-white/95 backdrop-blur px-2 py-1 rounded-md text-[10px] text-slate-600 font-bold border border-slate-200 shadow-sm">
-          Route cached • Reduced API cost
+          Live Tracking Active • {Math.round(interpolatedRider?.speed || 0)} km/h
         </div>
       )}
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison function for memo
-  // Only re-render if these props actually change
   return (
     prevProps.status === nextProps.status &&
     prevProps.eta === nextProps.eta &&
     prevProps.riderName === nextProps.riderName &&
     prevProps.riderLocation?.lat === nextProps.riderLocation?.lat &&
     prevProps.riderLocation?.lng === nextProps.riderLocation?.lng &&
+    prevProps.riderLocation?.heading === nextProps.riderLocation?.heading &&
     prevProps.sellerLocation?.lat === nextProps.sellerLocation?.lat &&
     prevProps.sellerLocation?.lng === nextProps.sellerLocation?.lng &&
     prevProps.destinationLocation?.lat === nextProps.destinationLocation?.lat &&
@@ -495,4 +542,3 @@ const LiveTrackingMap = memo(({
 LiveTrackingMap.displayName = 'LiveTrackingMap';
 
 export default LiveTrackingMap;
-

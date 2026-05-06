@@ -43,14 +43,14 @@ async function findOrderForUpdate(orderOrId, session) {
   // Backward-compat: older / partially-upgraded orders may have paymentBreakdown without snapshots.
   // Mongoose will throw a cast error on save if `paymentBreakdown.snapshots` is undefined.
   if (order.paymentBreakdown) {
-    const snapshots = order.paymentBreakdown.snapshots;
-    if (!snapshots || typeof snapshots !== "object") {
-      order.paymentBreakdown.snapshots = {
+    if (!order.paymentBreakdown.snapshots || typeof order.paymentBreakdown.snapshots !== "object") {
+      order.set("paymentBreakdown.snapshots", {
         deliverySettings: {},
         categoryCommissionSettings: [],
         handlingFeeStrategy: null,
         handlingCategoryUsed: {},
-      };
+      });
+      order.markModified("paymentBreakdown");
     }
   }
   return order;
@@ -91,14 +91,15 @@ function syncLegacyPricing(order) {
 
 function ensurePaymentBreakdownSnapshots(order) {
   if (!order?.paymentBreakdown) return;
-  const snapshots = order.paymentBreakdown.snapshots;
-  if (snapshots && typeof snapshots === "object") return;
-  order.paymentBreakdown.snapshots = {
-    deliverySettings: {},
-    categoryCommissionSettings: [],
-    handlingFeeStrategy: null,
-    handlingCategoryUsed: {},
-  };
+  if (!order.paymentBreakdown.snapshots || typeof order.paymentBreakdown.snapshots !== "object") {
+    order.set("paymentBreakdown.snapshots", {
+      deliverySettings: {},
+      categoryCommissionSettings: [],
+      handlingFeeStrategy: null,
+      handlingCategoryUsed: {},
+    });
+    order.markModified("paymentBreakdown");
+  }
 }
 
 function parsePositiveInt(value, fallback) {
@@ -131,7 +132,7 @@ function computeReturnWindowDates(deliveredAt) {
 export function freezeFinancialSnapshot(order, breakdown) {
   if (!order || !breakdown) return order;
 
-  const sanitized = { ...breakdown };
+  const sanitized = { ...(breakdown || {}) };
   if (!sanitized.snapshots || typeof sanitized.snapshots !== "object") {
     sanitized.snapshots = {
       deliverySettings: {},

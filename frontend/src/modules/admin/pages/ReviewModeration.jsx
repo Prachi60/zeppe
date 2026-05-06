@@ -38,24 +38,31 @@ const ReviewModeration = () => {
         try {
             setLoading(true);
             const res = await adminApi.getPendingReviews({ page: requestedPage, limit: pageSize });
-            if (res.data.success) {
-                const payload = res.data.result || {};
-                const data = Array.isArray(payload.items) ? payload.items : (res.data.results || []);
-                setReviews(data.map(r => ({
+            if (res?.data?.success) {
+                const payload = res.data.result || res.data.results || {};
+                const items = Array.isArray(payload.items) 
+                    ? payload.items 
+                    : (Array.isArray(payload) ? payload : []);
+                
+                const mappedReviews = items.map(r => ({
                     ...r,
-                    id: r._id,
-                    user: r.userId?.name || "Anonymous",
-                    item: r.productId?.name || "Deleted Product",
-                    itemImage: r.productId?.images?.[0],
-                    date: new Date(r.createdAt).toLocaleString(),
-                    tags: [] // Tags can be empty or logic-based
-                })));
-                setTotal(typeof payload.total === 'number' ? payload.total : data.length);
+                    id: r?._id,
+                    user: r?.userId?.name || "Anonymous",
+                    item: r?.productId?.name || "Deleted Product",
+                    itemImage: r?.productId?.mainImage,
+                    store: r?.productId?.sellerId?.shopName || "Unknown Store",
+                    date: r?.createdAt ? new Date(r.createdAt).toLocaleString() : "Recently",
+                    tags: Array.isArray(r?.tags) ? r.tags : []
+                }));
+
+                setReviews(mappedReviews);
+                setTotal(typeof payload.total === 'number' ? payload.total : mappedReviews.length);
                 setPage(typeof payload.page === 'number' ? payload.page : requestedPage);
             }
         } catch (error) {
             console.error("Fetch Reviews Error:", error);
-            showToast("Failed to load reviews", "error");
+            const msg = error.response?.data?.message || error.message || "Failed to load reviews";
+            showToast(msg, "error");
         } finally {
             setLoading(false);
         }
@@ -64,12 +71,13 @@ const ReviewModeration = () => {
     const handleApprove = async (id) => {
         try {
             const res = await adminApi.updateReviewStatus(id, 'approved');
-            if (res.data.success) {
+            if (res?.data?.success) {
                 setReviews(reviews.filter(r => r.id !== id));
                 fetchReviews(page);
                 showToast('Review approved and published', 'success');
             }
         } catch (error) {
+            console.error("Approve Review Error:", error);
             showToast("Failed to approve review", "error");
         }
     };
@@ -78,12 +86,13 @@ const ReviewModeration = () => {
         if (!window.confirm('Are you sure you want to reject and remove this review?')) return;
         try {
             const res = await adminApi.updateReviewStatus(id, 'rejected');
-            if (res.data.success) {
+            if (res?.data?.success) {
                 setReviews(reviews.filter(r => r.id !== id));
                 fetchReviews(page);
                 showToast('Review rejected and removed', 'warning');
             }
         } catch (error) {
+            console.error("Delete Review Error:", error);
             showToast("Failed to remove review", "error");
         }
     };
@@ -108,12 +117,6 @@ const ReviewModeration = () => {
                 <div>
                     <h1 className="ds-h1">Moderation Suite</h1>
                     <p className="ds-description mt-0.5">Protect community integrity and store reputations.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="flex bg-slate-100 p-1 rounded-xl">
-                        <button className="px-5 py-2 rounded-lg text-[10px] font-black uppercase bg-white text-slate-900 shadow-sm">ALL REVIEWS</button>
-                        <button className="px-5 py-2 rounded-lg text-[10px] font-black uppercase text-slate-400 hover:text-slate-600">FLAGGED ONLY</button>
-                    </div>
                 </div>
             </div>
 

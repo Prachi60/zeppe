@@ -18,6 +18,7 @@ import Button from '@shared/components/ui/Button';
 import { toast } from 'sonner';
 import { fetchPlansByRole, createSubscriptionOrder, verifySubscriptionPayment } from '@core/services/subscriptionService';
 import { openRazorpayCheckout } from '@core/services/razorpayService';
+import { useSettings } from '@core/context/SettingsContext';
 
 const AgreementSection = ({ title, children, icon: Icon }) => (
   <div className="mb-8 border-b border-gray-100 pb-8 last:border-0 last:pb-0">
@@ -72,6 +73,13 @@ const VendorSubscription = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [plan, setPlan] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { settings } = useSettings();
+
+  useEffect(() => {
+    if (settings?.subscriptionsEnabled === false) {
+      navigate('/seller');
+    }
+  }, [settings, navigate]);
 
   useEffect(() => {
     const loadPlan = async () => {

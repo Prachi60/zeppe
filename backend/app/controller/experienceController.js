@@ -25,7 +25,7 @@ const validateBasePayload = async (body) => {
     throw new Error("Invalid pageType");
   }
 
-  if (!["banners", "categories", "subcategories", "products"].includes(displayType)) {
+  if (!["banners", "categories", "subcategories", "products", "brands"].includes(displayType)) {
     throw new Error("Invalid displayType");
   }
 
@@ -192,6 +192,20 @@ const validateAndNormalizeConfig = async (displayType, config = {}) => {
       rows: normalizedRows,
       columns: normalizedColumns,
       singleRowScrollable,
+    };
+    return normalized;
+  }
+
+  if (displayType === "brands") {
+    const items = Array.isArray(config.items) ? config.items : [];
+    normalized.brands = {
+      items: items
+        .filter((b) => b && b.name && b.image)
+        .map((b) => ({
+          name: b.name,
+          image: b.image,
+          linkValue: b.linkValue || "",
+        })),
     };
     return normalized;
   }

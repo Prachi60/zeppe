@@ -482,20 +482,29 @@ const OrderDetails = () => {
   };
 
   const handleOtpValidationSuccess = (data) => {
-    // Return pickup OTP success → backend sets return_in_transit → show step 3 (navigate to seller)
     const updatedOrder = data?.result || data?.data?.result;
     
-    // Reset local transitional states first for instant visual feedback
+    // Reset local transitional states
     setShowOtpInput(false);
-    setPickupProofSubmitted(false); // Reset for the next delivery/drop-off proof if needed
+    setPickupProofSubmitted(false);
     setIsSlideComplete(false);
     setDragX(0);
-    setStep(3); // Optimistic step update
 
     if (updatedOrder) setOrder(updatedOrder);
-    
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    toast.success("✅ Pickup verified! Navigate to seller for drop-off.");
+
+    if (isReturn) {
+      // Return pickup OTP success → show step 3 (navigate to seller)
+      setStep(3);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      toast.success("✅ Pickup verified! Navigate to seller for drop-off.");
+    } else {
+      // Standard delivery OTP success → show step 4 (delivered)
+      setStep(4);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      toast.success("✅ Order Delivered Successfully!");
+      // Briefly show the delivered state then navigate home
+      setTimeout(() => navigate("/delivery/dashboard"), 2000);
+    }
   };
 
   const handleOtpValidationError = (error) => {

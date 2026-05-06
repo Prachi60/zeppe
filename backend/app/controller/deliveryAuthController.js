@@ -1,5 +1,6 @@
 import Delivery from "../models/delivery.js";
 import UserSubscription from "../models/userSubscription.js";
+import Setting from "../models/setting.js";
 import jwt from "jsonwebtoken";
 import handleResponse from "../utils/helper.js";
 import { sendOtpEmail } from "../services/nodemailerService.js";
@@ -174,9 +175,23 @@ export const verifyDeliveryOTP = async (req, res) => {
 
         const token = generateToken(delivery);
 
+        // Verify subscription status dynamically
+        const settings = await Setting.findOne({});
+        const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+
+        const activeSub = await UserSubscription.findOne({
+            userId: delivery._id,
+            role: "delivery",
+            status: "active",
+            endDate: { $gt: new Date() }
+        });
+
+        const deliveryObj = delivery.toObject();
+        deliveryObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
+
         return handleResponse(res, 200, "Login successful", {
             token,
-            delivery,
+            delivery: deliveryObj,
         });
     } catch (error) {
         return handleResponse(res, 500, error.message);
@@ -193,6 +208,9 @@ export const getDeliveryProfile = async (req, res) => {
             return handleResponse(res, 404, "Delivery partner not found");
         }
         // Verify subscription status dynamically
+        const settings = await Setting.findOne({});
+        const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+
         const activeSub = await UserSubscription.findOne({
             userId: req.user.id,
             role: "delivery",
@@ -201,7 +219,7 @@ export const getDeliveryProfile = async (req, res) => {
         });
 
         const deliveryObj = delivery.toObject();
-        deliveryObj.subscriptionStatus = activeSub ? "active" : "inactive";
+        deliveryObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
 
         return handleResponse(res, 200, "Profile fetched successfully", deliveryObj);
     } catch (error) {

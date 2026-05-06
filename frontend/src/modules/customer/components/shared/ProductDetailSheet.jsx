@@ -72,11 +72,16 @@ const ProductDetailSheet = () => {
         try {
             setReviewLoading(true);
             const res = await customerApi.getProductReviews(productId);
-            if (res.data.success) {
-                setReviews(res.data.results);
+            if (res?.data?.success) {
+                const payload = res.data.result || res.data.results || {};
+                const items = Array.isArray(payload.items) 
+                    ? payload.items 
+                    : (Array.isArray(payload) ? payload : []);
+                setReviews(items);
             }
         } catch (error) {
             console.error("Fetch reviews error:", error);
+            setReviews([]);
         } finally {
             setReviewLoading(false);
         }
@@ -224,7 +229,6 @@ const ProductDetailSheet = () => {
     const cleanDesc = cleanDescription(selectedProduct?.description);
 
     const AccordionItem = ({ title, children, id, icon }) => {
-        if (id === 'reviews') return null;
         const isOpen = expandedSections.includes(id);
         return (
             <div className="border-b border-slate-100 last:border-0">

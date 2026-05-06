@@ -136,12 +136,33 @@ const SellerTransactions = () => {
         });
     }, [transactions, searchTerm, filterStatus, filterType, selectedSeller]);
 
-    const handleExport = () => {
-        setIsExporting(true);
-        setTimeout(() => {
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            const params = {
+                type: filterType !== 'all' ? filterType : undefined,
+                status: filterStatus !== 'all' ? filterStatus : undefined,
+                search: searchTerm.trim() || undefined,
+            };
+
+            const response = await adminApi.exportFinanceStatement(params);
+            
+            // Create a link element and trigger the download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `zeppe-master-ledger-${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            
+            toast.success('Financial ledger exported successfully');
+        } catch (error) {
+            console.error("Export error:", error);
+            toast.error("Failed to export ledger");
+        } finally {
             setIsExporting(false);
-            alert('Financial ledger exported successfully.');
-        }, 1500);
+        }
     };
 
     if (loading) {

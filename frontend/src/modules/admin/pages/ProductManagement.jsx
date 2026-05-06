@@ -25,7 +25,8 @@ const productSchema = z.object({
     stock: z.preprocess((a) => parseInt(a), z.number().min(0)),
     status: z.enum(['active', 'inactive']),
     categoryId: z.string().min(1, 'Category is required'),
-    description: z.string().optional()
+    description: z.string().optional(),
+    mainImage: z.any().optional()
 });
 
 const ProductManagement = () => {
@@ -33,6 +34,7 @@ const ProductManagement = () => {
     const [editingItem, setEditingItem] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [categories, setCategories] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         adminApi.getCategoryTree().then(res => {
@@ -209,6 +211,7 @@ const ProductManagement = () => {
                     schema={productSchema}
                     fields={[
                         { section: 'Basic Info', name: 'name', label: 'Product Title', fullWidth: true, required: true },
+                        { section: 'Basic Info', name: 'mainImage', label: 'Product Image', type: 'image', fullWidth: true },
                         { section: 'Basic Info', name: 'categoryId', label: 'Category', type: 'select', options: categories, required: true },
                         { section: 'Basic Info', name: 'status', label: 'Listing Status', type: 'select', options: [{label: 'Active', value: 'active'}, {label: 'Inactive', value: 'inactive'}], required: true },
                         { section: 'Inventory & Pricing', name: 'price', label: 'Sale Price (₹)', type: 'number', required: true },
@@ -216,14 +219,33 @@ const ProductManagement = () => {
                         { section: 'Details', name: 'description', label: 'Description', type: 'textarea', fullWidth: true }
                     ]}
                     defaultValues={editingItem}
+                    isLoading={isSubmitting}
                     onSubmit={async (data) => {
+                        setIsSubmitting(true);
                         try {
-                            await adminApi.updateProduct(editingItem._id, data);
+                            const formData = new FormData();
+                            Object.keys(data).forEach(key => {
+                                if (key === 'mainImage') {
+                                    if (data[key] instanceof FileList && data[key].length > 0) {
+                                        formData.append('mainImage', data[key][0]);
+                                    } else if (typeof data[key] === 'string') {
+                                        // If it's a URL (original image), we might not need to send it back 
+                                        // unless the backend expects it. Usually we only send the new file.
+                                        formData.append('mainImage', data[key]);
+                                    }
+                                } else {
+                                    formData.append(key, data[key]);
+                                }
+                            });
+
+                            await adminApi.updateProduct(editingItem._id, formData);
                             toast.success('Product updated');
                             setIsModalOpen(false);
                             setRefreshTrigger(p => p + 1);
                         } catch (e) {
                             toast.error('Update failed');
+                        } finally {
+                            setIsSubmitting(false);
                         }
                     }}
                     submitLabel="Update Product"

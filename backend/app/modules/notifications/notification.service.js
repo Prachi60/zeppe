@@ -1,6 +1,8 @@
 import { EventEmitter } from "events";
 import Notification from "./notification.model.js";
 import NotificationPreference from "./preference.model.js";
+import PushToken from "./token.model.js";
+import { sendFCM } from "./firebase.service.js";
 import { buildNotification } from "./notification.builder.js";
 import {
   DEFAULT_DEDUP_TTL_SECONDS,
@@ -260,10 +262,58 @@ export function emitDeliveryNotification(eventType, payload = {}) {
   });
 }
 
+export async function broadcastCampaign({ title, body, segment = "all", data = {} }) {
+  if (!NOTIFICATIONS_ENABLED()) {
+    return { successCount: 0, failureCount: 0, totalTokens: 0 };
+  }
+
+  // 1. Fetch tokens based on segment
+  // If "all", we target tokens for all roles.
+  // Otherwise, we default to CUSTOMER for now (Power Users, etc.)
+  const query = { isActive: true };
+  
+  if (segment !== "all") {
+    query.role = NOTIFICATION_ROLES.CUSTOMER;
+    // TODO: Add segmentation logic based on lastOrder, etc. for other segments
+  }
+  
+  const activeTokens = await PushToken.find(query).distinct("token").lean();
+
+  if (!activeTokens.length) {
+    return { successCount: 0, failureCount: 0, totalTokens: 0 };
+  }
+
+  // 2. Send via FCM
+  const result = await sendFCM(activeTokens, {
+    title,
+    body,
+    data: {
+      ...data,
+      type: "campaign",
+      sentAt: new Date().toISOString(),
+    },
+  });
+
+  logger.info("Notification campaign broadcasted", {
+    title,
+    segment,
+    successCount: result.successCount,
+    failureCount: result.failureCount,
+    totalTokens: activeTokens.length,
+  });
+
+  return {
+    successCount: result.successCount,
+    failureCount: result.failureCount,
+    totalTokens: activeTokens.length,
+  };
+}
+
 export default {
   notify,
   emitNotificationEvent,
   emitCustomerNotification,
   emitSellerNotification,
   emitDeliveryNotification,
+  broadcastCampaign,
 };

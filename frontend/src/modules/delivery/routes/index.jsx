@@ -24,6 +24,8 @@ const SubscriptionStatus = lazy(() => import("../pages/profile/SubscriptionStatu
 const Notifications = lazy(() => import("../pages/Notifications"));
 const Subscription = lazy(() => import("../pages/Subscription"));
 
+import { useSettings } from "@core/context/SettingsContext";
+
 const LoadingFallback = () => (
   <div className="flex h-screen w-full items-center justify-center bg-slate-50 text-xs font-bold uppercase tracking-widest text-slate-400">
     Initializing...
@@ -31,6 +33,8 @@ const LoadingFallback = () => (
 );
 
 const DeliveryRoutes = () => {
+  const { settings } = useSettings();
+  const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
@@ -57,7 +61,7 @@ const DeliveryRoutes = () => {
           <Route path="profile/withdrawals" element={<Withdrawals />} />
           <Route path="profile/subscription" element={<SubscriptionStatus />} />
           <Route path="notifications" element={<Notifications />} />
-          <Route path="/" element={<Navigate to="subscription" replace />} />
+          <Route path="/" element={<Navigate to={isGlobalEnabled ? "subscription" : "dashboard"} replace />} />
         </Route>
       </Routes>
     </Suspense>

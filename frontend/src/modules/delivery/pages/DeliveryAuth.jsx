@@ -134,8 +134,16 @@ const DeliveryAuth = () => {
 
       login({ ...delivery, token, role: "delivery" });
 
-      toast.success(mode === "login" ? "Welcome back! Redirecting..." : "Welcome! Complete your subscription to start.");
-      navigate("/delivery/subscription");
+      const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+      const isSubscribed = delivery.subscriptionStatus === "active" || !isGlobalEnabled;
+
+      toast.success(mode === "login" ? "Welcome back! Redirecting..." : "Welcome! Complete your account to start.");
+      
+      if (isSubscribed) {
+        navigate("/delivery/dashboard");
+      } else {
+        navigate("/delivery/subscription");
+      }
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Invalid OTP");

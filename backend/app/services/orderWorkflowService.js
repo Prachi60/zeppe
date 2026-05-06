@@ -4,6 +4,7 @@ import Order from "../models/order.js";
 import DeliveryAssignment from "../models/deliveryAssignment.js";
 import OrderOtp from "../models/orderOtp.js";
 import Seller from "../models/seller.js";
+import User from "../models/customer.js";
 import {
   WORKFLOW_STATUS,
   legacyStatusFromWorkflow,
@@ -892,6 +893,7 @@ export async function advanceDeliveryRiderUiAtomic(deliveryId, orderId) {
 }
 
 export async function requestHandoffOtpAtomic(deliveryId, orderId, lat, lng) {
+  orderId = await requireCanonicalOrderId(orderId);
   if (
     typeof lat !== "number" ||
     typeof lng !== "number" ||
@@ -916,22 +918,23 @@ export async function requestHandoffOtpAtomic(deliveryId, orderId, lat, lng) {
   }
 
   const cust = order.address?.location;
-  if (
-    typeof cust?.lat !== "number" ||
-    typeof cust?.lng !== "number" ||
-    !Number.isFinite(cust.lat) ||
-    !Number.isFinite(cust.lng)
-  ) {
-    const err = new Error("Customer address coordinates missing");
-    err.statusCode = 400;
-    throw err;
-  }
+  const hasCoordinates = 
+    typeof cust?.lat === "number" &&
+    typeof cust?.lng === "number" &&
+    Number.isFinite(cust.lat) &&
+    Number.isFinite(cust.lng);
 
-  const d = distanceMeters(lat, lng, cust.lat, cust.lng);
-  if (d > OTP_RADIUS_M()) {
-    const err = new Error(`Too far from customer (>${OTP_RADIUS_M()}m)`);
-    err.statusCode = 400;
-    throw err;
+  if (hasCoordinates) {
+    const d = distanceMeters(lat, lng, cust.lat, cust.lng);
+    if (d > OTP_RADIUS_M()) {
+      const err = new Error(`Too far from customer (>${OTP_RADIUS_M()}m)`);
+      err.statusCode = 400;
+      err.code = "PROXIMITY_OUT_OF_RANGE";
+      err.details = { currentDistance: Math.round(d), requiredRange: `0-${OTP_RADIUS_M()}m` };
+      throw err;
+    }
+  } else {
+    console.warn(`[OTP] Skipping proximity check for order ${orderId} - customer coordinates missing`);
   }
 
   const redis = getRedisClient();
@@ -997,7 +1000,18 @@ export async function verifyHandoffOtpAndDeliver(deliveryId, orderId, code) {
     workflowVersion: { $gte: 2 },
   });
 
-  if (!order || order.workflowStatus !== WORKFLOW_STATUS.OUT_FOR_DELIVERY) {
+  if (!order) {
+    const err = new Error("Order not found or not assigned to you");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (order.workflowStatus === WORKFLOW_STATUS.DELIVERED) {
+    console.log(`[OTP] Order ${orderId} already delivered, returning success (idempotent)`);
+    return order;
+  }
+
+  if (order.workflowStatus !== WORKFLOW_STATUS.OUT_FOR_DELIVERY) {
     const err = new Error("Invalid state for delivery completion");
     err.statusCode = 409;
     throw err;
@@ -1009,34 +1023,38 @@ export async function verifyHandoffOtpAndDeliver(deliveryId, orderId, code) {
     consumedAt: null,
   }).sort({ createdAt: -1 });
 
-  if (!otp) {
-    const err = new Error("No active OTP");
-    err.statusCode = 400;
-    throw err;
-  }
-  if (otp.expiresAt < new Date()) {
-    const err = new Error("OTP expired");
-    err.statusCode = 400;
-    throw err;
-  }
-  if (otp.attempts >= otp.maxAttempts) {
-    const err = new Error("Too many OTP attempts");
-    err.statusCode = 429;
-    throw err;
+  let match = false;
+  if (otp) {
+    if (otp.expiresAt >= new Date() && otp.attempts < otp.maxAttempts) {
+      match = OrderOtp.hashCode(String(code)) === otp.codeHash;
+      if (!match) {
+        await OrderOtp.updateOne({ _id: otp._id }, { $inc: { attempts: 1 } });
+      }
+    }
   }
 
-  const match = OrderOtp.hashCode(String(code)) === otp.codeHash;
+  // Fallback to static OTP if dynamic match failed or no dynamic OTP exists
   if (!match) {
-    await OrderOtp.updateOne({ _id: otp._id }, { $inc: { attempts: 1 } });
+    const customer = await User.findById(order.customer);
+    if (customer?.deliveryStaticOtp && String(customer.deliveryStaticOtp) === String(code)) {
+      console.log(`[OTP] Static OTP match for order ${orderId}`);
+      match = true;
+    }
+  }
+
+  if (!match) {
     const err = new Error("Invalid OTP");
     err.statusCode = 400;
+    err.code = "OTP_MISMATCH";
     throw err;
   }
 
-  await OrderOtp.updateOne(
-    { _id: otp._id },
-    { $set: { consumedAt: new Date() } },
-  );
+  if (otp && match) {
+    await OrderOtp.updateOne(
+      { _id: otp._id },
+      { $set: { consumedAt: new Date() } },
+    );
+  }
 
   const now = new Date();
   const updated = await Order.findOneAndUpdate(

@@ -202,7 +202,14 @@ const Profile = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible">
-        {menuItems.map((item, index) => (
+        {menuItems
+          .filter(item => {
+            if (item.label === "Subscription Status") {
+              return settings?.subscriptionsEnabled !== false;
+            }
+            return true;
+          })
+          .map((item, index) => (
           <motion.button
             key={index}
             variants={itemVariants}

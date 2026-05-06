@@ -168,6 +168,10 @@ const settingSchema = new mongoose.Schema(
                 active: { type: Boolean, default: true },
             }
         ],
+        subscriptionsEnabled: {
+            type: Boolean,
+            default: true,
+        },
     },
     {
         timestamps: true,

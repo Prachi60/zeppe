@@ -51,6 +51,16 @@ const configSchema = new mongoose.Schema(
       columns: { type: Number, min: 1 },
       singleRowScrollable: { type: Boolean, default: false },
     },
+    // Brands section
+    brands: {
+      items: [
+        {
+          name: { type: String, required: true },
+          image: { type: String, required: true },
+          linkValue: { type: String },
+        },
+      ],
+    },
   },
   { _id: false }
 );
@@ -69,7 +79,7 @@ const experienceSectionSchema = new mongoose.Schema(
     },
     displayType: {
       type: String,
-      enum: ["banners", "categories", "subcategories", "products"],
+      enum: ["banners", "categories", "subcategories", "products", "brands"],
       required: true,
     },
     title: {

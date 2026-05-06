@@ -1,6 +1,7 @@
 import Seller from "../models/seller.js";
 import Transaction from "../models/transaction.js";
 import UserSubscription from "../models/userSubscription.js";
+import Setting from "../models/setting.js";
 import { handleResponse, calculateDistance } from "../utils/helper.js";
 import mongoose from "mongoose";
 
@@ -138,6 +139,9 @@ export const getSellerProfile = async (req, res) => {
       return handleResponse(res, 404, "Seller not found");
     }
     // Verify subscription status dynamically
+    const settings = await Setting.findOne({});
+    const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+
     const activeSub = await UserSubscription.findOne({
       userId: req.user.id,
       role: "seller",
@@ -146,7 +150,7 @@ export const getSellerProfile = async (req, res) => {
     });
 
     const sellerObj = seller.toObject();
-    sellerObj.subscriptionStatus = activeSub ? "active" : "inactive";
+    sellerObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
 
     return handleResponse(
       res,
