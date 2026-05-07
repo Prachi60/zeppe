@@ -89,7 +89,7 @@ export function getOrderSocket(getToken) {
   if (socket.disconnected) {
     socket.connect();
   }
-  
+
   return socket;
 }
 
@@ -120,56 +120,56 @@ export function leaveOrderRoom(orderId, getToken) {
 
 export function onOrderStatusUpdate(getToken, handler) {
   const s = getOrderSocket(getToken);
-  if (!s || typeof handler !== "function") return () => {};
+  if (!s || typeof handler !== "function") return () => { };
   s.on("order:status:update", handler);
   return () => s.off("order:status:update", handler);
 }
 
 export function onDeliveryBroadcast(getToken, handler) {
   const s = getOrderSocket(getToken);
-  if (!s || typeof handler !== "function") return () => {};
+  if (!s || typeof handler !== "function") return () => { };
   s.on("delivery:broadcast", handler);
   return () => s.off("delivery:broadcast", handler);
 }
 
 export function onDeliveryBroadcastWithdrawn(getToken, handler) {
   const s = getOrderSocket(getToken);
-  if (!s || typeof handler !== "function") return () => {};
+  if (!s || typeof handler !== "function") return () => { };
   s.on("delivery:broadcast:withdrawn", handler);
   return () => s.off("delivery:broadcast:withdrawn", handler);
 }
 
 export function onSellerOrderNew(getToken, handler) {
   const s = getOrderSocket(getToken);
-  if (!s || typeof handler !== "function") return () => {};
+  if (!s || typeof handler !== "function") return () => { };
   s.on("order:new", handler);
   return () => s.off("order:new", handler);
 }
 
 export function onSellerReturnRequested(getToken, handler) {
   const s = getOrderSocket(getToken);
-  if (!s || typeof handler !== "function") return () => {};
+  if (!s || typeof handler !== "function") return () => { };
   s.on("return:requested", handler);
   return () => s.off("return:requested", handler);
 }
 
 export function onCustomerOtp(getToken, handler) {
   const s = getOrderSocket(getToken);
-  if (!s || typeof handler !== "function") return () => {};
+  if (!s || typeof handler !== "function") return () => { };
   s.on("order:otp", handler);
   return () => s.off("order:otp", handler);
 }
 
 export function onReturnPickupOtp(getToken, handler) {
   const s = getOrderSocket(getToken);
-  if (!s || typeof handler !== "function") return () => {};
+  if (!s || typeof handler !== "function") return () => { };
   s.on("return:pickup:otp", handler);
   return () => s.off("return:pickup:otp", handler);
 }
 
 export function onReturnDropOtp(getToken, handler) {
   const s = getOrderSocket(getToken);
-  if (!s || typeof handler !== "function") return () => {};
+  if (!s || typeof handler !== "function") return () => { };
   s.on("return:drop:otp", handler);
   return () => s.off("return:drop:otp", handler);
 }
@@ -178,16 +178,16 @@ export function onDeliveryOtpGenerated(getToken, handler) {
   const s = getOrderSocket(getToken);
   if (!s || typeof handler !== "function") {
     console.warn('[orderSocket] onDeliveryOtpGenerated: Socket not available or invalid handler');
-    return () => {};
+    return () => { };
   }
-  
+
   console.log('[orderSocket] Registering delivery:otp:generated listener');
-  
+
   const wrappedHandler = (payload) => {
     console.log('[orderSocket] delivery:otp:generated event received:', payload);
     handler(payload);
   };
-  
+
   s.on("delivery:otp:generated", wrappedHandler);
   return () => {
     console.log('[orderSocket] Unregistering delivery:otp:generated listener');
@@ -199,16 +199,16 @@ export function onDeliveryOtpValidated(getToken, handler) {
   const s = getOrderSocket(getToken);
   if (!s || typeof handler !== "function") {
     console.warn('[orderSocket] onDeliveryOtpValidated: Socket not available or invalid handler');
-    return () => {};
+    return () => { };
   }
-  
+
   console.log('[orderSocket] Registering delivery:otp:validated listener');
-  
+
   const wrappedHandler = (payload) => {
     console.log('[orderSocket] delivery:otp:validated event received:', payload);
     handler(payload);
   };
-  
+
   s.on("delivery:otp:validated", wrappedHandler);
   return () => {
     console.log('[orderSocket] Unregistering delivery:otp:validated listener');
@@ -218,7 +218,7 @@ export function onDeliveryOtpValidated(getToken, handler) {
 
 export function onCashLimitAlert(getToken, handler) {
   const s = getOrderSocket(getToken);
-  if (!s || typeof handler !== "function") return () => {};
+  if (!s || typeof handler !== "function") return () => { };
   s.on("delivery:cash:limit", handler);
   return () => s.off("delivery:cash:limit", handler);
 }

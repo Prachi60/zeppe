@@ -191,9 +191,9 @@ export const markNotificationsRead = async (req, res) => {
       markAll || (!notificationId && notificationIds.length === 0)
         ? { $or: [{ userId }, { recipient: userId }], isRead: false }
         : {
-            _id: { $in: validIds },
-            $or: [{ userId }, { recipient: userId }],
-          };
+          _id: { $in: validIds },
+          $or: [{ userId }, { recipient: userId }],
+        };
 
     const result = await Notification.updateMany(filter, {
       $set: { isRead: true },
@@ -380,8 +380,8 @@ export const getCampaignStats = async (req, res) => {
       totalUsers,
       recentUsers,
       reachableUsers: reachableTokens.length,
-      lapsedUsers: Math.floor(totalUsers * 0.2), 
-      powerUsers: Math.floor(totalUsers * 0.1), 
+      lapsedUsers: Math.floor(totalUsers * 0.2),
+      powerUsers: Math.floor(totalUsers * 0.1),
     });
   } catch (error) {
     return handleResponse(res, 500, error.message);

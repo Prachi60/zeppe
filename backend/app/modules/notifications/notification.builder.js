@@ -208,8 +208,7 @@ function eventDefinition(eventType) {
           normalizeIdList(payload.customerId || payload.userId),
         title: () => "Return Request Rejected",
         body: (payload) =>
-          `Your return request for order #${payload.orderId || ""} was rejected.${
-            payload.data?.reason ? " Reason: " + payload.data.reason : ""
+          `Your return request for order #${payload.orderId || ""} was rejected.${payload.data?.reason ? " Reason: " + payload.data.reason : ""
           }`,
       };
     case NOTIFICATION_EVENTS.NEW_RETURN_BROADCAST:
@@ -228,10 +227,9 @@ function eventDefinition(eventType) {
         recipientIds: (payload) => normalizeIdList(payload.deliveryId),
         title: () => "Return Pickup Assigned",
         body: (payload) =>
-          `Return pickup for order #${payload.orderId || ""}.${
-            payload.data?.commission
-              ? " Commission: ₹" + payload.data.commission + "."
-              : ""
+          `Return pickup for order #${payload.orderId || ""}.${payload.data?.commission
+            ? " Commission: ₹" + payload.data.commission + "."
+            : ""
           } Check app for details.`,
       };
     case NOTIFICATION_EVENTS.RETURN_PICKUP_OTP:
@@ -270,8 +268,7 @@ function eventDefinition(eventType) {
           normalizeIdList(payload.customerId || payload.userId),
         title: () => "QC Passed — Refund Initiated 💸",
         body: (payload) =>
-          `Quality check passed for order #${payload.orderId || ""}. Refund of ₹${
-            payload.data?.refundAmount || 0
+          `Quality check passed for order #${payload.orderId || ""}. Refund of ₹${payload.data?.refundAmount || 0
           } credited to your wallet.`,
       };
     case NOTIFICATION_EVENTS.RETURN_QC_FAILED:
@@ -281,8 +278,7 @@ function eventDefinition(eventType) {
           normalizeIdList(payload.customerId || payload.userId),
         title: () => "QC Failed — No Refund",
         body: (payload) =>
-          `Quality check failed for order #${payload.orderId || ""}. No refund will be issued.${
-            payload.data?.note ? " Note: " + payload.data.note : ""
+          `Quality check failed for order #${payload.orderId || ""}. No refund will be issued.${payload.data?.note ? " Note: " + payload.data.note : ""
           }`,
       };
     case NOTIFICATION_EVENTS.CASH_OVER_LIMIT:
