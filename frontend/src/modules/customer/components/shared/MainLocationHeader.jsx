@@ -584,7 +584,7 @@ const MainLocationHeader = ({
             transition: "all 0.3s ease"
           }}
           className={cn(
-            "w-full z-10 rounded-b-none px-4 pt-safe pb-0 md:rounded-none md:pt-4 md:pb-3 md:border-b md:border-black/10 transition-all duration-300 border-b-0",
+            "w-full z-10 rounded-b-none px-4 pt-0 pb-0 md:rounded-none md:pt-4 md:pb-3 md:border-b md:border-black/10 transition-all duration-300 border-b-0",
             isScrolled && !isDesktopViewport
               ? "shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-b-[24px]"
               : "shadow-none"

@@ -116,7 +116,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 </>
             )}
 
-            <main className={cn("flex-1 md:pb-0", !showHeader && "pt-0", !fullHeight && "pb-[70px]")}>
+            <main className={cn("flex-1 md:pb-0", !showHeader && "pt-0", !fullHeight && "pb-[calc(70px+env(safe-area-inset-bottom,0px))]")}>
                 {children}
             </main>
 
