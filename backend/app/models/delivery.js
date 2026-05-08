@@ -12,6 +12,11 @@ const deliverySchema = new mongoose.Schema(
             type: String,
             sparse: true,
         },
+        avatar: {
+            type: String,
+            trim: true,
+            default: "",
+        },
 
         vehicleType: {
             type: String,
@@ -57,15 +62,38 @@ const deliverySchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
-
+        vehicleModel: {
+            type: String,
+            trim: true,
+        },
+        vehicleColor: {
+            type: String,
+            trim: true,
+        },
+        fuelType: {
+            type: String,
+            trim: true,
+        },
         drivingLicenseNumber: {
             type: String,
             trim: true,
+        },
+        drivingLicenseExpiry: {
+            type: String,
+        },
+        rcExpiry: {
+            type: String,
         },
 
         currentArea: {
             type: String,
             trim: true,
+        },
+        dob: {
+            type: String, // Or Date
+        },
+        bloodGroup: {
+            type: String,
         },
 
         isVerified: {

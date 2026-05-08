@@ -1,5 +1,8 @@
+import mongoose from "mongoose";
 import Delivery from "../../models/delivery.js";
 import Order from "../../models/order.js";
+import Wallet from "../../models/wallet.js";
+import Transaction from "../../models/transaction.js";
 import { createAdminController } from "../../utils/controllerFactory.js";
 import { handleResponse } from "../../utils/helper.js";
 import { buildQuery, buildSort, getPaginationOptions } from "../../utils/queryBuilder.js";
@@ -29,8 +32,76 @@ export const getDeliveryBoys = async (req, res) => {
             Delivery.countDocuments(query),
         ]);
 
+        // Enrich with stats
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        const enrichedItems = await Promise.all(items.map(async (rider) => {
+            const riderId = new mongoose.Types.ObjectId(rider._id);
+            const [totalDeliveries, wallet, earningResults, totalEarningResults] = await Promise.all([
+                Order.countDocuments({ 
+                    deliveryBoy: riderId, 
+                    $or: [
+                        { status: 'delivered' },
+                        { workflowStatus: 'delivered' }
+                    ]
+                }),
+                Wallet.findOne({ ownerId: riderId, ownerType: 'DELIVERY_PARTNER' }),
+                Transaction.aggregate([
+                    {
+                        $match: {
+                            user: riderId,
+                            userModel: 'Delivery',
+                            status: 'Settled',
+                            type: { $in: ['Delivery Earning', 'Incentive', 'Bonus'] },
+                            createdAt: { $gte: startOfToday }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            todayEarnings: { $sum: '$amount' }
+                        }
+                    }
+                ]),
+                Transaction.aggregate([
+                    {
+                        $match: {
+                            user: riderId,
+                            userModel: 'Delivery',
+                            status: 'Settled',
+                            type: { $in: ['Delivery Earning', 'Incentive', 'Bonus'] }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            totalEarnings: { $sum: '$amount' }
+                        }
+                    }
+                ])
+            ]);
+
+            const earningResult = earningResults[0];
+            const totalEarningResult = totalEarningResults[0];
+            
+            // Debug logs
+            console.log(`[Admin Stats] Rider: ${rider.name} (${riderId})`);
+            console.log(`[Admin Stats] Total Deliveries: ${totalDeliveries}`);
+            console.log(`[Admin Stats] Total Earnings: ${totalEarningResult?.totalEarnings || 0}`);
+
+            return {
+                ...rider,
+                totalDeliveries,
+                totalEarnings: totalEarningResult?.totalEarnings || 0,
+                walletBalance: wallet?.availableBalance || 0,
+                todayEarnings: earningResult?.todayEarnings || 0,
+                rating: 4.5, 
+            };
+        }));
+
         return handleResponse(res, 200, "Deliverys fetched successfully", {
-            items,
+            items: enrichedItems,
             page,
             limit,
             total,
@@ -41,7 +112,9 @@ export const getDeliveryBoys = async (req, res) => {
         return handleResponse(res, 500, error.message);
     }
 };
+
 export const getDeliveryBoyById = controller.getById;
+
 export const updateDeliveryBoy = async (req, res) => {
     try {
         const rider = await Delivery.findByIdAndUpdate(
@@ -87,6 +160,7 @@ export const deleteDeliveryBoy = async (req, res) => {
         return handleResponse(res, 500, error.message);
     }
 };
+
 export const updateRider = controller.update;
 export const deleteRider = controller.delete;
 export const createRider = controller.create;

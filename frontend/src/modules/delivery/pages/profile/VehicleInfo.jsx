@@ -14,24 +14,24 @@ const VehicleInfo = () => {
 
   const vehicleDetails = {
     type: user?.vehicleType || "Not Specified",
-    model: "N/A", // We don't have vehicle model in backend yet
+    model: user?.vehicleModel || "N/A",
     plateNumber: user?.vehicleNumber || "Not Assigned",
-    color: "N/A",
-    fuelType: "N/A",
+    color: user?.vehicleColor || "N/A",
+    fuelType: user?.fuelType || "N/A",
   };
 
   const documents = [
     {
       title: "Driving License",
       number: user?.drivingLicenseNumber || "Not Available",
-      expiry: "N/A",
-      status: "Verified",
+      expiry: user?.drivingLicenseExpiry || "N/A",
+      status: user?.isVerified ? "Verified" : "Pending",
     },
     {
       title: "RC Book",
       number: user?.vehicleNumber || "Not Assigned",
-      expiry: "Valid Forever",
-      status: "Verified",
+      expiry: user?.rcExpiry || "Valid Forever",
+      status: user?.isVerified ? "Verified" : "Pending",
     },
   ];
 

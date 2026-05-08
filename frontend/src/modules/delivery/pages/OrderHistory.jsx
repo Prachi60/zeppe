@@ -50,9 +50,9 @@ const OrderHistory = () => {
           { signal: abortController.signal },
         );
         if (runSeq !== fetchSeqRef.current) return;
-        const list =
-          response.data?.results ?? response.data?.result ?? [];
-        setOrders(Array.isArray(list) ? list : []);
+        const data = response.data?.result ?? response.data?.results ?? response.data ?? {};
+        const list = Array.isArray(data) ? data : (data.items ?? data.results ?? []);
+        setOrders(list);
       } catch (error) {
         if (
           error?.code === "ERR_CANCELED" ||
@@ -98,9 +98,9 @@ const OrderHistory = () => {
             { signal: ac.signal },
           );
           if (runSeq !== fetchSeqRef.current) return;
-          const list =
-            response.data?.results ?? response.data?.result ?? [];
-          setOrders(Array.isArray(list) ? list : []);
+          const data = response.data?.result ?? response.data?.results ?? response.data ?? {};
+          const list = Array.isArray(data) ? data : (data.items ?? data.results ?? []);
+          setOrders(list);
         } catch (error) {
           if (
             error?.code === "ERR_CANCELED" ||

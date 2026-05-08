@@ -726,8 +726,6 @@ const SellerProfile = () => {
             </div>
           </Card>
 
-          </Card>
- 
           {settings?.subscriptionsEnabled !== false && (
             <Card className="p-8 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[40px] bg-emerald-50 border border-emerald-100">
               <h4 className="text-[10px] font-black uppercase tracking-[4px] text-emerald-600/60 mb-6">

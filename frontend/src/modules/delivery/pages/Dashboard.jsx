@@ -141,7 +141,7 @@ const Dashboard = () => {
                 4.8
               </span>
               <span className="text-gray-300 mx-2">•</span>
-              <span className="ds-caption text-gray-500">ID: 882190</span>
+              <span className="ds-caption text-gray-500">ID: {user?._id?.slice(-6).toUpperCase() || "------"}</span>
             </div>
           </div>
         </div>

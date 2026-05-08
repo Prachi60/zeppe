@@ -35,7 +35,7 @@ const Withdrawals = () => {
             if (res.data.success) {
                 setStats({
                     availableBalance: res.data.result.totalEarnings || 0,
-                    pendingWithdrawals: (res.data.result.recentTransactions || [])
+                    pendingWithdrawals: res.data.result.pendingWithdrawalsTotal || (res.data.result.recentTransactions || [])
                         .filter(t => t.type.includes('Withdrawal') && (t.status === 'Pending' || t.status === 'Processing'))
                         .reduce((acc, t) => acc + Math.abs(t.amount), 0),
                     history: (res.data.result.recentTransactions || [])
@@ -208,7 +208,7 @@ const Withdrawals = () => {
                                         <div>
                                             <p className="font-bold text-gray-900">₹{Math.abs(item.amount).toLocaleString()}</p>
                                             <p className="text-[10px] font-medium text-gray-400 mt-0.5">
-                                                {new Date(item.date).toLocaleDateString()} • {item.id}
+                                                {new Date(item.createdAt || item.date).toLocaleDateString()} • {item.reference || item.id}
                                             </p>
                                         </div>
                                     </div>

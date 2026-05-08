@@ -232,7 +232,12 @@ export const getDeliveryProfile = async (req, res) => {
 ================================ */
 export const updateDeliveryProfile = async (req, res) => {
     try {
-        const { name, vehicleType, vehicleNumber, drivingLicenseNumber, currentArea, isOnline } = req.body;
+        const { 
+            name, vehicleType, vehicleNumber, drivingLicenseNumber, currentArea, 
+            isOnline, dob, bloodGroup, email, address,
+            vehicleModel, vehicleColor, fuelType, drivingLicenseExpiry, rcExpiry,
+            accountHolder, accountNumber, ifsc
+        } = req.body;
 
         const delivery = await Delivery.findById(req.user.id);
         if (!delivery) {
@@ -240,10 +245,22 @@ export const updateDeliveryProfile = async (req, res) => {
         }
 
         if (name) delivery.name = name;
+        if (email) delivery.email = email;
+        if (address) delivery.address = address;
         if (vehicleType) delivery.vehicleType = vehicleType;
         if (vehicleNumber) delivery.vehicleNumber = vehicleNumber;
+        if (vehicleModel) delivery.vehicleModel = vehicleModel;
+        if (vehicleColor) delivery.vehicleColor = vehicleColor;
+        if (fuelType) delivery.fuelType = fuelType;
         if (drivingLicenseNumber) delivery.drivingLicenseNumber = drivingLicenseNumber;
+        if (drivingLicenseExpiry) delivery.drivingLicenseExpiry = drivingLicenseExpiry;
+        if (rcExpiry) delivery.rcExpiry = rcExpiry;
         if (currentArea) delivery.currentArea = currentArea;
+        if (dob) delivery.dob = dob;
+        if (bloodGroup) delivery.bloodGroup = bloodGroup;
+        if (accountHolder) delivery.accountHolder = accountHolder;
+        if (accountNumber) delivery.accountNumber = accountNumber;
+        if (ifsc) delivery.ifsc = ifsc;
         if (typeof isOnline !== 'undefined') delivery.isOnline = isOnline;
 
         await delivery.save();

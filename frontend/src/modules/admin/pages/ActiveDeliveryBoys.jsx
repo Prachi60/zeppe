@@ -67,9 +67,11 @@ const ActiveDeliveryBoys = () => {
                 status: r.isOnline ? 'available' : 'offline',
                 vehicle: r.vehicleType,
                 vehicleNum: r.vehicleNumber || 'N/A',
-                rating: 4.5, // Mock rating for now
-                totalOrders: 0, // Mock total orders
-                todayEarnings: 0, // Mock earnings
+                rating: r.rating || 4.5,
+                totalOrders: r.totalDeliveries || 0,
+                todayEarnings: r.todayEarnings || 0,
+                totalEarnings: r.totalEarnings || 0,
+                walletBalance: r.walletBalance || 0,
                 location: r.currentArea || 'Unknown',
                 lastSync: 'Now',
                 joinDate: new Date(r.createdAt).toLocaleDateString()
@@ -308,7 +310,6 @@ return (
                                         <div className="bg-slate-50 p-3 rounded-2xl">
                                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Today Earnings</p>
                                             <div className="flex items-center gap-1.5">
-                                                <DollarSign className="h-3.5 w-3.5 text-brand-500" />
                                                 <span className="text-xs font-black text-slate-900">₹{rider.todayEarnings}</span>
                                             </div>
                                         </div>
@@ -453,16 +454,16 @@ return (
                                     </div>
                                 </div>
                                 <div className="text-center border-l border-slate-200">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Fleet Rank</p>
-                                    <span className="text-lg font-black text-slate-900">#42</span>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Total Earnings</p>
+                                    <span className="text-lg font-black text-brand-600">₹{(viewingRider.totalEarnings || 0).toLocaleString()}</span>
                                 </div>
                                 <div className="text-center border-l border-slate-200">
                                     <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Total Deliveries</p>
-                                    <span className="text-lg font-black text-slate-900 text-indigo-600">{viewingRider.totalOrders}</span>
+                                    <span className="text-lg font-black text-slate-900 text-indigo-600">{viewingRider.totalOrders ?? 0}</span>
                                 </div>
                                 <div className="text-center border-l border-slate-200">
                                     <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Wallet Creds</p>
-                                    <span className="text-lg font-black text-slate-900 text-brand-600">₹4,250</span>
+                                    <span className="text-lg font-black text-slate-900 text-brand-600">₹{(viewingRider.walletBalance || 0).toLocaleString()}</span>
                                 </div>
                             </div>
 
