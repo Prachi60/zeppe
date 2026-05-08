@@ -101,7 +101,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     const finalShowFooterMessageMobile = showFooterMessage && !isProductDetailOpen;
 
     return (
-        <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col font-sans selection:bg-[#f59931]/30">
+        <div className="min-h-[100dvh] bg-white flex flex-col font-sans selection:bg-[#f59931]/30">
             {/* Header logic: Always show on desktop if showHeader is true. On mobile, hide if product detail is open. */}
             {showHeader && (
                 <>
@@ -116,7 +116,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 </>
             )}
 
-            <main className={cn("flex-1 md:pb-0", !showHeader && "pt-0", !fullHeight && "pb-[calc(70px+var(--sab))]")}>
+            <main className={cn("flex-1 md:pb-0", !showHeader && "pt-0", !fullHeight && "pb-[70px]")}>
                 {children}
             </main>
 

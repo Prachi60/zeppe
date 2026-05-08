@@ -31,7 +31,7 @@ const BottomNav = () => {
 
     return (
         <>
-            <div className="fixed bottom-0 left-0 right-0 z-[500] bg-white border-t border-gray-100 flex items-center justify-around h-[calc(70px+var(--sab))] md:hidden shadow-[0_-8px_30px_rgba(0,0,0,0.06)] px-4 pb-[var(--sab)]">
+            <div className="fixed bottom-0 left-0 right-0 z-[500] bg-white border-t border-gray-100 flex items-center justify-around h-[calc(70px+var(--sab,0px))] md:hidden shadow-[0_-8px_30px_rgba(0,0,0,0.06)] px-4 pb-[var(--sab,0px)] transition-all duration-300">
 
                 {navItems.map((item) => {
                     const isActive = location.pathname === item.path ||

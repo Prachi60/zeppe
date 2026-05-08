@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import Sidebar from './Sidebar';
@@ -274,17 +274,17 @@ const DashboardLayout = ({ children, navItems, title }) => {
                 <main className={cn("p-4 md:p-6 min-h-screen", (role === "admin" || role === "seller") ? "pt-20 md:pt-6 pb-24 md:pb-6" : "pt-20")}>
                     <div className="w-full pb-12">
                         <SellerOrdersProvider
-                            value={{
+                            value={useMemo(() => ({
                                 orders: role === 'seller' ? sellerOrders : [],
                                 ordersLoading: role === 'seller' ? ordersLoading : false,
                                 refreshOrders,
-                            }}>
+                            }), [role, sellerOrders, ordersLoading])}>
                             <SellerEarningsProvider
-                                value={{
+                                value={useMemo(() => ({
                                     earningsData: role === 'seller' ? sellerEarningsData : defaultEarnings,
                                     earningsLoading: role === 'seller' ? earningsLoading : false,
                                     refreshEarnings,
-                                }}>
+                                }), [role, sellerEarningsData, earningsLoading])}>
                                 {children}
                             </SellerEarningsProvider>
                         </SellerOrdersProvider>

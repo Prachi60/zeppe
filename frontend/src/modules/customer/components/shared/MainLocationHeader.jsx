@@ -469,7 +469,7 @@ const MainLocationHeader = ({
           backgroundImage: buildHeaderGradient(baseHeaderColor, true),
         }}
         className={cn(
-          "relative w-full z-[900] h-auto pt-[calc(var(--sat)+12px)] md:hidden",
+          "relative w-full z-[900] h-auto pt-[12px] md:hidden",
           isProductDetailOpen && "hidden",
           isLocationOpen && "hidden"
         )}>
