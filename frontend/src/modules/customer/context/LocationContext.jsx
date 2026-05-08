@@ -40,9 +40,8 @@ export const LocationProvider = ({ children }) => {
   ) => {
     setCurrentLocation(newLoc);
     
-    // Determine serviceability (Mock: only Indore is supported for now)
-    const serviceable = String(newLoc.city || "").trim().toLowerCase() === "indore";
-    setIsServiceable(serviceable);
+    // Determine serviceability (Dynamically determined by backend availability)
+    setIsServiceable(true);
 
     if (updateSavedHome) {
       setSavedAddresses((prev) =>

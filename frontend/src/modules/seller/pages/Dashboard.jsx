@@ -246,28 +246,27 @@ const Dashboard = () => {
       />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat) => (
-          <Card key={stat.label} className="hover:shadow-lg transition-shadow">
-            <div className="flex items-start justify-between">
+          <Card key={stat.label} className="hover:shadow-lg transition-shadow p-0 overflow-hidden">
+            <div className="p-4 sm:p-5 flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-base font-medium text-slate-600">{stat.label}</p>
-                <p className="text-2xl font-bold text-slate-900 mt-2">{stat.value}</p>
-                <div className="flex items-center gap-2 mt-2">
+                <p className="text-[10px] sm:text-sm font-black text-slate-500 uppercase tracking-widest leading-tight">{stat.label}</p>
+                <p className="text-lg sm:text-2xl font-black text-slate-900 mt-1">{stat.value}</p>
+                <div className="flex items-center gap-1 sm:gap-2 mt-2">
                   <span
                     className={cn(
-                      "text-xs font-semibold flex items-center gap-1",
+                      "text-[10px] sm:text-xs font-bold flex items-center gap-1",
                       stat.changeType === "increase" ? "text-brand-600" : "text-red-600"
                     )}
                   >
                     <TrendingUp className={cn("h-3 w-3", stat.changeType === "decrease" && "rotate-180")} />
                     {stat.change}
                   </span>
-                  <span className="text-sm text-slate-600">{stat.description}</span>
                 </div>
               </div>
-              <div className={cn("p-3 rounded-lg", stat.iconBg)}>
-                <stat.icon className={cn("h-6 w-6", stat.iconColor)} />
+              <div className={cn("p-2 sm:p-3 rounded-lg shrink-0", stat.iconBg)}>
+                <stat.icon className={cn("h-4 w-4 sm:h-6 sm:w-6", stat.iconColor)} />
               </div>
             </div>
           </Card>
@@ -327,7 +326,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
         <Card title="Revenue Overview" subtitle="Last 7 days performance" className="lg:col-span-2">
-          <div className="h-[300px] min-h-[280px] w-full mt-4">
+          <div className="h-[220px] sm:h-[300px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueChartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <defs>
@@ -377,7 +376,7 @@ const Dashboard = () => {
 
         {/* Product Performance */}
         <Card title="Top Categories" subtitle="Sales by category">
-          <div className="h-[300px] min-h-[280px] w-full mt-4">
+          <div className="h-[220px] sm:h-[300px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={statsData?.categoryMix || []} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
@@ -420,7 +419,7 @@ const Dashboard = () => {
           </button>
         }
       >
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100">
@@ -484,6 +483,47 @@ const Dashboard = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile List View */}
+        <div className="md:hidden space-y-3">
+          {safeOrders.slice(0, 5).map((order) => (
+            <div key={order.orderId} className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-black text-slate-900 tracking-tight">#{order.orderId}</span>
+                <Badge variant={getStatusColor(order.status)} className="text-[9px] uppercase font-black px-1.5 py-0">
+                  {order.status}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-end">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-white border border-slate-100 flex items-center justify-center text-[10px] font-black text-slate-600">
+                    {order.customer?.name?.split(" ").map(n => n[0]).join("") || "C"}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</p>
+                    <p className="text-xs font-bold text-slate-700 truncate max-w-[120px]">{order.customer?.name || "Customer"}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</p>
+                  <p className="text-sm font-black text-primary">₹{order.pricing?.total || 0}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-1">
+                <span className="text-[10px] font-bold text-slate-400">{new Date(order.createdAt).toLocaleDateString()}</span>
+                <button
+                  onClick={() => {
+                    setSelectedOrder(normalizeOrderForModal(order));
+                    setIsOrderModalOpen(true);
+                  }}
+                  className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest"
+                >
+                  View Details <ArrowUpRight className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
 

@@ -55,8 +55,21 @@ const Orders = () => {
 
     const refreshOrders = () => setRefreshKey(prev => prev + 1);
 
+    const memoizedParams = useMemo(() => ({
+        startDate,
+        endDate,
+        search: searchTerm,
+        status: activeTab === 'All' ? '' : (activeTab === 'Out for Delivery' ? 'out_for_delivery' : activeTab.toLowerCase())
+    }), [startDate, endDate, searchTerm, activeTab]);
+
     const tabs = ['All', 'Pending', 'Confirmed', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled'];
     const todayStr = new Date().toISOString().split('T')[0];
+
+    const formatAddr = (addr) => {
+        if (!addr) return '';
+        if (typeof addr === 'string') return addr;
+        return [addr.name, addr.address, addr.landmark, addr.city].filter(Boolean).join(', ');
+    };
 
     const safeOrders = useMemo(
         () => (Array.isArray(contextOrders) ? contextOrders : []),
@@ -134,7 +147,7 @@ const Orders = () => {
     ], [safeOrders]);
 
     const getStatusColor = (status) => {
-        const s = status.toLowerCase();
+        const s = (status || '').toLowerCase();
         switch (s) {
             case 'pending': return 'warning';
             case 'confirmed': return 'info';
@@ -177,14 +190,14 @@ const Orders = () => {
         };
         const headers = ["Order ID", "Customer", "Phone", "Date", "Time", "Total (₹)", "Status", "Address", "Payment"];
         const rows = data.map((o) => [
-            o.id,
+            o.id || o.orderId,
             o.customer?.name ?? "",
             o.customer?.phone ?? "",
-            o.date,
-            o.time,
-            o.total,
+            o.date || (o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ""),
+            o.time || (o.createdAt ? new Date(o.createdAt).toLocaleTimeString() : ""),
+            o.pricing?.total || o.total || 0,
             o.status,
-            o.address ?? "",
+            formatAddr(o.address),
             o.payment ?? "",
         ]);
         const csvContent = [
@@ -285,99 +298,138 @@ const Orders = () => {
                     </div>
 
                     {/* Toolbox */}
-                    <div className="p-3 sm:p-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+                    <div className="p-3 sm:p-4 border-b border-slate-100 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between bg-white">
                         <div className="relative flex-1 group w-full">
                             <HiOutlineMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 group-focus-within:text-primary transition-all" />
                             <input
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search by Order ID or Customer Name..."
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 border-none rounded-lg text-sm font-semibold text-slate-700 placeholder:text-slate-500 focus:ring-2 focus:ring-primary/5 transition-all outline-none"
+                                placeholder="Search orders..."
+                                className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-primary/5 transition-all outline-none shadow-inner"
                             />
                         </div>
-                        <div className="flex gap-3 shrink-0 w-full lg:w-auto items-center justify-end flex-wrap">
-                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
-                                <div className="w-full sm:w-32">
+                        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <div className="flex-1 sm:w-36">
                                     <DatePicker
                                         value={startDate}
                                         max={todayStr}
                                         align="left"
                                         onChange={(value) => {
-                                            if (!value) {
-                                                setStartDate("");
-                                                setPage(1);
-                                                return;
-                                            }
-                                            const today = new Date().toISOString().split("T")[0];
-                                            if (value > today) {
-                                                showToast("Start date cannot be in the future", "error");
-                                                return;
-                                            }
-                                            if (endDate && value > endDate) {
-                                                showToast("Start date cannot be after end date", "error");
-                                                return;
-                                            }
+                                            setStartDate(value || "");
                                             setPage(1);
-                                            setStartDate(value);
                                         }}
-                                        placeholder="From date"
+                                        placeholder="From"
                                     />
                                 </div>
-                                <span className="text-xs font-semibold text-slate-600 hidden sm:inline">
-                                    to
-                                </span>
-                                <div className="w-full sm:w-32 mt-2 sm:mt-0">
+                                <span className="text-[10px] font-black text-slate-300 uppercase hidden sm:inline">TO</span>
+                                <div className="flex-1 sm:w-36">
                                     <DatePicker
                                         value={endDate}
                                         max={todayStr}
                                         min={startDate || undefined}
                                         align="right"
-                                        popupClassName="mt-4"
                                         disabled={!startDate}
                                         onChange={(value) => {
-                                            if (!value) {
-                                                setEndDate("");
-                                                setPage(1);
-                                                return;
-                                            }
-                                            const today = new Date().toISOString().split("T")[0];
-                                            if (value > today) {
-                                                showToast("End date cannot be in the future", "error");
-                                                return;
-                                            }
-                                            if (startDate && value < startDate) {
-                                                showToast("End date cannot be before start date", "error");
-                                                return;
-                                            }
+                                            setEndDate(value || "");
                                             setPage(1);
-                                            setEndDate(value);
                                         }}
-                                        placeholder="To date"
+                                        placeholder="To"
                                     />
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => { setStartDate(''); setEndDate(''); setPage(1); }}
-                                className="text-xs font-semibold text-slate-600 hover:text-slate-700"
-                            >
-                                Clear dates
-                            </button>
+                            {(startDate || endDate) && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setStartDate(''); setEndDate(''); setPage(1); }}
+                                    className="text-[10px] font-black text-rose-500 hover:text-rose-600 uppercase tracking-widest shrink-0"
+                                >
+                                    Clear
+                                </button>
+                            )}
                         </div>
                     </div>
+
                     {/* Orders Table */}
                     <DynamicDataTable
                         apiService={sellerApi}
                         refreshSelected={refreshKey}
                         endpoint="orders/seller-orders"
-                        searchPlaceholder="Search by Order ID or Customer Name..."
-                        defaultParams={{
-                            startDate,
-                            endDate,
-                            search: searchTerm,
-                            status: activeTab === 'All' ? '' : (activeTab === 'Out for Delivery' ? 'out_for_delivery' : activeTab.toLowerCase())
+                        searchPlaceholder="Search orders..."
+                        renderMobileRow={(o) => {
+                            const status = getLegacyStatusFromOrder(o);
+                            return (
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[11px] font-black text-slate-900 tracking-tight">#{o.orderId}</span>
+                                            <Badge variant={getStatusColor(status)} className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md lg:hidden">
+                                                {status}
+                                            </Badge>
+                                        </div>
+                                        <div className="relative inline-block w-32" onClick={(e) => e.stopPropagation()}>
+                                            <select
+                                                value={status}
+                                                onChange={(e) => handleStatusUpdate(o.orderId, e.target.value)}
+                                                className={cn(
+                                                    "w-full text-[9px] pl-2 pr-6 py-1.5 rounded-full font-black uppercase tracking-widest cursor-pointer appearance-none outline-none shadow-sm border-none transition-all",
+                                                    status === 'pending' ? "bg-amber-100 text-amber-700" :
+                                                        status === 'confirmed' ? "bg-blue-100 text-blue-700" :
+                                                            status === 'packed' ? "bg-indigo-100 text-indigo-700" :
+                                                                status === 'out_for_delivery' ? "bg-purple-100 text-purple-700" :
+                                                                    status === 'delivered' ? "bg-brand-100 text-brand-700" :
+                                                                        status === 'cancelled' ? "bg-rose-100 text-rose-700" :
+                                                                            "bg-slate-100 text-slate-700"
+                                                )}
+                                            >
+                                                <option value="pending">Pending</option>
+                                                <option value="confirmed">Confirmed</option>
+                                                <option value="packed">Packed</option>
+                                                <option value="out_for_delivery">Out for Delivery</option>
+                                                <option value="delivered">Delivered</option>
+                                                <option value="cancelled">Cancelled</option>
+                                            </select>
+                                            <HiOutlineChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none opacity-60 text-current" />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className="h-8 w-8 rounded-full bg-slate-900 flex items-center justify-center text-[10px] font-black text-white shrink-0">
+                                                    {(o.customer?.name || 'U').charAt(0)}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-black text-slate-900 truncate">{o.customer?.name || 'Unknown'}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400">{o.customer?.phone || 'No Phone'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-sm font-black text-primary tracking-tight">₹{(o.pricing?.total || 0).toLocaleString()}</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{(o.items || []).length} ITEMS</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ordered On</span>
+                                                <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1">
+                                                    {new Date(o.createdAt).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleViewDetails(o); }}
+                                                className="px-4 py-2 bg-white border border-slate-200 text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm active:scale-95 flex items-center gap-2"
+                                            >
+                                                Details <HiOutlineChevronRight size={12} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
                         }}
+                        defaultParams={memoizedParams}
                         columns={[
                             {
                                 header: "Order Details",
@@ -399,7 +451,7 @@ const Orders = () => {
                                 width: "25%",
                                 cell: (o) => (
                                     <div className="flex items-center gap-3">
-                                        <div className="h-9 w-9 rounded-full bg-slate-900 flex items-center justify-center text-xs font-black text-white shadow-sm ring-2 ring-white">
+                                        <div className="h-9 w-9 rounded-full bg-slate-900 flex items-center justify-center text-xs font-black text-white shadow-sm ring-2 ring-white shrink-0">
                                             {(o.customer?.name || 'U').charAt(0)}
                                         </div>
                                         <div className="min-w-0">
@@ -445,7 +497,7 @@ const Orders = () => {
                                                 <option value="delivered">Delivered</option>
                                                 <option value="cancelled">Cancelled</option>
                                             </select>
-                                            <HiOutlineChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none opacity-60" />
+                                            <HiOutlineChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none opacity-60 text-current" />
                                         </div>
                                     );
                                 }
@@ -509,11 +561,11 @@ const Orders = () => {
                                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                     <div className="p-3 sm:p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
                                         <p className="text-[10px] sm:text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Total Revenue</p>
-                                        <p className="text-base sm:text-xl font-black text-indigo-700 truncate">₹{safeOrders.reduce((acc, o) => acc + o.total, 0).toLocaleString()}</p>
+                                        <p className="text-base sm:text-xl font-black text-indigo-700 truncate">₹{safeOrders.reduce((acc, o) => acc + (o.pricing?.total || o.total || 0), 0).toLocaleString()}</p>
                                     </div>
                                     <div className="p-3 sm:p-4 rounded-2xl bg-brand-50 border border-brand-100">
                                         <p className="text-[10px] sm:text-xs font-bold text-brand-400 uppercase tracking-widest mb-1">Avg. Order Value</p>
-                                        <p className="text-base sm:text-xl font-black text-brand-700">₹{safeOrders.length ? (safeOrders.reduce((acc, o) => acc + o.total, 0) / safeOrders.length).toFixed(0) : '0'}</p>
+                                        <p className="text-base sm:text-xl font-black text-brand-700">₹{safeOrders.length ? (safeOrders.reduce((acc, o) => acc + (o.pricing?.total || o.total || 0), 0) / safeOrders.length).toFixed(0) : '0'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -560,18 +612,18 @@ const Orders = () => {
                                     <div>
                                         <h3 className="text-base font-black text-slate-900">Order Details</h3>
                                         <div className="flex items-center space-x-2 mt-0.5">
-                                            <Badge variant={getStatusColor(selectedOrder.status)} className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0">{selectedOrder.status}</Badge>
-                                            <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">#{selectedOrder.id}</span>
+                                            <Badge variant={getStatusColor(selectedOrder.status)} className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0">{selectedOrder.status || 'Unknown'}</Badge>
+                                            <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">#{selectedOrder.orderId || selectedOrder.id}</span>
                                         </div>
-                                        {(selectedOrder.date || selectedOrder.time) && (
+                                        {(selectedOrder.createdAt || selectedOrder.date) && (
                                             <p className="text-[11px] font-bold text-slate-500 mt-1.5 flex items-center gap-1.5">
                                                 <HiOutlineCalendarDays className="h-3.5 w-3.5" />
-                                                {selectedOrder.date}
-                                                {selectedOrder.time && (
+                                                {selectedOrder.date || new Date(selectedOrder.createdAt).toLocaleDateString()}
+                                                {(selectedOrder.time || selectedOrder.createdAt) && (
                                                     <>
                                                         <span className="text-slate-300">•</span>
                                                         <HiOutlineClock className="h-3.5 w-3.5" />
-                                                        {selectedOrder.time}
+                                                        {selectedOrder.time || new Date(selectedOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </>
                                                 )}
                                             </p>
@@ -610,7 +662,7 @@ const Orders = () => {
                                                     )}
                                             </div>
                                             <p className="text-xs font-bold text-slate-800 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-100 shadow-sm">
-                                                {selectedOrder.address}
+                                                {formatAddr(selectedOrder.address) || 'No address provided'}
                                             </p>
                                         </div>
                                         <div>
@@ -629,16 +681,16 @@ const Orders = () => {
                                             <div className="space-y-2">
                                                 <div className="flex justify-between text-xs">
                                                     <span className="font-bold text-slate-600">Subtotal</span>
-                                                    <span className="font-black text-slate-900">₹{(selectedOrder.total - 10).toFixed(2)}</span>
+                                                    <span className="font-black text-slate-900">₹{(selectedOrder.pricing?.subtotal || (selectedOrder.pricing?.total || 0) - (selectedOrder.pricing?.deliveryFee || 10)).toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-xs">
                                                     <span className="font-bold text-slate-600">Delivery Fee</span>
-                                                    <span className="font-black text-brand-600">₹10.00</span>
+                                                    <span className="font-black text-brand-600">₹{(selectedOrder.pricing?.deliveryFee || 10).toFixed(2)}</span>
                                                 </div>
                                                 <div className="h-px bg-primary/10 my-2" />
                                                 <div className="flex justify-between text-sm">
                                                     <span className="font-black text-slate-900">Total</span>
-                                                    <span className="font-black text-primary">₹{selectedOrder.total.toFixed(2)}</span>
+                                                    <span className="font-black text-primary">₹{(selectedOrder.pricing?.total || 0).toFixed(2)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -661,12 +713,12 @@ const Orders = () => {
                                                     <img src={item.image} alt={item.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs font-bold text-slate-900">{item.name}</p>
-                                                    <p className="text-xs font-semibold text-slate-600 mt-0.5">₹{item.price.toFixed(2)} × {item.qty}</p>
+                                                    <p className="text-xs font-bold text-slate-900">{item.name || 'Product'}</p>
+                                                    <p className="text-xs font-semibold text-slate-600 mt-0.5">₹{(item.price || 0).toFixed(2)} × {item.qty || 1}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-xs font-black text-slate-900">₹{(item.price * item.qty).toFixed(2)}</p>
+                                                <p className="text-xs font-black text-slate-900">₹{((item.price || 0) * (item.qty || 1)).toFixed(2)}</p>
                                             </div>
                                         </div>
                                     ))}

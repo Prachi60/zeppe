@@ -1259,6 +1259,11 @@ const Home = () => {
           : Promise.resolve({ data: { results: [] } }),
       ]);
 
+      console.log('--- HOME DATA FETCH DEBUG ---');
+      console.log('Coordinates:', currentLocation?.latitude, currentLocation?.longitude);
+      console.log('Products found:', prodRes?.data?.result?.items?.length || 0);
+      console.log('Stores found:', storesRes?.data?.results?.length || storesRes?.data?.result?.length || 0);
+
       if (storesRes?.data?.success || storesRes?.data?.results) {
         const rawStores = storesRes.data.results || storesRes.data.result || [];
         setNearbyStores(rawStores.slice(0, 9));
@@ -2021,7 +2026,7 @@ const Home = () => {
       )}
 
       {/* Main Page Content - Conditionally Hidden if No Service */}
-      {products.length === 0 && !isLoading ? (
+      {products.length === 0 && nearbyStores.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center justify-center pt-24 pb-48 px-6 text-center animate-in fade-in zoom-in duration-700">
           {/* Coming Soon UI - Premium Look */}
           <div className="relative mb-10">

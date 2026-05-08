@@ -40,6 +40,13 @@ const StockManagement = () => {
 
     const refreshData = () => setRefreshKey(prev => prev + 1);
 
+    const memoizedInventoryParams = useMemo(() => ({
+        stockStatus: filterStatus === 'In Stock' ? 'in' : (filterStatus === 'Out of Stock' ? 'out' : (filterStatus === 'Low Stock' ? 'low' : '')),
+        search: searchTerm
+    }), [filterStatus, searchTerm]);
+
+    const memoizedHistoryParams = useMemo(() => ({}), []);
+
     useEffect(() => {
         const fetchStats = async () => {
             try {
@@ -47,16 +54,16 @@ const StockManagement = () => {
                 if (res.data.success) {
                     setInventory(res.data.result?.items || []);
                 }
-            } catch (err) {}
+            } catch (err) { }
         };
-        
+
         const fetchHist = async () => {
             try {
                 const res = await sellerApi.getStockHistory();
                 if (res.data.success) {
                     setHistory(res.data.result || []);
                 }
-            } catch (err) {}
+            } catch (err) { }
         };
 
         fetchStats();
@@ -123,11 +130,11 @@ const StockManagement = () => {
                             Monitor stock levels, manage restocks, and track movements.
                         </p>
                     </div>
-                    <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                    <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-full lg:w-auto">
                         <button
                             onClick={() => setActiveView('inventory')}
                             className={cn(
-                                "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                "flex-1 lg:flex-none px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
                                 activeView === 'inventory' ? "bg-white text-slate-900 shadow-md" : "text-slate-500 hover:text-slate-700"
                             )}
                         >
@@ -136,7 +143,7 @@ const StockManagement = () => {
                         <button
                             onClick={() => setActiveView('history')}
                             className={cn(
-                                "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                "flex-1 lg:flex-none px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
                                 activeView === 'history' ? "bg-white text-slate-900 shadow-md" : "text-slate-500 hover:text-slate-700"
                             )}
                         >
@@ -161,8 +168,8 @@ const StockManagement = () => {
                                             <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 duration-500 shadow-sm", stat.bg, stat.color)}>
                                                 <stat.icon className="h-5 w-5" />
                                             </div>
-                                            <div>
-                                                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{stat.label}</p>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mb-1 truncate">{stat.label}</p>
                                                 <h4 className="text-xl font-black text-slate-900 tracking-tight">{stat.value}</h4>
                                             </div>
                                         </div>
@@ -175,9 +182,9 @@ const StockManagement = () => {
                     <BlurFade delay={0.3}>
                         <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden rounded-3xl">
                             {/* Toolbox */}
-                            <div className="p-4 border-b border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between bg-white">
-                                <div className="flex flex-col md:flex-row gap-3 items-center w-full">
-                                    <div className="relative w-full md:w-72">
+                            <div className="p-4 border-b border-slate-50 flex flex-col lg:flex-row gap-4 items-center justify-between bg-white">
+                                <div className="flex flex-col lg:flex-row gap-3 items-center w-full">
+                                    <div className="relative w-full lg:w-72">
                                         <HiOutlineMagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                         <Input
                                             placeholder="Search product..."
@@ -186,13 +193,13 @@ const StockManagement = () => {
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                         />
                                     </div>
-                                    <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-sm">
+                                    <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-sm w-full lg:w-auto overflow-x-auto no-scrollbar">
                                         {['All', 'In Stock', 'Out of Stock', 'Low Stock'].map((status) => (
                                             <button
                                                 key={status}
                                                 onClick={() => setFilterStatus(status)}
                                                 className={cn(
-                                                    "px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all uppercase tracking-tighter",
+                                                    "px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all uppercase tracking-tighter shrink-0 flex-1 lg:flex-none",
                                                     filterStatus === status
                                                         ? "bg-white text-slate-900 shadow-md"
                                                         : "text-slate-600 hover:text-slate-700"
@@ -203,10 +210,10 @@ const StockManagement = () => {
                                         ))}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 w-full lg:w-auto">
                                     <Button
                                         onClick={() => navigate('/seller/products/add')}
-                                        className="rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+                                        className="rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform flex-1 lg:flex-none"
                                     >
                                         <HiOutlinePlus className="h-4 w-4 mr-2" />
                                         NEW PRODUCT
@@ -214,29 +221,72 @@ const StockManagement = () => {
                                 </div>
                             </div>
 
-                            {/* Dynamic Stock Table */}
                             <DynamicDataTable
                                 apiService={sellerApi}
                                 endpoint="products/seller/me"
                                 refreshSelected={refreshKey}
-                                defaultParams={{
-                                    stockStatus: filterStatus === 'In Stock' ? 'in' : (filterStatus === 'Out of Stock' ? 'out' : (filterStatus === 'Low Stock' ? 'low' : '')),
-                                    search: searchTerm
-                                }}
+                                defaultParams={memoizedInventoryParams}
+                                renderMobileRow={(p) => (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-12 w-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                                                {p.mainImage ? (
+                                                    <img src={p.mainImage} alt="" className="h-full w-full object-cover" />
+                                                ) : <HiOutlineCube className="h-6 w-6 opacity-20" />}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex justify-between items-start">
+                                                    <h4 className="text-xs font-black text-slate-900 truncate pr-2">{p.name}</h4>
+                                                    <Badge
+                                                        variant={(p.stock || 0) === 0 ? 'destructive' : ((p.stock || 0) <= (p.lowStockAlert || 5) ? 'warning' : 'success')}
+                                                        className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md shrink-0"
+                                                    >
+                                                        {(p.stock || 0) === 0 ? 'Out of Stock' : ((p.stock || 0) <= (p.lowStockAlert || 5) ? 'Low Stock' : 'In Stock')}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">SKU: {p.sku || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Inventory</span>
+                                                <span className={cn(
+                                                    "text-xs font-black",
+                                                    (p.stock || 0) <= (p.lowStockAlert || 5) ? "text-rose-600" : "text-slate-900"
+                                                )}>
+                                                    {p.stock || 0} UNITS
+                                                </span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Price</span>
+                                                <p className="text-xs font-black text-slate-900">₹{(p.price || 0).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-end pt-1">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); openAdjustModal({ ...p, id: p._id, threshold: p.lowStockAlert || 5 }); }}
+                                                className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary transition-all shadow-md active:scale-95"
+                                            >
+                                                <HiOutlineArrowsUpDown size={14} /> Adjust Stock
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                                 columns={[
                                     {
                                         header: "Product Detail",
+                                        width: "35%",
                                         cell: (p) => (
                                             <div className="flex items-center gap-4 group">
-                                                <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center text-slate-600 group-hover:scale-105 transition-transform overflow-hidden ring-1 ring-slate-100 shadow-sm">
+                                                <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center text-slate-600 group-hover:scale-105 transition-transform overflow-hidden ring-1 ring-slate-100 shadow-sm shrink-0">
                                                     {p.mainImage ? (
                                                         <img src={p.mainImage} alt={p.name} className="h-full w-full object-cover" />
                                                     ) : (
                                                         <HiOutlineCube className="h-6 w-6 opacity-30" />
                                                     )}
                                                 </div>
-                                                <div>
-                                                    <h4 className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">
+                                                <div className="min-w-0">
+                                                    <h4 className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors truncate">
                                                         {p.name}
                                                     </h4>
                                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
@@ -312,33 +362,78 @@ const StockManagement = () => {
                             apiService={sellerApi}
                             endpoint="products/stock-history"
                             refreshSelected={refreshKey}
-                            defaultParams={{}}
+                            defaultParams={memoizedHistoryParams}
+                            renderMobileRow={(log) => (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn(
+                                            "h-10 w-10 rounded-2xl flex items-center justify-center shadow-sm shrink-0",
+                                            log.type === 'Restock' ? "bg-emerald-50 text-emerald-600" :
+                                                log.type === 'Sale' ? "bg-indigo-50 text-indigo-600" : "bg-rose-50 text-rose-600"
+                                        )}>
+                                            {log.type === 'Restock' ? <HiOutlinePlus className="h-5 w-5" /> :
+                                                log.type === 'Sale' ? <HiOutlineCube className="h-5 w-5" /> : <HiOutlineMinus className="h-5 w-5" />}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex justify-between items-center">
+                                                <h4 className="text-xs font-black text-slate-900 truncate pr-2">{log.product?.name || 'Unknown Product'}</h4>
+                                                <div className={cn(
+                                                    "text-[12px] font-black tracking-tight shrink-0",
+                                                    log.quantity > 0 ? "text-emerald-600" : "text-rose-600"
+                                                )}>
+                                                    {log.quantity > 0 ? `+${log.quantity}` : log.quantity}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <Badge className={cn(
+                                                    "text-[8px] font-black uppercase px-2 py-0.5 rounded-md border-none",
+                                                    log.type === 'Restock' ? "bg-emerald-100 text-emerald-700" :
+                                                        log.type === 'Sale' ? "bg-indigo-100 text-indigo-700" : "bg-rose-100 text-rose-700"
+                                                )}>
+                                                    {log.type}
+                                                </Badge>
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter shrink-0">
+                                                    {new Date(log.createdAt).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {log.note && (
+                                        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                            <p className="text-[10px] text-slate-500 font-bold leading-relaxed italic">
+                                                "{log.note}"
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             columns={[
                                 {
                                     header: "Activity",
+                                    width: "45%",
                                     cell: (log) => (
                                         <div className="flex items-center gap-4">
                                             <div className={cn(
-                                                "h-10 w-10 rounded-2xl flex items-center justify-center shadow-sm",
+                                                "h-10 w-10 rounded-2xl flex items-center justify-center shadow-sm shrink-0",
                                                 log.type === 'Restock' ? "bg-emerald-50 text-emerald-600" :
                                                     log.type === 'Sale' ? "bg-indigo-50 text-indigo-600" : "bg-rose-50 text-rose-600"
                                             )}>
                                                 {log.type === 'Restock' ? <HiOutlinePlus className="h-5 w-5" /> :
                                                     log.type === 'Sale' ? <HiOutlineCube className="h-5 w-5" /> : <HiOutlineMinus className="h-5 w-5" />}
                                             </div>
-                                            <div>
+                                            <div className="min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <h4 className="text-sm font-black text-slate-900">{log.product?.name || 'Unknown Product'}</h4>
+                                                    <h4 className="text-sm font-black text-slate-900 truncate">{log.product?.name || 'Unknown Product'}</h4>
                                                     <Badge className={cn(
-                                                        "text-[8px] font-black uppercase px-2 py-0.5 rounded-md border-none",
+                                                        "text-[8px] font-black uppercase px-2 py-0.5 rounded-md border-none shrink-0",
                                                         log.type === 'Restock' ? "bg-emerald-100 text-emerald-700" :
                                                             log.type === 'Sale' ? "bg-indigo-100 text-indigo-700" : "bg-rose-100 text-rose-700"
                                                     )}>
                                                         {log.type}
                                                     </Badge>
                                                 </div>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2 truncate">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-200 shrink-0" />
                                                     {log.note || 'Internal Adjustment'}
                                                 </p>
                                             </div>

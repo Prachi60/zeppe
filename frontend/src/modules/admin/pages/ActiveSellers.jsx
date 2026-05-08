@@ -18,6 +18,7 @@ import {
 } from 'react-icons/hi2';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { adminApi } from '../services/adminApi';
 
 const ActiveSellers = () => {
     const [selectedSeller, setSelectedSeller] = useState(null);
@@ -152,7 +153,8 @@ const ActiveSellers = () => {
             }
         } catch (error) {
             console.error("Update Seller Error:", error);
-            alert("Failed to update seller");
+            const message = error.response?.data?.message || error.message || "Failed to update seller";
+            alert(`Failed to update seller: ${message}`);
         }
     };
 
@@ -341,6 +343,28 @@ const ActiveSellers = () => {
                                         value={editingSeller.serviceRadius}
                                         onChange={(e) => setEditingSeller({ ...editingSeller, serviceRadius: e.target.value })}
                                         className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Latitude</label>
+                                    <input 
+                                        type="number"
+                                        step="any"
+                                        value={editingSeller.latitude}
+                                        onChange={(e) => setEditingSeller({ ...editingSeller, latitude: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                        placeholder="e.g. 26.2124"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Longitude</label>
+                                    <input 
+                                        type="number"
+                                        step="any"
+                                        value={editingSeller.longitude}
+                                        onChange={(e) => setEditingSeller({ ...editingSeller, longitude: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                        placeholder="e.g. 85.6875"
                                     />
                                 </div>
                             </div>
