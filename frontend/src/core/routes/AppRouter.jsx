@@ -79,6 +79,14 @@ const CustomerLayoutWrapper = () => (
     </LocationProvider>
 );
 
+const CatchAllRedirect = () => {
+    const path = window.location.pathname;
+    if (path.startsWith('/delivery')) return <Navigate to="/delivery/dashboard" replace />;
+    if (path.startsWith('/seller')) return <Navigate to="/seller/dashboard" replace />;
+    if (path.startsWith('/admin')) return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/" replace />;
+};
+
 const AppRouter = () => {
     const router = useMemo(() => createBrowserRouter([
         {
@@ -183,7 +191,7 @@ const AppRouter = () => {
                 },
                 {
                     path: '*',
-                    element: <Navigate to="/" replace />
+                    element: <CatchAllRedirect />
                 }
             ]
         }

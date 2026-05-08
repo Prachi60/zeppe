@@ -73,6 +73,16 @@ const ProductManagement = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState([]);
 
+  // Memoize defaultParams to prevent DynamicDataTable from re-fetching on every ProductManagement render
+  const memoizedDefaultParams = useMemo(() => ({
+    search: searchTerm,
+    category: filterCategory !== "all" ? filterCategory : undefined,
+    status: filterStatus !== "All" ? filterStatus.toLowerCase().replace(" ", "-") : undefined,
+    sort: sortBy,
+    priceMin: priceMin || undefined,
+    priceMax: priceMax || undefined,
+  }), [searchTerm, filterCategory, filterStatus, sortBy, priceMin, priceMax]);
+
   const refreshTable = () => setRefreshKey(prev => prev + 1);
 
   const makeSku = (name, index = 1) => {
@@ -484,14 +494,7 @@ const ProductManagement = () => {
         apiService={sellerApi}
         refreshSelected={refreshKey}
         endpoint="products/seller/me"
-        defaultParams={{
-          search: searchTerm,
-          category: filterCategory !== "all" ? filterCategory : undefined,
-          status: filterStatus !== "All" ? filterStatus.toLowerCase().replace(" ", "-") : undefined,
-          sort: sortBy,
-          priceMin: priceMin || undefined,
-          priceMax: priceMax || undefined,
-        }}
+        defaultParams={memoizedDefaultParams}
         columns={[
           {
             header: "Product",
