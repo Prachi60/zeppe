@@ -1047,16 +1047,16 @@ const Home = () => {
   const [categoriesBannerIndex, setCategoriesBannerIndex] = useState(0);
   const [isHoveringCategoryBanner, setIsHoveringCategoryBanner] = useState(false);
   const [featuredOffer, setFeaturedOffer] = useState({
-    title: "Sugar",
-    image: "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
-    subtitle: "Rs. 1 per Kg*",
-    description: "On Order above 399",
+    title: "",
+    image: null,
+    subtitle: "",
+    description: "",
   });
   const desktopHeroOffer = {
-    title: "Sugar",
-    image: "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
-    subtitle: "Rs. 1 per Kg*",
-    description: "On Order above 399",
+    title: "",
+    image: null,
+    subtitle: "",
+    description: "",
   };
   const categoryBannerTouchStartXRef = useRef(null);
 
@@ -1553,12 +1553,10 @@ const Home = () => {
   useEffect(() => {
     const isAll = !activeCategory || activeCategory._id === 'all';
     setFeaturedOffer({
-      title: activeCategory?.promoBannerTitle || (isAll ? 'Sugar' : activeCategory?.name || 'All Offers'),
-      image: isAll
-        ? '/FortuneSugarPack.png'
-        : (activeCategory?.image || '/FortuneSugarPack.png'),
-      subtitle: activeCategory?.promoBannerSubtitle || (isAll ? 'Rs. 1 per Kg*' : 'Exclusive Deals'),
-      description: activeCategory?.promoBannerDescription || (isAll ? 'On Order above 399' : 'Shop now for best prices'),
+      title: activeCategory?.promoBannerTitle || (isAll ? "" : activeCategory?.name || "All Offers"),
+      image: isAll ? null : activeCategory?.image,
+      subtitle: activeCategory?.promoBannerSubtitle || (isAll ? "" : "Exclusive Deals"),
+      description: activeCategory?.promoBannerDescription || (isAll ? "" : "Shop now for best prices"),
     });
   }, [activeCategory]);
 
@@ -2099,15 +2097,13 @@ const Home = () => {
                       key={category.id}
                       className="min-w-full h-full flex-shrink-0 relative overflow-hidden">
                       {/* Background Image */}
-                      <img
-                        src={
-                          category.image ||
-                          getCategoryImage(category.name) ||
-                          "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=500&h=300"
-                        }
-                        alt={category.name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
+                      {(category.image || getCategoryImage(category.name)) && (
+                        <img
+                          src={category.image || getCategoryImage(category.name)}
+                          alt={category.name}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      )}
                       {/* Gradient Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent" />
                       {/* Content */}

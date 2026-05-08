@@ -79,9 +79,11 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     // Route-based visibility logic
     const path = location.pathname.replace(/\/$/, '') || '/';
 
-    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/rewards', '/support', '/privacy', '/account-privacy', '/about', '/terms', '/refund-policy', '/return-policy', '/shipping-policy', '/checkout', '/search', '/chat', '/stores'];
-    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/rewards'];
-    const hideCartRoutes = ['/checkout', '/search', '/chat', '/rewards', '/wallet'];
+    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/rewards', '/refer-earn', '/support', '/privacy', '/account-privacy', '/about', '/terms', '/refund-policy', '/return-policy', '/shipping-policy', '/checkout', '/search', '/chat', '/stores'];
+    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/rewards', '/refer-earn'];
+
+    const hideCartRoutes = ['/checkout', '/search', '/chat', '/rewards', '/wallet', '/refer-earn'];
+
 
     // If props are passed, use them. Otherwise, use route-based logic.
     const showHeader = showHeaderProp !== undefined ? showHeaderProp : (!hideHeaderRoutes.includes(path) && !path.startsWith('/category') && !path.startsWith('/orders') && !path.startsWith('/stores'));
@@ -114,7 +116,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 </>
             )}
 
-            <main className={cn("flex-1 md:pb-0", !showHeader && "pt-0", !fullHeight && "pb-[calc(70px+env(safe-area-inset-bottom,0px))]")}>
+            <main className={cn("flex-1 md:pb-0", !showHeader && "pt-0", !fullHeight && "pb-[calc(70px+var(--sab))]")}>
                 {children}
             </main>
 

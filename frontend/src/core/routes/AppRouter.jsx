@@ -50,6 +50,8 @@ const PaymentStatusPage = lazy(() => import('../../modules/customer/pages/Paymen
 const SearchPage = lazy(() => import('../../modules/customer/pages/SearchPage'));
 const WalletPage = lazy(() => import('../../modules/customer/pages/WalletPage'));
 const MyScratchCards = lazy(() => import('../../modules/customer/pages/MyScratchCards'));
+const ReferEarnPage = lazy(() => import('../../modules/customer/pages/ReferEarnPage'));
+
 
 // Lazy load heavy modules
 const SellerModule = lazy(() => import('../../modules/seller/routes/index'));
@@ -174,6 +176,8 @@ const AppRouter = () => {
                         { path: 'profile/edit', element: <ProtectedRoute><EditProfilePage /></ProtectedRoute> },
                         { path: 'wallet', element: <ProtectedRoute><WalletPage /></ProtectedRoute> },
                         { path: 'rewards', element: <ProtectedRoute><MyScratchCards /></ProtectedRoute> },
+                        { path: 'refer-earn', element: <ProtectedRoute><ReferEarnPage /></ProtectedRoute> },
+
                         { path: 'search', element: <SearchPage /> },
                     ]
                 },

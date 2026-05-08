@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     User, MapPin, Package, CreditCard, Wallet, ChevronRight,
-    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Phone, Trophy, RotateCcw, Truck
+    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Phone, Trophy, RotateCcw, Truck, Share2
 } from 'lucide-react';
 import { useAuth } from '@core/context/AuthContext';
 import { useSettings } from '@core/context/SettingsContext';
@@ -218,6 +218,15 @@ const ProfilePage = () => {
                                 path="/rewards"
                                 color="#8b5cf6"
                                 bg="rgba(139,92,246,0.10)"
+                            />
+                            <MenuItem
+                                icon={Share2}
+                                label="Refer & Earn"
+                                sub="Invite friends & get rewards"
+                                path="/refer-earn"
+
+                                color="#6366f1"
+                                bg="rgba(99,102,241,0.10)"
                             />
                             <MenuItem
                                 icon={MapPin}

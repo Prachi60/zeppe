@@ -30,6 +30,8 @@ const PaymentStatusPage = React.lazy(() => import('../pages/PaymentStatusPage'))
 const StoreDetailPage = React.lazy(() => import('../pages/StoreDetailPage'));
 const WalletPage = React.lazy(() => import('../pages/WalletPage'));
 const MyScratchCards = React.lazy(() => import('../pages/MyScratchCards'));
+const ReferEarnPage = React.lazy(() => import('../pages/ReferEarnPage'));
+
 
 import ScrollToTop from '../components/shared/ScrollToTop';
 import { WishlistProvider } from '../context/WishlistContext';
@@ -79,6 +81,9 @@ const CustomerRoutes = () => {
                                 <Route path="profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
                                 <Route path="wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
                                 <Route path="rewards" element={<ProtectedRoute><MyScratchCards /></ProtectedRoute>} />
+                                <Route path="refer-earn" element={<ProtectedRoute><ReferEarnPage /></ProtectedRoute>} />
+
+
                             </Routes>
                         </React.Suspense>
                     </CartAnimationProvider>

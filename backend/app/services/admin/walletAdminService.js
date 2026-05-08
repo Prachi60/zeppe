@@ -92,7 +92,7 @@ export async function getSellerTransactionsData({ page, limit, skip }) {
     .populate("user", "name shopName phone bankDetails")
     .populate({
       path: "order",
-      select: "orderId pricing",
+      select: "orderId pricing paymentBreakdown",
       populate: {
         path: "items.product",
         select: "name",
@@ -105,12 +105,75 @@ export async function getSellerTransactionsData({ page, limit, skip }) {
 
   const total = await Transaction.countDocuments(query);
 
+  // Global Stats Aggregation
+  const statsAggregation = await Transaction.aggregate([
+    { $match: query },
+    {
+      $lookup: {
+        from: "orders",
+        localField: "order",
+        foreignField: "_id",
+        as: "orderData",
+      },
+    },
+    { $unwind: { path: "$orderData", preserveNullAndEmptyArrays: true } },
+    {
+      $group: {
+        _id: null,
+        totalGross: {
+          $sum: {
+            $cond: [
+              { $in: ["$type", ["Seller Earning", "Order Payment"]] },
+              "$amount",
+              0,
+            ],
+          },
+        },
+        totalCommission: {
+          $sum: {
+            $ifNull: [
+              "$orderData.paymentBreakdown.adminProductCommissionTotal",
+              0,
+            ],
+          },
+        },
+        totalPayouts: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $in: ["$type", ["Withdrawal", "Payout"]] },
+                  { $eq: ["$status", "Settled"] },
+                ],
+              },
+              { $abs: "$amount" },
+              0,
+            ],
+          },
+        },
+        pendingSettlements: {
+          $sum: {
+            $cond: [{ $eq: ["$status", "Pending"] }, { $abs: "$amount" }, 0],
+          },
+        },
+      },
+    },
+  ]);
+
+  const globalStats = statsAggregation[0] || {
+    totalGross: 0,
+    totalCommission: 0,
+    totalPayouts: 0,
+    pendingSettlements: 0,
+  };
+
   return {
     items: transactions,
     page,
     limit,
     total,
     totalPages: Math.ceil(total / limit) || 1,
+    stats: globalStats,
   };
 }
 

@@ -17,14 +17,12 @@ const PromoBanner = ({ activeCategory }) => {
     const bannerLocation = getCategoryLocation(activeCategoryKey || 'all');
 
     // Use backend promo fields if available, else fallback to defaults
-    const bannerTitle = activeCategory?.promoBannerTitle || (isAllCategory ? 'Sugar' : categoryName);
-    const bannerPrimaryText = activeCategory?.promoBannerSubtitle || (isAllCategory ? 'Rs. 1 per Kg*' : `${categoryName} Deals`);
-    const bannerSecondaryText = activeCategory?.promoBannerDescription || (isAllCategory ? 'On Order above 399' : '');
+    const bannerTitle = activeCategory?.promoBannerTitle || (isAllCategory ? "" : categoryName);
+    const bannerPrimaryText = activeCategory?.promoBannerSubtitle || (isAllCategory ? "" : `${categoryName} Deals`);
+    const bannerSecondaryText = activeCategory?.promoBannerDescription || (isAllCategory ? "" : "");
     const bannerImage = activeCategory?.promoBannerImage ||
-        (isAllCategory
-            ? '/FortuneSugarPack.png'
-            : (activeCategory?.image || getCategoryImage(categoryName) || '/FortuneSugarPack.png'));
-    const bannerImageAlt = isAllCategory ? 'Fortune sugar pack' : `${categoryName} banner`;
+        (!isAllCategory ? (activeCategory?.image || getCategoryImage(categoryName)) : null);
+    const bannerImageAlt = isAllCategory ? "Promotion" : `${categoryName} banner`;
 
     // Color: if admin set headerColor use it, else "All" defaults to brand orange
     const bannerBackground = (isAllCategory && !activeCategory?.headerColor)
@@ -59,15 +57,17 @@ const PromoBanner = ({ activeCategory }) => {
 
                     {/* Center Column: Image */}
                     <div className="flex items-center justify-center">
-                        <motion.img
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.2 }}
-                            src={bannerImage}
-                            alt={bannerImageAlt}
-                            className="h-24 w-auto object-contain sm:h-36 md:h-80 drop-shadow-2xl"
-                            loading="eager"
-                        />
+                        {bannerImage && (
+                            <motion.img
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                src={bannerImage}
+                                alt={bannerImageAlt}
+                                className="h-24 w-auto object-contain sm:h-36 md:h-80 drop-shadow-2xl"
+                                loading="eager"
+                            />
+                        )}
                     </div>
 
                     {/* Right Column: Subtitle & Description */}
