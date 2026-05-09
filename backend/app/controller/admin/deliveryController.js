@@ -177,7 +177,7 @@ export const getActiveFleet = async (req, res) => {
         const [items, total] = await Promise.all([
             Order.find(query)
                 .populate("deliveryBoy", "name phone vehicleType avatar")
-                .populate("seller", "shopName phone")
+                .populate("seller", "shopName phone location")
                 .populate("customer", "name phone")
                 .sort({ updatedAt: -1 })
                 .skip(skip)

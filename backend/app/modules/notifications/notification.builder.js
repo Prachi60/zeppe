@@ -297,8 +297,22 @@ function eventDefinition(eventType) {
 function eventData(eventType, payload = {}) {
   const orderId = String(payload.orderId || "").trim() || undefined;
   const checkoutGroupId = String(payload.checkoutGroupId || "").trim() || undefined;
+
+  // SELLER_IN_COMMAND: Informational notifications should not trigger mobile action buttons.
+  // We append _INFO to the eventType in the data payload to prevent the mobile app
+  // from matching these to its "actionable" event list (Accept/Reject).
+  let dataEventType = eventType;
+  if (
+    eventType === NOTIFICATION_EVENTS.DELIVERY_ASSIGNED ||
+    eventType === NOTIFICATION_EVENTS.ORDER_DELIVERED ||
+    eventType === NOTIFICATION_EVENTS.ORDER_READY ||
+    eventType === NOTIFICATION_EVENTS.RETURN_PICKUP_ASSIGNED
+  ) {
+    dataEventType = `${eventType}_INFO`;
+  }
+
   return {
-    eventType,
+    eventType: dataEventType,
     orderId,
     checkoutGroupId,
     link: buildOrderLink(orderId),

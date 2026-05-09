@@ -1118,7 +1118,7 @@ const ProductDetailSheet = () => {
                             <Link
                                 to="/checkout"
                                 onClick={closeProduct}
-                                className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[185px] max-w-[90%] bg-gradient-to-r from-[#e88a31] to-[#f59e3b] text-white h-[52px] rounded-full flex items-center justify-between pl-2 pr-3 shadow-[0_8px_25px_rgba(232,138,49,0.25)] z-50 pointer-events-auto"
+                                className="fixed bottom-[calc(100px+var(--sab,0px))] left-1/2 -translate-x-1/2 w-[185px] max-w-[90%] bg-gradient-to-r from-[#e88a31] to-[#f59e3b] text-white h-[52px] rounded-full flex items-center justify-between pl-2 pr-3 shadow-[0_8px_25px_rgba(232,138,49,0.25)] z-50 pointer-events-auto"
                             >
                                 <div className="flex items-center gap-1.5">
                                     <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center p-1.5 shadow-sm overflow-hidden select-none">

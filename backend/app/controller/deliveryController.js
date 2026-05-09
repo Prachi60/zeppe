@@ -538,7 +538,7 @@ export const getMyDeliveryOrders = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
-                .populate("seller", "shopName address")
+                .populate("seller", "shopName address location")
                 .populate("customer", "name phone")
                 .lean(),
             Order.countDocuments(query),

@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import customerPin from "@/assets/customer-pin.png";
 import { deliveryApi } from "../services/deliveryApi";
 import storePin from "@/assets/store-pin.png";
+import deliveryRiderIcon from "@/assets/delivery-rider.png";
 import {
   getCachedDeliveryPartnerLocation,
   saveDeliveryPartnerLocation,
@@ -59,18 +60,16 @@ function destinationForPhase(order, phase) {
 /**
  * Custom Airplane Emoji Pin for Rider Side
  */
-const getAirplaneEmojiPin = (heading = 0) => {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
-      <circle cx="32" cy="32" r="28" fill="white" />
-      <circle cx="32" cy="32" r="28" stroke="#45B0E2" stroke-width="3" />
-      <g transform="rotate(${heading} 32 32)">
-        <path d="M32 4 L36 12 L28 12 Z" fill="#45B0E2" />
-        <text x="32" y="38" font-size="34" text-anchor="middle" dominant-baseline="middle" style="font-family: Arial, sans-serif;">🛩️</text>
-      </g>
-    </svg>
-  `;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+const getRiderIcon = (isLoaded) => {
+  if (!isLoaded) return undefined;
+  if (typeof window !== "undefined" && window.google?.maps?.Size) {
+    return {
+      url: deliveryRiderIcon,
+      scaledSize: new window.google.maps.Size(48, 48),
+      anchor: new window.google.maps.Point(24, 48),
+    };
+  }
+  return deliveryRiderIcon;
 };
 
 const DeliveryTrackingMapComponent = ({
@@ -223,18 +222,7 @@ const DeliveryTrackingMapComponent = ({
     }
   }, [routeData?.polyline, isLoaded]);
 
-  const riderMarkerIcon = useMemo(() => {
-    if (!isLoaded) return undefined;
-    const url = getAirplaneEmojiPin(rider?.heading || 0);
-    if (typeof window !== "undefined" && window.google?.maps?.Size) {
-      return {
-        url,
-        scaledSize: new window.google.maps.Size(48, 48),
-        anchor: new window.google.maps.Point(24, 24),
-      };
-    }
-    return url;
-  }, [isLoaded, rider?.heading]);
+  const riderMarkerIcon = useMemo(() => getRiderIcon(isLoaded), [isLoaded]);
 
   const customerMarkerIcon = useMemo(() => {
     if (!isLoaded || !customerPin) return undefined;

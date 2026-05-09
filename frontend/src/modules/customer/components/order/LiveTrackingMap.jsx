@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import customerPin from "@/assets/customer-pin.png";
 import storePin from "@/assets/store-pin.png";
+import deliveryRiderIcon from "@/assets/delivery-rider.png";
 
 const libraries = ["geometry"];
 
@@ -53,28 +54,16 @@ function hasValidLatLng(location) {
 /**
  * Custom Airplane Emoji Pin - Premium Marker Style
  */
-const getAirplaneEmojiPin = (heading = 0) => {
-  // We wrap the 🛩️ emoji in a high-end white circular pin with shadows and brand-blue accents.
-  // The plane itself rotates inside the pin.
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
-      <!-- Shadow and base glow -->
-      <circle cx="32" cy="32" r="28" fill="white" />
-      <circle cx="32" cy="32" r="28" stroke="#45B0E2" stroke-width="3" />
-      
-      <!-- Subtle internal ring -->
-      <circle cx="32" cy="32" r="24" stroke="#45B0E2" stroke-width="1" stroke-dasharray="4 4" opacity="0.4" />
-      
-      <!-- Directional Indicator (Small blue triangle pointing where the plane is facing) -->
-      <g transform="rotate(${heading} 32 32)">
-        <path d="M32 4 L36 12 L28 12 Z" fill="#45B0E2" />
-        
-        <!-- The Emoji itself -->
-        <text x="32" y="38" font-size="34" text-anchor="middle" dominant-baseline="middle" style="font-family: Arial, sans-serif;">🛩️</text>
-      </g>
-    </svg>
-  `;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+const getRiderIcon = (isLoaded) => {
+  if (!isLoaded) return undefined;
+  if (typeof window !== "undefined" && window.google?.maps?.Size) {
+    return {
+      url: deliveryRiderIcon,
+      scaledSize: new window.google.maps.Size(48, 48),
+      anchor: new window.google.maps.Point(24, 48), // Bottom center anchor for scooter
+    };
+  }
+  return deliveryRiderIcon;
 };
 
 const LiveTrackingMap = memo(({
@@ -197,19 +186,6 @@ const LiveTrackingMap = memo(({
     }
   }, [routePolyline, isLoaded]);
 
-  const getRiderIcon = (heading) => {
-    if (!isLoaded) return undefined;
-    const url = getAirplaneEmojiPin(heading || 0);
-    if (typeof window !== "undefined" && window.google?.maps?.Size) {
-      return {
-        url,
-        scaledSize: new window.google.maps.Size(48, 48),
-        anchor: new window.google.maps.Point(24, 24),
-      };
-    }
-    return url;
-  };
-
   const getCustomerIcon = () => {
     if (!isLoaded || !customerPin) return undefined;
     if (typeof window !== "undefined" && window.google?.maps?.Size) {
@@ -234,7 +210,7 @@ const LiveTrackingMap = memo(({
     return storePin;
   };
 
-  const riderMarkerIcon = useMemo(() => getRiderIcon(interpolatedRider?.heading), [isLoaded, interpolatedRider?.heading]);
+  const riderMarkerIcon = useMemo(() => getRiderIcon(isLoaded), [isLoaded]);
   const customerMarkerIcon = getCustomerIcon();
   const storeMarkerIcon = getStoreIcon();
 

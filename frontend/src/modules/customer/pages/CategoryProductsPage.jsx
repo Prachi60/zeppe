@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import ProductDetailSheet from '../components/shared/ProductDetailSheet';
 import { useProductDetail } from '../context/ProductDetailContext';
 import { customerApi } from '../services/customerApi';
-import MiniCart from '../components/shared/MiniCart';
 import { useSettings } from '@core/context/SettingsContext';
 import { useCartAnimation } from '../context/CartAnimationContext';
 import Lottie from 'lottie-react';
@@ -454,9 +453,6 @@ const CategoryProductsPage = () => {
                     )}
                 </div>
             </div>
-
-            <MiniCart />
-            <ProductDetailSheet />
 
             <style dangerouslySetInnerHTML={{
                 __html: `

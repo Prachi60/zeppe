@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SellerOrdersProvider } from '@/modules/seller/context/SellerOrdersContext';
 import { SellerEarningsProvider, defaultEarnings } from '@/modules/seller/context/SellerEarningsContext';
-import { getOrderSocket, onSellerOrderNew, onReturnDropOtp } from '@/core/services/orderSocket';
+import { getOrderSocket, onSellerOrderNew, onReturnDropOtp, onSellerReturnRequested } from '@/core/services/orderSocket';
 
 const POLL_INTERVAL_MS = 15000;
 
@@ -149,12 +149,18 @@ const DashboardLayout = ({ children, navItems, title }) => {
         const unsubscribeDrop = onReturnDropOtp(getToken, (payload) => {
             console.log("[DashboardLayout] Received return drop OTP:", payload);
             setReturnDropOtpAlert(payload);
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-            audio.play().catch(() => { });
+            playAlertSound();
+        });
+
+        const unsubscribeReturn = onSellerReturnRequested(getToken, (payload) => {
+            console.log("[DashboardLayout] Received return request:", payload);
+            setNewReturnAlert(payload);
+            playAlertSound();
         });
 
         return () => {
             unsubscribeDrop();
+            unsubscribeReturn();
         };
     }, [role]);
 
@@ -406,6 +412,54 @@ const DashboardLayout = ({ children, navItems, title }) => {
                                 >
                                     Dismiss Alert
                                 </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+                {/* Global Return Request Alert Modal */}
+                {newReturnAlert && (
+                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-orange-100"
+                        >
+                            <div className="flex flex-col items-center text-center">
+                                <div className="h-20 w-20 bg-orange-50 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                                    <BellRing className="h-10 w-10 text-orange-600" />
+                                </div>
+
+                                <h2 className="text-2xl font-black text-slate-900 mb-2">Return Requested!</h2>
+                                <p className="text-slate-600 font-medium mb-4">
+                                    A customer has requested a return for order <span className="text-orange-600 font-bold">#{newReturnAlert.orderId}</span>.
+                                </p>
+                                
+                                <div className="w-full bg-orange-50 rounded-2xl p-4 mb-6 border border-orange-100 text-left">
+                                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Reason</p>
+                                    <p className="text-sm font-bold text-slate-800 line-clamp-3">
+                                        {newReturnAlert.returnReason || "No reason provided."}
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 w-full">
+                                    <button
+                                        onClick={() => setNewReturnAlert(null)}
+                                        className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors"
+                                    >
+                                        Dismiss
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setNewReturnAlert(null);
+                                            navigate('/seller/returns');
+                                        }}
+                                        className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-orange-600 text-white font-bold hover:bg-orange-700 shadow-xl shadow-orange-200 transition-all active:scale-95"
+                                    >
+                                        <Eye className="h-5 w-5" />
+                                        Review
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </div>

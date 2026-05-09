@@ -109,7 +109,7 @@ function parsePositiveInt(value, fallback) {
 }
 
 function getReturnEligibilityDelayMinutes() {
-  return parsePositiveInt(process.env.RETURN_ELIGIBILITY_DELAY_MINUTES, 2);
+  return parsePositiveInt(process.env.RETURN_ELIGIBILITY_DELAY_MINUTES, 0);
 }
 
 function getReturnWindowMinutes() {
@@ -121,8 +121,8 @@ function computeReturnWindowForOrder(order) {
   const deliveredAt = base instanceof Date ? base : new Date(base);
   const eligibleDelay = getReturnEligibilityDelayMinutes();
   const windowMinutes = getReturnWindowMinutes();
-  const eligibleAt = order?.returnEligibleAt || new Date(deliveredAt.getTime() + eligibleDelay * 60 * 1000);
-  let windowExpiresAt = order?.returnWindowExpiresAt || new Date(deliveredAt.getTime() + windowMinutes * 60 * 1000);
+  const eligibleAt = new Date(deliveredAt.getTime() + eligibleDelay * 60 * 1000);
+  let windowExpiresAt = new Date(deliveredAt.getTime() + windowMinutes * 60 * 1000);
   if (windowExpiresAt < eligibleAt) {
     windowExpiresAt = eligibleAt;
   }
@@ -706,7 +706,7 @@ export const getReturnDetails = async (req, res) => {
 
     const order = await Order.findOne(orderKey)
       .populate("customer", "name phone")
-      .populate("seller", "shopName name")
+      .populate("seller", "shopName name location")
       .populate("returnDeliveryBoy", "name phone");
 
     if (!order) {

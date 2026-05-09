@@ -12,7 +12,7 @@ const ActiveOrderPill = ({ order }) => {
     return (
         <AnimatePresence>
             <div
-                className="fixed bottom-6 left-0 right-0 flex justify-center z-[55] pointer-events-none px-4"
+                className="fixed bottom-[calc(80px+var(--sab,0px))] left-0 right-0 flex justify-center z-[55] pointer-events-none px-4"
             >
                 <motion.div
                     initial={{ y: 100, opacity: 0 }}

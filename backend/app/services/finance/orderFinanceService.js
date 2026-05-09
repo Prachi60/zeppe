@@ -109,7 +109,7 @@ function parsePositiveInt(value, fallback) {
 }
 
 function getReturnEligibilityDelayMinutes() {
-  return parsePositiveInt(process.env.RETURN_ELIGIBILITY_DELAY_MINUTES, 2);
+  return parsePositiveInt(process.env.RETURN_ELIGIBILITY_DELAY_MINUTES, 0);
 }
 
 function getReturnWindowMinutes() {
