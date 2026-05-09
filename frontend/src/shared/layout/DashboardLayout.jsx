@@ -7,7 +7,7 @@ import BottomNav from './BottomNav';
 import { sellerApi } from '@/modules/seller/services/sellerApi';
 import { useAuth } from "@core/context/AuthContext";
 import { motion, AnimatePresence } from 'framer-motion';
-import { BellRing, Check, X, Clock, Truck } from 'lucide-react';
+import { BellRing, Check, X, Clock, Truck, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SellerOrdersProvider } from '@/modules/seller/context/SellerOrdersContext';
