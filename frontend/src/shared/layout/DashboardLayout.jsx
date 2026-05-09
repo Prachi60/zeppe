@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { SellerOrdersProvider } from '@/modules/seller/context/SellerOrdersContext';
 import { SellerEarningsProvider, defaultEarnings } from '@/modules/seller/context/SellerEarningsContext';
 import { getOrderSocket, onSellerOrderNew, onReturnDropOtp, onSellerReturnRequested } from '@/core/services/orderSocket';
+import { showSystemNotification } from '@/core/firebase/pushClient';
 
 const POLL_INTERVAL_MS = 15000;
 
@@ -28,10 +29,6 @@ function secondsLeftUntilSellerExpiry(order) {
 const isEarningsRoute = (path) =>
     path.includes('earnings') || path.includes('withdrawals') || path.includes('transactions');
 
-function playAlertSound() {
-    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    audio.play().catch(() => { });
-}
 
 const DashboardLayout = ({ children, navItems, title }) => {
     const [newOrderAlert, setNewOrderAlert] = useState(null);
@@ -43,6 +40,63 @@ const DashboardLayout = ({ children, navItems, title }) => {
     const acceptWindowTotalRef = useRef(60);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [returnDropOtpAlert, setReturnDropOtpAlert] = useState(null); // { orderId, otp, expiresAt }
+    const audioRef = useRef(null);
+
+    useEffect(() => {
+        const shouldPlay = !!newOrderAlert || !!newReturnAlert || !!returnDropOtpAlert;
+
+        if (shouldPlay) {
+            if (!audioRef.current) {
+                audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audioRef.current.loop = true;
+            }
+            audioRef.current.play().catch(() => { });
+        } else if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+            }
+        };
+    }, [newOrderAlert, newReturnAlert, returnDropOtpAlert]);
+
+    // Handle browser autoplay policy + desktop notifications
+    useEffect(() => {
+        const hasAlert = !!newOrderAlert || !!newReturnAlert || !!returnDropOtpAlert;
+        if (hasAlert) {
+            // 1. Try to play audio immediately
+            if (audioRef.current && audioRef.current.paused) {
+                audioRef.current.play().catch(() => {
+                    console.log("Audio autoplay blocked by browser policy");
+                });
+            }
+
+            // 2. Also show desktop notification (OS will play system sound)
+            const title = newOrderAlert ? "New Order!" : (newReturnAlert ? "Return Request" : "Rider at Store");
+            const body = newOrderAlert 
+                ? `Order #${newOrderAlert.orderId} - ₹${newOrderAlert.pricing?.total || newOrderAlert.total}`
+                : (newReturnAlert ? `Return for #${newReturnAlert.orderId}` : `Rider waiting for OTP for #${returnDropOtpAlert?.orderId}`);
+            
+            showSystemNotification({ title, body }).catch(() => {});
+        }
+
+        const unlockAudio = () => {
+            if (hasAlert && audioRef.current && audioRef.current.paused) {
+                audioRef.current.play().catch(() => { });
+            }
+        };
+        window.addEventListener("click", unlockAudio);
+        window.addEventListener("touchstart", unlockAudio);
+        return () => {
+            window.removeEventListener("click", unlockAudio);
+            window.removeEventListener("touchstart", unlockAudio);
+        };
+    }, [newOrderAlert, newReturnAlert, returnDropOtpAlert]);
+
     const { user, logout, role } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
@@ -112,7 +166,6 @@ const DashboardLayout = ({ children, navItems, title }) => {
                 // 1. SOUND ALERT: Play sound for any order we haven't alerted yet
                 const unalertedOrders = pendingOrders.filter(o => !playedSoundIdsRef.current.has(o.orderId));
                 if (unalertedOrders.length > 0) {
-                    playAlertSound();
                     unalertedOrders.forEach(o => playedSoundIdsRef.current.add(o.orderId));
                 }
 
@@ -149,13 +202,11 @@ const DashboardLayout = ({ children, navItems, title }) => {
         const unsubscribeDrop = onReturnDropOtp(getToken, (payload) => {
             console.log("[DashboardLayout] Received return drop OTP:", payload);
             setReturnDropOtpAlert(payload);
-            playAlertSound();
         });
 
         const unsubscribeReturn = onSellerReturnRequested(getToken, (payload) => {
             console.log("[DashboardLayout] Received return request:", payload);
             setNewReturnAlert(payload);
-            playAlertSound();
         });
 
         return () => {

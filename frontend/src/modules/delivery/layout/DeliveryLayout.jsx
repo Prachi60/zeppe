@@ -18,6 +18,7 @@ import {
   markIncomingOrderHandled,
 } from "../utils/deliveryHandledOrders";
 import { saveDeliveryPartnerLocation } from "../utils/deliveryLastLocation";
+import { showSystemNotification } from "@/core/firebase/pushClient";
 
 /** Match server `deliverySearchExpiresAt` — progress bar + countdown stay aligned when modal opens late. */
 function secondsLeftUntilDeliveryExpiry(expiresAt) {
@@ -47,14 +48,68 @@ const DeliveryLayout = () => {
   const notificationsRequestRef = useRef({ inFlight: false, controller: null });
   const locationRequestRef = useRef({ inFlight: false, controller: null });
   const [cashAlert, setCashAlert] = useState(null);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    const shouldPlay = !!activeOrder || !!cashAlert;
+
+    if (shouldPlay) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+        audioRef.current.loop = true;
+      }
+      audioRef.current.play().catch(() => { });
+    } else if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [activeOrder, cashAlert]);
+
+  // Handle browser autoplay policy + desktop notifications
+  useEffect(() => {
+    const hasAlert = !!activeOrder || !!cashAlert;
+    if (hasAlert) {
+      // 1. Try to play audio immediately
+      if (audioRef.current && audioRef.current.paused) {
+        audioRef.current.play().catch(() => {
+          console.log("Audio autoplay blocked by browser policy");
+        });
+      }
+
+      // 2. Also show desktop notification (OS will play system sound)
+      const title = activeOrder ? (activeOrder.isReturnPickup ? "Return Pickup Request" : "New Order Request") : "Cash Limit Alert";
+      const body = activeOrder
+        ? `${activeOrder.pickup} → ${activeOrder.drop} | Earnings: ₹${activeOrder.earnings}`
+        : (cashAlert?.message || "Please check your cash limit");
+
+      showSystemNotification({ title, body }).catch(() => { });
+    }
+
+    const unlockAudio = () => {
+      if (hasAlert && audioRef.current && audioRef.current.paused) {
+        audioRef.current.play().catch(() => { });
+      }
+    };
+    window.addEventListener("click", unlockAudio);
+    window.addEventListener("touchstart", unlockAudio);
+    return () => {
+      window.removeEventListener("click", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+    };
+  }, [activeOrder, cashAlert]);
 
   useEffect(() => {
     if (!user?.isOnline) return undefined;
     const getToken = () => localStorage.getItem("auth_delivery");
     return onCashLimitAlert(getToken, (payload) => {
       setCashAlert(payload);
-      const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
-      audio.play().catch(() => {});
     });
   }, [user?.isOnline]);
 
@@ -107,8 +162,6 @@ const DeliveryLayout = () => {
       isReturnPickup: payload.type === "RETURN_PICKUP" || payload.isReturnPickup === true,
       items: payload.items || [],
     });
-    const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
-    audio.play().catch(() => {});
     return true;
   }, []);
 
@@ -147,8 +200,6 @@ const DeliveryLayout = () => {
       isReturnPickup,
       items: newOrder.items || [],
     });
-    const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
-    audio.play().catch(() => {});
   }, []);
 
   const hideBottomNavRoutes = [
@@ -320,7 +371,7 @@ const DeliveryLayout = () => {
       (pos) => {
         postLocationOnce(pos.coords.latitude, pos.coords.longitude);
       },
-      () => {},
+      () => { },
       { enableHighAccuracy: false, maximumAge: 30000, timeout: 20000 },
     );
 
@@ -345,7 +396,7 @@ const DeliveryLayout = () => {
           const list = res.data.results || res.data.result || [];
           applyAvailableOrdersList(list);
         })
-        .catch(() => {});
+        .catch(() => { });
     });
   }, [
     user?.isOnline,
@@ -404,7 +455,7 @@ const DeliveryLayout = () => {
             orderId: oid,
             preview: n.data.preview,
             deliverySearchExpiresAt: n.data.deliverySearchExpiresAt,
-            type: n.data.type || (n.data.preview?.type), 
+            type: n.data.type || (n.data.preview?.type),
           });
           if (fromStored) return;
           const r2 = await fetchAvailableOrders();

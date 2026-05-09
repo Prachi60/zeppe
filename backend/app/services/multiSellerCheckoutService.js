@@ -164,20 +164,40 @@ export async function createSellerOrdersAtomic(checkoutGroupId, sellerGroups, co
     for (const [sellerId, group] of sellerGroupsArray) {
       for (const item of group.items) {
         const product = await Product.findById(item.product._id).session(session);
+        const variantId = item.variantSlot; // This holds the SKU or name
         
         if (!product) {
           throw new Error(`Product ${item.product._id} not found`);
         }
         
-        if (product.stock < item.quantity) {
-          throw new Error(
-            `Insufficient stock for product ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`
-          );
+        if (variantId) {
+          // Check variant stock
+          const variant = product.variants.find(v => v.sku === variantId || v.name === variantId);
+          if (!variant) {
+            throw new Error(`Variant ${variantId} for product ${product.name} not found`);
+          }
+          
+          if (variant.stock < item.quantity) {
+            throw new Error(
+              `Insufficient stock for product ${product.name} (Variant: ${variantId}). Available: ${variant.stock}, Requested: ${item.quantity}`
+            );
+          }
+          
+          // Decrement variant stock
+          variant.stock -= item.quantity;
+          await product.save({ session });
+        } else {
+          // Check master stock
+          if (product.stock < item.quantity) {
+            throw new Error(
+              `Insufficient stock for product ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`
+            );
+          }
+          
+          // Decrement master stock
+          product.stock -= item.quantity;
+          await product.save({ session });
         }
-        
-        // Decrement stock
-        product.stock -= item.quantity;
-        await product.save({ session });
       }
     }
     

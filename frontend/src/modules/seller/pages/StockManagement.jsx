@@ -226,42 +226,49 @@ const StockManagement = () => {
                                 endpoint="products/seller/me"
                                 refreshSelected={refreshKey}
                                 defaultParams={memoizedInventoryParams}
-                                renderMobileRow={(p) => (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-12 w-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                                                {p.mainImage ? (
-                                                    <img src={p.mainImage} alt="" className="h-full w-full object-cover" />
-                                                ) : <HiOutlineCube className="h-6 w-6 opacity-20" />}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex justify-between items-start">
-                                                    <h4 className="text-xs font-black text-slate-900 truncate pr-2">{p.name}</h4>
-                                                    <Badge
-                                                        variant={(p.stock || 0) === 0 ? 'destructive' : ((p.stock || 0) <= (p.lowStockAlert || 5) ? 'warning' : 'success')}
-                                                        className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md shrink-0"
-                                                    >
-                                                        {(p.stock || 0) === 0 ? 'Out of Stock' : ((p.stock || 0) <= (p.lowStockAlert || 5) ? 'Low Stock' : 'In Stock')}
-                                                    </Badge>
+                                renderMobileRow={(p) => {
+                                    const totalStock = p.variants?.length > 0 
+                                        ? p.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+                                        : Number(p.stock || 0);
+                                    const threshold = p.lowStockAlert || 5;
+                                    const status = totalStock === 0 ? 'Out of Stock' : (totalStock <= threshold ? 'Low Stock' : 'In Stock');
+                                    
+                                    return (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-12 w-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                                                    {p.mainImage ? (
+                                                        <img src={p.mainImage} alt="" className="h-full w-full object-cover" />
+                                                    ) : <HiOutlineCube className="h-6 w-6 opacity-20" />}
                                                 </div>
-                                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">SKU: {p.sku || 'N/A'}</p>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex justify-between items-start">
+                                                        <h4 className="text-xs font-black text-slate-900 truncate pr-2">{p.name}</h4>
+                                                        <Badge
+                                                            variant={status === 'In Stock' ? 'success' : (status === 'Low Stock' ? 'warning' : 'destructive')}
+                                                            className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md shrink-0"
+                                                        >
+                                                            {status}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">SKU: {p.sku || 'N/A'}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
-                                            <div className="flex flex-col">
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Inventory</span>
-                                                <span className={cn(
-                                                    "text-xs font-black",
-                                                    (p.stock || 0) <= (p.lowStockAlert || 5) ? "text-rose-600" : "text-slate-900"
-                                                )}>
-                                                    {p.stock || 0} UNITS
-                                                </span>
+                                            <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Inventory</span>
+                                                    <span className={cn(
+                                                        "text-xs font-black",
+                                                        totalStock <= threshold ? "text-rose-600" : "text-slate-900"
+                                                    )}>
+                                                        {totalStock} UNITS
+                                                    </span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Price</span>
+                                                    <p className="text-xs font-black text-slate-900">₹{(p.price || 0).toLocaleString()}</p>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Price</span>
-                                                <p className="text-xs font-black text-slate-900">₹{(p.price || 0).toLocaleString()}</p>
-                                            </div>
-                                        </div>
                                         <div className="flex items-center justify-end pt-1">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); openAdjustModal({ ...p, id: p._id, threshold: p.lowStockAlert || 5 }); }}
@@ -270,8 +277,9 @@ const StockManagement = () => {
                                                 <HiOutlineArrowsUpDown size={14} /> Adjust Stock
                                             </button>
                                         </div>
-                                    </div>
-                                )}
+                                        </div>
+                                    );
+                                }}
                                 columns={[
                                     {
                                         header: "Product Detail",
@@ -298,19 +306,26 @@ const StockManagement = () => {
                                     },
                                     {
                                         header: "Inventory",
-                                        cell: (p) => (
-                                            <div className="flex flex-col">
-                                                <span className={cn(
-                                                    "text-sm font-black",
-                                                    (p.stock || 0) <= (p.lowStockAlert || 5) ? "text-rose-600" : "text-slate-900"
-                                                )}>
-                                                    {(p.stock || 0)} units
-                                                </span>
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                                    Threshold: {p.lowStockAlert || 5}
-                                                </span>
-                                            </div>
-                                        )
+                                        cell: (p) => {
+                                            const totalStock = p.variants?.length > 0 
+                                                ? p.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+                                                : Number(p.stock || 0);
+                                            const threshold = p.lowStockAlert || 5;
+
+                                            return (
+                                                <div className="flex flex-col">
+                                                    <span className={cn(
+                                                        "text-sm font-black",
+                                                        totalStock <= threshold ? "text-rose-600" : "text-slate-900"
+                                                    )}>
+                                                        {totalStock} units
+                                                    </span>
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                                        Threshold: {threshold}
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
                                     },
                                     {
                                         header: "Status",

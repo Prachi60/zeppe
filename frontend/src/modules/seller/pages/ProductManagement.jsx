@@ -189,7 +189,9 @@ const ProductManagement = () => {
 
   const handleSave = async () => {
     try {
-      if (!formData.name || !formData.price || !formData.stock || !formData.header || !formData.category || !formData.subcategory) {
+      const isInvalid = (val) => val === undefined || val === null || val === "";
+      
+      if (isInvalid(formData.name) || isInvalid(formData.price) || isInvalid(formData.stock) || isInvalid(formData.header) || isInvalid(formData.category) || isInvalid(formData.subcategory)) {
         toast.error("Please fill all required fields, including categories");
         return;
       }
@@ -282,10 +284,10 @@ const ProductManagement = () => {
         slug: item.slug || "",
         sku: item.sku || "",
         description: item.description || "",
-        price: item.price || "",
-        salePrice: item.salePrice || "",
-        stock: item.stock || "",
-        lowStockAlert: item.lowStockAlert || 5,
+        price: item.price !== undefined && item.price !== null ? item.price : "",
+        salePrice: item.salePrice !== undefined && item.salePrice !== null ? item.salePrice : "",
+        stock: item.stock !== undefined && item.stock !== null ? item.stock : "",
+        lowStockAlert: item.lowStockAlert !== undefined && item.lowStockAlert !== null ? item.lowStockAlert : 5,
         header: item.headerId?._id || item.headerId || "",
         category: item.categoryId?._id || item.categoryId || "",
         subcategory: item.subcategoryId?._id || item.subcategoryId || "",
@@ -299,9 +301,9 @@ const ProductManagement = () => {
           {
             id: Date.now(),
             name: "",
-            price: item.price || "",
-            salePrice: item.salePrice || "",
-            stock: item.stock || "",
+            price: item.price !== undefined && item.price !== null ? item.price : "",
+            salePrice: item.salePrice !== undefined && item.salePrice !== null ? item.salePrice : "",
+            stock: item.stock !== undefined && item.stock !== null ? item.stock : "",
             sku: item.sku || "",
           },
         ],
@@ -610,19 +612,25 @@ const ProductManagement = () => {
           },
           {
             header: "Inventory",
-            cell: (p) => (
-              <div className="flex flex-col">
-                <span className={cn(
-                  "text-xs font-black",
-                  p.stock === 0 ? "text-rose-600" : p.stock <= 10 ? "text-amber-600" : "text-emerald-600"
-                )}>
-                  {p.stock} IN STOCK
-                </span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
-                  ₹{Number(p.price).toLocaleString()}
-                </span>
-              </div>
-            )
+            cell: (p) => {
+              const totalStock = p.variants?.length > 0 
+                ? p.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+                : Number(p.stock || 0);
+                
+              return (
+                <div className="flex flex-col">
+                  <span className={cn(
+                    "text-xs font-black",
+                    totalStock === 0 ? "text-rose-600" : totalStock <= 10 ? "text-amber-600" : "text-emerald-600"
+                  )}>
+                    {totalStock} IN STOCK
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                    ₹{Number(p.price).toLocaleString()}
+                  </span>
+                </div>
+              );
+            }
           },
           {
             header: "Variants",

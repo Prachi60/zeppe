@@ -16,6 +16,12 @@ import {
   Upload,
   Loader2,
   ImagePlus,
+  Library,
+  CreditCard,
+  Hash,
+  FileText,
+  Tag,
+  Building2,
 } from "lucide-react";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
@@ -64,6 +70,19 @@ const SellerProfile = () => {
     address: "",
     shopLogo: "",
     shopBanner: "",
+    category: "",
+    description: "",
+    locality: "",
+    pincode: "",
+    city: "",
+    state: "",
+    bankDetails: {
+      accountHolderName: "",
+      accountNumber: "",
+      ifscCode: "",
+      bankName: "",
+      branchName: "",
+    },
   });
 
   useEffect(() => {
@@ -86,6 +105,19 @@ const SellerProfile = () => {
         address: data.address || "",
         shopLogo: data.shopLogo || "",
         shopBanner: data.shopBanner || "",
+        category: data.category || "",
+        description: data.description || "",
+        locality: data.locality || "",
+        pincode: data.pincode || "",
+        city: data.city || "",
+        state: data.state || "",
+        bankDetails: {
+          accountHolderName: data.bankDetails?.accountHolderName || "",
+          accountNumber: data.bankDetails?.accountNumber || "",
+          ifscCode: data.bankDetails?.ifscCode || "",
+          bankName: data.bankDetails?.bankName || "",
+          branchName: data.bankDetails?.branchName || "",
+        },
       });
     } catch (error) {
       toast.error("Failed to fetch profile");
@@ -106,6 +138,19 @@ const SellerProfile = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name.startsWith("bank.")) {
+      const field = name.split(".")[1];
+      setFormData((prev) => ({
+        ...prev,
+        bankDetails: {
+          ...prev.bankDetails,
+          [field]: value,
+        },
+      }));
+      return;
+    }
+
     if (name === "name") {
       // Disallow numbers in seller name
       const cleaned = value.replace(/[0-9]/g, "");
@@ -117,6 +162,9 @@ const SellerProfile = () => {
     } else if (name === "email") {
       // Trim spaces, keep as-is otherwise; HTML5 type=email will help validate shape
       setFormData({ ...formData, [name]: value.trimStart() });
+    } else if (name === "pincode") {
+      const digitsOnly = value.replace(/[^0-9]/g, "").slice(0, 6);
+      setFormData({ ...formData, [name]: digitsOnly });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -486,6 +534,46 @@ const SellerProfile = () => {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                    Store Category
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">
+                      <Tag size={18} />
+                    </div>
+                    <input
+                      type="text"
+                      name="category"
+                      placeholder="e.g. Grocery, Electronics..."
+                      value={formData.category}
+                      onChange={handleChange}
+                      disabled={!isEditing}
+                      className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                  Store Description
+                </label>
+                <div className="relative group">
+                  <div className="absolute left-5 top-6 text-slate-300">
+                    <FileText size={18} />
+                  </div>
+                  <textarea
+                    name="description"
+                    rows={4}
+                    placeholder="Describe your store and what you sell..."
+                    value={formData.description}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70 resize-none"
+                  />
+                </div>
               </div>
             </form>
           </Card>
@@ -664,6 +752,38 @@ const SellerProfile = () => {
                     </div>
                   </div>
                 )}
+                
+                {/* Detailed Address Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Locality</label>
+                      <input 
+                        type="text" name="locality" value={formData.locality} onChange={handleChange} disabled={!isEditing}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-slate-900 disabled:opacity-60"
+                      />
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Pincode</label>
+                      <input 
+                        type="text" name="pincode" value={formData.pincode} onChange={handleChange} disabled={!isEditing}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-slate-900 disabled:opacity-60"
+                      />
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">City</label>
+                      <input 
+                        type="text" name="city" value={formData.city} onChange={handleChange} disabled={!isEditing}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-slate-900 disabled:opacity-60"
+                      />
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">State</label>
+                      <input 
+                        type="text" name="state" value={formData.state} onChange={handleChange} disabled={!isEditing}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-slate-900 disabled:opacity-60"
+                      />
+                   </div>
+                </div>
               </div>
 
               <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
@@ -674,6 +794,122 @@ const SellerProfile = () => {
                   exactly at your physical storefront for accurate delivery
                   assignments.
                 </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-8 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-lg">
+            <div className="flex items-center justify-between gap-4 mb-8 border-b border-slate-50 pb-4">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                  <CreditCard className="text-slate-400" size={24} />
+                  Bank Account Details
+                </h3>
+                <p className="mt-1 text-sm font-medium text-slate-500">
+                  Where you'll receive your earnings and settlements.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                  Account Holder Name
+                </label>
+                <div className="relative group">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-slate-900 transition-colors">
+                    <User size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    name="bank.accountHolderName"
+                    value={formData.bankDetails.accountHolderName}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    placeholder="Enter full name"
+                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                  Account Number
+                </label>
+                <div className="relative group">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-slate-900 transition-colors">
+                    <Hash size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    name="bank.accountNumber"
+                    value={formData.bankDetails.accountNumber}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    placeholder="Enter account number"
+                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                  Bank Name
+                </label>
+                <div className="relative group">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-slate-900 transition-colors">
+                    <Building2 size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    name="bank.bankName"
+                    value={formData.bankDetails.bankName}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    placeholder="e.g. HDFC Bank, SBI..."
+                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                  IFSC Code
+                </label>
+                <div className="relative group">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-slate-900 transition-colors">
+                    <Library size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    name="bank.ifscCode"
+                    value={formData.bankDetails.ifscCode}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    placeholder="e.g. HDFC0001234"
+                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                  />
+                </div>
+              </div>
+              
+              <div className="md:col-span-2 space-y-3">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                  Branch Name
+                </label>
+                <div className="relative group">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-slate-900 transition-colors">
+                    <MapPin size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    name="bank.branchName"
+                    value={formData.bankDetails.branchName}
+                    onChange={handleChange}
+                    disabled={!isEditing}
+                    placeholder="Enter branch name"
+                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                  />
+                </div>
               </div>
             </div>
           </Card>

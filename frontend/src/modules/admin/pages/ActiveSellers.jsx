@@ -14,7 +14,9 @@ import {
     HiOutlineEnvelope,
     HiOutlinePhone,
     HiOutlinePencilSquare,
-    HiOutlineTrash
+    HiOutlineTrash,
+    HiOutlineCreditCard,
+    HiOutlineBanknotes
 } from 'react-icons/hi2';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -145,6 +147,22 @@ const ActiveSellers = () => {
 
     const handleUpdateSeller = async (e) => {
         e.preventDefault();
+        
+        const isInvalid = (val) => val === undefined || val === null || val === "";
+
+        if (
+            isInvalid(editingSeller.shopName) ||
+            isInvalid(editingSeller.ownerName) ||
+            isInvalid(editingSeller.phone) ||
+            isInvalid(editingSeller.email) ||
+            isInvalid(editingSeller.location) ||
+            isInvalid(editingSeller.category) ||
+            isInvalid(editingSeller.serviceRadius)
+        ) {
+            toast.error("Please fill all required fields");
+            return;
+        }
+
         try {
             const res = await adminApi.updateSeller(editingSeller.id, editingSeller);
             if (res.data.success) {
@@ -244,6 +262,24 @@ const ActiveSellers = () => {
                                         <div className="flex items-center justify-between text-xs font-bold text-indigo-900">
                                             <span className="opacity-60 font-medium">Average Order Value</span>
                                             <span>₹{Math.round(selectedSeller.avgOrderValue).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="p-6 bg-amber-50/50 rounded-2xl border border-amber-100 space-y-4">
+                                    <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Payout Information</h4>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between text-xs font-bold text-amber-900 border-b border-amber-100 pb-2">
+                                            <span className="opacity-60 font-medium">Bank Name</span>
+                                            <span>{selectedSeller.bankDetails?.bankName || "Not Set"}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs font-bold text-amber-900 border-b border-amber-100 pb-2">
+                                            <span className="opacity-60 font-medium">A/C Number</span>
+                                            <span className="font-mono">{selectedSeller.bankDetails?.accountNumber || "Not Set"}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                                            <span className="opacity-60 font-medium">IFSC Code</span>
+                                            <span className="font-mono uppercase">{selectedSeller.bankDetails?.ifscCode || "Not Set"}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -376,6 +412,72 @@ const ActiveSellers = () => {
                                     onChange={(e) => setEditingSeller({ ...editingSeller, location: e.target.value })}
                                     className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10 min-h-[100px]"
                                 />
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-100">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Bank Account Details</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account Holder Name</label>
+                                        <input 
+                                            type="text"
+                                            value={editingSeller.bankDetails?.accountHolderName || ''}
+                                            onChange={(e) => setEditingSeller({ 
+                                                ...editingSeller, 
+                                                bankDetails: { ...(editingSeller.bankDetails || {}), accountHolderName: e.target.value } 
+                                            })}
+                                            className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account Number</label>
+                                        <input 
+                                            type="text"
+                                            value={editingSeller.bankDetails?.accountNumber || ''}
+                                            onChange={(e) => setEditingSeller({ 
+                                                ...editingSeller, 
+                                                bankDetails: { ...(editingSeller.bankDetails || {}), accountNumber: e.target.value } 
+                                            })}
+                                            className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bank Name</label>
+                                        <input 
+                                            type="text"
+                                            value={editingSeller.bankDetails?.bankName || ''}
+                                            onChange={(e) => setEditingSeller({ 
+                                                ...editingSeller, 
+                                                bankDetails: { ...(editingSeller.bankDetails || {}), bankName: e.target.value } 
+                                            })}
+                                            className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">IFSC Code</label>
+                                        <input 
+                                            type="text"
+                                            value={editingSeller.bankDetails?.ifscCode || ''}
+                                            onChange={(e) => setEditingSeller({ 
+                                                ...editingSeller, 
+                                                bankDetails: { ...(editingSeller.bankDetails || {}), ifscCode: e.target.value } 
+                                            })}
+                                            className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10 uppercase"
+                                        />
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Branch Name</label>
+                                        <input 
+                                            type="text"
+                                            value={editingSeller.bankDetails?.branchName || ''}
+                                            onChange={(e) => setEditingSeller({ 
+                                                ...editingSeller, 
+                                                bankDetails: { ...(editingSeller.bankDetails || {}), branchName: e.target.value } 
+                                            })}
+                                            className="w-full px-4 py-3 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500/10"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="flex gap-3 pt-4">

@@ -184,6 +184,8 @@ export const updateSellerProfile = async (req, res) => {
       shopLogo,
       shopBanner,
       bankDetails,
+      category,
+      description,
     } = req.body;
 
     // Find seller
@@ -220,6 +222,8 @@ export const updateSellerProfile = async (req, res) => {
         ...bankDetails
       };
     }
+    if (category !== undefined) seller.category = category;
+    if (description !== undefined) seller.description = description;
 
     // Validate and update geo data
     if (lat !== undefined && lng !== undefined) {

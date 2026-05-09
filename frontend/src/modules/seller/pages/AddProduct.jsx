@@ -130,8 +130,9 @@ const AddProduct = () => {
       return;
     }
 
+    const isInvalid = (val) => val === undefined || val === null || val === "";
     const firstVariant = formData.variants[0] || {};
-    if (!firstVariant.price || !firstVariant.stock) {
+    if (isInvalid(firstVariant.price) || isInvalid(firstVariant.stock)) {
       toast.error("Main variant must have price and stock");
       return;
     }
