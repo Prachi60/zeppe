@@ -59,6 +59,7 @@ const DashboardLayout = ({ children, navItems, title }) => {
     const newOrderAlertRef = useRef(null);
     const newReturnAlertRef = useRef(null);
     const fetchOrdersRef = useRef(null);
+    const playedSoundIdsRef = useRef(new Set());
     const earningsFetchedRef = useRef(false);
 
     useEffect(() => {
@@ -108,15 +109,23 @@ const DashboardLayout = ({ children, navItems, title }) => {
                     return;
                 }
 
-                const newOrder = pendingOrders.find((o) => !shownOrderIdsRef.current.has(o.orderId));
-                if (!newOrder || newOrderAlertRef.current) return;
+                // 1. SOUND ALERT: Play sound for any order we haven't alerted yet
+                const unalertedOrders = pendingOrders.filter(o => !playedSoundIdsRef.current.has(o.orderId));
+                if (unalertedOrders.length > 0) {
+                    playAlertSound();
+                    unalertedOrders.forEach(o => playedSoundIdsRef.current.add(o.orderId));
+                }
 
-                setNewOrderAlert(newOrder);
-                setShownOrderIds((prev) => new Set(prev).add(newOrder.orderId));
-                shownOrderIdsRef.current = new Set(shownOrderIdsRef.current).add(newOrder.orderId);
-                newOrderAlertRef.current = newOrder;
+                // 2. MODAL DISPLAY: Only show if no modal is currently active
+                if (newOrderAlertRef.current) return;
 
-                playAlertSound();
+                const nextOrderToShow = pendingOrders.find((o) => !shownOrderIdsRef.current.has(o.orderId));
+                if (!nextOrderToShow) return;
+
+                setNewOrderAlert(nextOrderToShow);
+                setShownOrderIds((prev) => new Set(prev).add(nextOrderToShow.orderId));
+                shownOrderIdsRef.current = new Set(shownOrderIdsRef.current).add(nextOrderToShow.orderId);
+                newOrderAlertRef.current = nextOrderToShow;
             } catch (error) {
                 console.error("Polling Error:", error);
             } finally {
@@ -236,6 +245,9 @@ const DashboardLayout = ({ children, navItems, title }) => {
             await sellerApi.updateOrderStatus(orderId, { status: 'confirmed' });
             toast.success(`Order #${orderId} Accepted!`);
             setNewOrderAlert(null);
+            newOrderAlertRef.current = null;
+            // Check for next order in queue
+            setTimeout(() => refreshOrders(), 500);
         } catch (error) {
             const msg =
                 error?.response?.data?.message ||
@@ -249,6 +261,9 @@ const DashboardLayout = ({ children, navItems, title }) => {
             await sellerApi.updateOrderStatus(orderId, { status: 'cancelled' });
             toast.error(`Order #${orderId} Declined`);
             setNewOrderAlert(null);
+            newOrderAlertRef.current = null;
+            // Check for next order in queue
+            setTimeout(() => refreshOrders(), 500);
         } catch (error) {
             const msg =
                 error?.response?.data?.message ||

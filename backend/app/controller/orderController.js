@@ -1,4 +1,5 @@
 import Order from "../models/order.js";
+import logger from "../services/logger.js";
 import Cart from "../models/cart.js";
 import Product from "../models/product.js";
 import Transaction from "../models/transaction.js";
@@ -817,6 +818,27 @@ export const updateOrderStatus = async (req, res) => {
         } catch (e) {
           return handleResponse(res, e.statusCode || 500, e.message);
         }
+      }
+
+      // SELLER_IN_COMMAND: Separation of Powers
+      // 1. If pending, clear the timer and start logistics.
+      if (order.workflowStatus === WORKFLOW_STATUS.SELLER_PENDING) {
+        logger.info("Seller initiated logistics from pending. Transitioning to DELIVERY_SEARCH.", {
+          orderId: order.orderId,
+          action: status
+        });
+        order.workflowStatus = WORKFLOW_STATUS.DELIVERY_SEARCH;
+      } 
+      // 2. If already in logistics, DO NOT touch workflowStatus. 
+      // The rider app is now the source of truth for the machine state.
+      else {
+        logger.info("Order in logistics phase. Seller status update is informational-only.", {
+          orderId: order.orderId,
+          action: status,
+          currentWorkflow: order.workflowStatus
+        });
+        // We fall through to the standard status update below, 
+        // which only updates order.status for the UI labels.
       }
     }
 
