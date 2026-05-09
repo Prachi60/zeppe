@@ -1,13 +1,14 @@
 import Product from "../../models/product.js";
 import { createSellerController } from "../../utils/controllerFactory.js";
-import { slugify } from "../../utils/slugify.js";
+import { slugify, generateUniqueSlug } from "../../utils/slugify.js";
 import { uploadToCloudinary } from "../../services/mediaService.js";
 import { enqueueProductIndex, enqueueProductRemoval } from "../../services/searchSyncService.js";
 import { invalidate } from "../../services/cacheService.js";
 
 const makeProductSku = (name, index = 1) => {
     const prefix = String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "item";
-    return `${prefix}-${String(index).padStart(3, "0")}`;
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}-${String(index).padStart(2, "0")}-${randomSuffix}`;
 };
 
 const normalizeUrl = (value) => {
@@ -71,8 +72,23 @@ const prepareProductData = async (req, data) => {
 
     // 3. Slug & SKU
     if (data.name) {
-        if (!data.slug) data.slug = slugify(data.name);
-        if (!data.sku) data.sku = makeProductSku(data.name, Date.now() % 1000);
+        if (!data.slug) {
+            const slugResult = await generateUniqueSlug({
+                Model: Product,
+                name: data.name,
+                sellerId: req.user?._id || data.sellerId,
+                excludeId: req.params.id
+            });
+
+            if (!slugResult.success) {
+                // If it's a duplicate for the same seller, we throw an error
+                const error = new Error(slugResult.error);
+                error.statusCode = 400;
+                throw error;
+            }
+            data.slug = slugResult.slug;
+        }
+        if (!data.sku) data.sku = makeProductSku(data.name, 1);
     }
 
     applyMediaFields(data);

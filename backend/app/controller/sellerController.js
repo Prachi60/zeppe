@@ -3,6 +3,7 @@ import Transaction from "../models/transaction.js";
 import UserSubscription from "../models/userSubscription.js";
 import Setting from "../models/setting.js";
 import { handleResponse, calculateDistance } from "../utils/helper.js";
+import { generateUniqueSlug } from "../utils/slugify.js";
 import mongoose from "mongoose";
 
 /* ===============================
@@ -193,7 +194,18 @@ export const updateSellerProfile = async (req, res) => {
 
     // Update fields if provided
     if (name) seller.name = name;
-    if (shopName) seller.shopName = shopName;
+    if (shopName && shopName !== seller.shopName) {
+      seller.shopName = shopName;
+      const slugResult = await generateUniqueSlug({
+        Model: Seller,
+        name: shopName,
+        sellerId: null, // Stores must be globally unique
+        excludeId: seller._id
+      });
+      if (slugResult.success) {
+        seller.slug = slugResult.slug;
+      }
+    }
     if (phone) seller.phone = phone;
     if (address !== undefined) seller.address = address;
     if (locality !== undefined) seller.locality = locality;

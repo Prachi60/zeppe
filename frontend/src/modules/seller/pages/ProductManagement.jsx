@@ -63,6 +63,7 @@ const ProductManagement = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [modalTab, setModalTab] = useState("general");
   const [refreshKey, setRefreshKey] = useState(0);
+  const sessionRandom = useMemo(() => Math.random().toString(36).substring(2, 6).toUpperCase(), []);
 
   // --- Filter & pagination state (consumed by UI & DDT defaultParams) ---
   const [filterCategory, setFilterCategory] = useState("all");
@@ -90,7 +91,7 @@ const ProductManagement = () => {
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "")
       .slice(0, 5) || "item";
-    return `${prefix}-${String(index).padStart(3, "0")}`;
+    return `${prefix}-${String(index).padStart(2, "0")}-${sessionRandom}`;
   };
 
   const isAutoSku = (sku, name, index = 1) =>

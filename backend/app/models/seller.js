@@ -155,6 +155,12 @@ const sellerSchema = new mongoose.Schema(
       enum: ["active", "inactive", "expired"],
       default: "inactive",
     },
+    slug: {
+      type: String,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
     lastLogin: Date,
   },
   { timestamps: true },

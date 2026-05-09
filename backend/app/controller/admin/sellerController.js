@@ -1,5 +1,6 @@
 import Seller from "../../models/seller.js";
 import { createAdminController } from "../../utils/controllerFactory.js";
+import { generateUniqueSlug } from "../../utils/slugify.js";
 
 const controller = createAdminController(Seller, {
     searchFields: ['shopName', 'name', 'phone', 'email'],
@@ -12,7 +13,8 @@ const controller = createAdminController(Seller, {
                 'name', 'shopName', 'email', 'phone', 'category', 'description', 
                 'shopLogo', 'shopBanner', 'address', 'locality', 'pincode', 
                 'city', 'state', 'location', 'serviceRadius', 'isActive', 
-                'isVerified', 'applicationStatus', 'bankDetails', 'subscriptionStatus'
+                'isVerified', 'applicationStatus', 'bankDetails', 'subscriptionStatus',
+                'slug'
             ];
 
             const sanitizedData = {};
@@ -28,6 +30,23 @@ const controller = createAdminController(Seller, {
                     sanitizedData[field] = data[field];
                 }
             });
+
+            // Handle Slug Generation if shopName changed
+            if (sanitizedData.shopName) {
+                // We need to fetch the current seller to check if name actually changed
+                const existingSeller = await Seller.findById(req.params.id);
+                if (existingSeller && existingSeller.shopName !== sanitizedData.shopName) {
+                    const slugResult = await generateUniqueSlug({
+                        Model: Seller,
+                        name: sanitizedData.shopName,
+                        sellerId: null,
+                        excludeId: req.params.id
+                    });
+                    if (slugResult.success) {
+                        sanitizedData.slug = slugResult.slug;
+                    }
+                }
+            }
 
             // Handle serviceRadius conversion
             if (sanitizedData.serviceRadius !== undefined) {

@@ -198,7 +198,7 @@ const Orders = () => {
             o.pricing?.total || o.total || 0,
             o.status,
             formatAddr(o.address),
-            o.payment ?? "",
+            (o.payment && typeof o.payment === 'object') ? `${o.payment.method} (${o.payment.status})` : (o.payment ?? ""),
         ]);
         const csvContent = [
             headers.map(escapeCsv).join(","),
@@ -698,7 +698,11 @@ const Orders = () => {
                                             <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest mb-2">Payment Status</h4>
                                             <div className="flex items-center gap-2">
                                                 <HiOutlineBanknotes className="h-5 w-5 text-brand-400" />
-                                                <span className="text-xs font-bold tracking-tight">{selectedOrder.payment}</span>
+                                                <span className="text-xs font-bold tracking-tight">
+                                                    {(selectedOrder.payment && typeof selectedOrder.payment === 'object') 
+                                                        ? `${selectedOrder.payment.method.toUpperCase()} - ${selectedOrder.payment.status.toUpperCase()}` 
+                                                        : (selectedOrder.payment || 'N/A')}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

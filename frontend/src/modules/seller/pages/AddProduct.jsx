@@ -25,6 +25,7 @@ const AddProduct = () => {
   const navigate = useNavigate();
   const [modalTab, setModalTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
+  const sessionRandom = useMemo(() => Math.random().toString(36).substring(2, 6).toUpperCase(), []);
 
   const makeSku = (name, index = 1) => {
     const prefix =
@@ -32,7 +33,8 @@ const AddProduct = () => {
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "")
         .slice(0, 5) || "item";
-    return `${prefix}-${String(index).padStart(3, "0")}`;
+    
+    return `${prefix}-${String(index).padStart(2, "0")}-${sessionRandom}`;
   };
 
   const isAutoSku = (sku, name, index = 1) =>

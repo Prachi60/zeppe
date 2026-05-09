@@ -13,6 +13,7 @@ import {
     verifySellerVerificationToken,
 } from "../services/sellerVerificationService.js";
 import { uploadToCloudinary } from "../services/mediaService.js";
+import { generateUniqueSlug } from "../utils/slugify.js";
 
 /* ===============================
    Utils
@@ -258,6 +259,13 @@ export const signupSeller = async (req, res) => {
             phoneVerified: true,
             isActive: false,
         };
+
+        const slugResult = await generateUniqueSlug({
+            Model: Seller,
+            name: shopName,
+            sellerId: null // Stores must be globally unique
+        });
+        sellerData.slug = slugResult.slug;
 
         if (parsedLat !== undefined && parsedLng !== undefined) {
             sellerData.location = {
