@@ -100,6 +100,14 @@ const deliverySchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        isEmailVerified: {
+            type: Boolean,
+            default: false,
+        },
+        isActive: {
+            type: Boolean,
+            default: false,
+        },
 
         applicationStatus: {
             type: String,

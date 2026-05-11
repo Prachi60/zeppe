@@ -19,11 +19,18 @@ export const getDeliveryBoys = async (req, res) => {
         const { page, limit, skip } = getPaginationOptions(req);
 
         // Backward compatibility: old riders may not have applicationStatus.
-        if (String(req.query?.applicationStatus || "").toLowerCase() === "pending") {
+        const status = String(req.query?.applicationStatus || "").toLowerCase();
+        if (status === "pending") {
             delete query.applicationStatus;
             query.$or = [
                 { applicationStatus: "pending" },
                 { applicationStatus: { $exists: false }, isVerified: { $ne: true } },
+            ];
+        } else if (status === "approved") {
+            delete query.applicationStatus;
+            query.$or = [
+                { applicationStatus: "approved" },
+                { applicationStatus: { $exists: false }, isVerified: true },
             ];
         }
 
@@ -122,6 +129,7 @@ export const updateDeliveryBoy = async (req, res) => {
             {
                 $set: {
                     isVerified: true,
+                    isActive: true,
                     isOnline: false,
                     applicationStatus: "approved",
                     rejectionReason: "",
@@ -146,6 +154,7 @@ export const deleteDeliveryBoy = async (req, res) => {
             {
                 $set: {
                     isVerified: false,
+                    isActive: false,
                     isOnline: false,
                     applicationStatus: "rejected",
                     rejectionReason: reason,

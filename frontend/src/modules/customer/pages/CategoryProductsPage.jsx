@@ -17,6 +17,21 @@ import noServiceAnimation from '@/assets/lottie/animation.json';
 import { getCategoryLocation } from '../utils/categoryNavigation';
 import { useLocation as useAppLocation } from '../context/LocationContext';
 
+const MANUAL_SUBCAT_ORDER = [
+  "Vegetables",
+  "Fresh Fruits",
+  "Rice, Dals & Atta",
+  "Masala, Oil & Ghee",
+  "Frozen Food",
+  "Milk, Bakery & Eggs",
+  "Biscuits & Cookies",
+  "Cereals & Nuts",
+  "Dry Fruits",
+  "Sweets",
+  "Puja Samagri",
+  "Kitchen Tools & Appliances"
+];
+
 /* ─── Compact Kuiklo-style card ─────────────────────────────────────────── */
 const KuikloCard = React.memo(({ product }) => {
     const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
@@ -219,7 +234,7 @@ const EmptyCategoryView = ({ categoryName }) => {
                 </button>
 
                 <button 
-                    onClick={() => navigate('/search')}
+                    onClick={() => navigate('/')}
                     className="flex items-center justify-between bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all group active:scale-[0.98]"
                 >
                     <div className="flex items-center gap-4">
@@ -326,11 +341,20 @@ const CategoryProductsPage = () => {
                 if (!currentCat) return;
 
                 setCategory(currentCat);
-                const subs = (currentCat.children || []).map((s) => ({
-                    id: s._id,
-                    name: s.name,
-                    image: s.image || s.mainImage || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
-                }));
+                const subs = (currentCat.children || [])
+                    .sort((a, b) => {
+                        const idxA = MANUAL_SUBCAT_ORDER.indexOf(a.name);
+                        const idxB = MANUAL_SUBCAT_ORDER.indexOf(b.name);
+                        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                        if (idxA !== -1) return -1;
+                        if (idxB !== -1) return 1;
+                        return new Date(a.createdAt) - new Date(b.createdAt);
+                    })
+                    .map((s) => ({
+                        id: s._id,
+                        name: s.name,
+                        image: s.image || s.mainImage || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
+                    }));
 
                 setSubCategories([
                     {

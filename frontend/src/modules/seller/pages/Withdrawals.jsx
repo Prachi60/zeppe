@@ -194,6 +194,7 @@ const Withdrawals = () => {
                         apiService={sellerApi}
                         endpoint="seller/ledger"
                         refreshSelected={refreshKey}
+                        showToolbox={false}
                         defaultParams={{
                             type: 'Withdrawal',
                             search: searchTerm

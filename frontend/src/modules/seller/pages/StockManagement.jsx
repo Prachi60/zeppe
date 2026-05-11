@@ -36,6 +36,7 @@ const StockManagement = () => {
     const [adjustType, setAdjustType] = useState('Restock');
     const [adjustValue, setAdjustValue] = useState('');
     const [adjustNote, setAdjustNote] = useState('');
+    const [selectedVariantId, setSelectedVariantId] = useState('');
     const [refreshKey, setRefreshKey] = useState(0);
 
     const refreshData = () => setRefreshKey(prev => prev + 1);
@@ -71,12 +72,29 @@ const StockManagement = () => {
         setIsLoading(false);
     }, [refreshKey]);
 
-    const stats = useMemo(() => [
-        { label: 'Total Inventory', value: inventory.reduce((acc, item) => acc + (item.stock || 0), 0), icon: HiOutlineCube, color: 'text-indigo-600', bg: 'bg-indigo-50', status: 'All' },
-        { label: 'Low Stock Items', value: inventory.filter(i => (i.stock || 0) > 0 && (i.stock || 0) <= (i.lowStockAlert || 5)).length, icon: HiOutlineExclamationTriangle, color: 'text-amber-600', bg: 'bg-amber-50', status: 'Low Stock' },
-        { label: 'Out of Stock', value: inventory.filter(i => (i.stock || 0) === 0).length, icon: HiOutlineArchiveBoxXMark, color: 'text-rose-600', bg: 'bg-rose-50', status: 'Out of Stock' },
-        { label: 'Stock Valuation', value: `₹${inventory.reduce((acc, item) => acc + ((item.stock || 0) * (item.price || 0)), 0).toLocaleString()}`, icon: HiOutlineArrowsUpDown, color: 'text-brand-600', bg: 'bg-brand-50', status: 'In Stock' }
-    ], [inventory]);
+    const stats = useMemo(() => {
+        const calculateTotalStock = (item) => {
+            if (item.variants?.length > 0) {
+                return item.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
+            }
+            return Number(item.stock || 0);
+        };
+
+        const totalUnits = inventory.reduce((acc, item) => acc + calculateTotalStock(item), 0);
+        const lowStockCount = inventory.filter(i => {
+            const stock = calculateTotalStock(i);
+            return stock > 0 && stock <= (i.lowStockAlert || 5);
+        }).length;
+        const outOfStockCount = inventory.filter(i => calculateTotalStock(i) === 0).length;
+        const valuation = inventory.reduce((acc, item) => acc + (calculateTotalStock(item) * (item.price || 0)), 0);
+
+        return [
+            { label: 'Total Inventory', value: totalUnits, icon: HiOutlineCube, color: 'text-indigo-600', bg: 'bg-indigo-50', status: 'All' },
+            { label: 'Low Stock Items', value: lowStockCount, icon: HiOutlineExclamationTriangle, color: 'text-amber-600', bg: 'bg-amber-50', status: 'Low Stock' },
+            { label: 'Out of Stock', value: outOfStockCount, icon: HiOutlineArchiveBoxXMark, color: 'text-rose-600', bg: 'bg-rose-50', status: 'Out of Stock' },
+            { label: 'Stock Valuation', value: `₹${valuation.toLocaleString()}`, icon: HiOutlineArrowsUpDown, color: 'text-brand-600', bg: 'bg-brand-50', status: 'In Stock' }
+        ];
+    }, [inventory]);
 
     const handleFullAdjustment = async () => {
         const value = parseInt(adjustValue);
@@ -88,8 +106,9 @@ const StockManagement = () => {
         try {
             const res = await sellerApi.adjustStock({
                 productId: selectedItem.id,
+                variantId: selectedVariantId,
                 type: adjustType === 'Restock' ? 'Restock' : 'Correction',
-                quantity: adjustType === 'Restock' ? value : -value,
+                quantity: value,
                 note: adjustNote
             });
 
@@ -107,6 +126,12 @@ const StockManagement = () => {
         setSelectedItem(item);
         setAdjustValue('');
         setAdjustNote('');
+        // If it has variants, default to the first one
+        if (item.variants?.length > 0) {
+            setSelectedVariantId(item.variants[0]._id);
+        } else {
+            setSelectedVariantId('');
+        }
         setIsAdjustModalOpen(true);
     };
 
@@ -225,6 +250,7 @@ const StockManagement = () => {
                                 apiService={sellerApi}
                                 endpoint="products/seller/me"
                                 refreshSelected={refreshKey}
+                                showToolbox={false}
                                 defaultParams={memoizedInventoryParams}
                                 renderMobileRow={(p) => {
                                     const totalStock = p.variants?.length > 0 
@@ -330,7 +356,12 @@ const StockManagement = () => {
                                     {
                                         header: "Status",
                                         cell: (p) => {
-                                            const status = (p.stock || 0) === 0 ? 'Out of Stock' : ((p.stock || 0) <= (p.lowStockAlert || 5) ? 'Low Stock' : 'In Stock');
+                                            const totalStock = p.variants?.length > 0 
+                                                ? p.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+                                                : Number(p.stock || 0);
+                                            const threshold = p.lowStockAlert || 5;
+                                            const status = totalStock === 0 ? 'Out of Stock' : (totalStock <= threshold ? 'Low Stock' : 'In Stock');
+                                            
                                             return (
                                                 <Badge
                                                     variant={status === 'In Stock' ? 'success' : (status === 'Low Stock' ? 'warning' : 'destructive')}
@@ -530,11 +561,42 @@ const StockManagement = () => {
                                     <div>
                                         <h4 className="text-sm font-black text-slate-900">{selectedItem.name}</h4>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Stock:</span>
-                                            <span className="text-[10px] font-black text-slate-900 bg-white px-2 py-0.5 rounded-lg border border-slate-200">{(selectedItem.stock || 0)} Units</span>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                {selectedVariantId ? "Variant Stock:" : "Active Stock:"}
+                                            </span>
+                                            <span className="text-[10px] font-black text-slate-900 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
+                                                {selectedVariantId && selectedItem.variants?.length > 0 
+                                                    ? (selectedItem.variants.find(v => v._id === selectedVariantId)?.stock || 0)
+                                                    : (selectedItem.variants?.length > 0 
+                                                        ? selectedItem.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+                                                        : (selectedItem.stock || 0))
+                                                } Units
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
+
+                                {selectedItem.variants?.length > 0 && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Variant</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedItem.variants.map((variant) => (
+                                                <button
+                                                    key={variant._id}
+                                                    onClick={() => setSelectedVariantId(variant._id)}
+                                                    className={cn(
+                                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                                        selectedVariantId === variant._id
+                                                            ? "bg-primary text-white shadow-md shadow-primary/20"
+                                                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                    )}
+                                                >
+                                                    {variant.name || 'Unnamed'} ({variant.stock || 0})
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="space-y-6">
                                     <div className="flex p-1.5 bg-slate-100 rounded-[1.5rem] border border-slate-200">

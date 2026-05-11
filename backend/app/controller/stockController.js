@@ -7,7 +7,7 @@ import handleResponse from "../utils/helper.js";
 ================================ */
 export const adjustStock = async (req, res) => {
     try {
-        const { productId, type, quantity, note } = req.body;
+        const { productId, variantId, type, quantity, note } = req.body;
         const sellerId = req.user.id;
 
         const product = await Product.findOne({ _id: productId, sellerId });
@@ -16,14 +16,29 @@ export const adjustStock = async (req, res) => {
         }
 
         const qtyChange = Number(quantity);
-        const finalStock = type === 'Restock' ? product.stock + qtyChange : product.stock - qtyChange;
+        let variantName = "";
 
-        if (finalStock < 0) {
-            return handleResponse(res, 400, "Stock cannot be negative");
+        if (variantId && product.variants && product.variants.length > 0) {
+            const variant = product.variants.id(variantId);
+            if (!variant) {
+                return handleResponse(res, 404, "Variant not found");
+            }
+            variantName = variant.name || "Unnamed Variant";
+            const finalVariantStock = type === 'Restock' ? (variant.stock || 0) + qtyChange : (variant.stock || 0) - qtyChange;
+            
+            if (finalVariantStock < 0) {
+                return handleResponse(res, 400, "Variant stock cannot be negative");
+            }
+            variant.stock = finalVariantStock;
+        } else {
+            const finalStock = type === 'Restock' ? (product.stock || 0) + qtyChange : (product.stock || 0) - qtyChange;
+            if (finalStock < 0) {
+                return handleResponse(res, 400, "Stock cannot be negative");
+            }
+            product.stock = finalStock;
         }
 
-        // 1. Update Product Stock
-        product.stock = finalStock;
+        // 1. Save Product
         await product.save();
 
         // 2. Create History Entry
@@ -32,7 +47,7 @@ export const adjustStock = async (req, res) => {
             seller: sellerId,
             type, // Restock, Correction
             quantity: type === 'Restock' ? qtyChange : -qtyChange,
-            note: note || `Manual ${type} adjustment`
+            note: note || `Manual ${type} adjustment${variantName ? ` for ${variantName}` : ""}`
         });
 
         await historyEntry.save();

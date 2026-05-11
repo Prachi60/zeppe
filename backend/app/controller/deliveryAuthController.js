@@ -114,8 +114,8 @@ export const loginDelivery = async (req, res) => {
 
         const delivery = await Delivery.findOne({ email });
 
-        if (!delivery || !delivery.isVerified) {
-            return handleResponse(res, 404, "Delivery partner not found");
+        if (!delivery) {
+            return handleResponse(res, 404, "Delivery partner not found. Please signup first.");
         }
 
         const otp = generateOTP();
@@ -165,8 +165,7 @@ export const verifyDeliveryOTP = async (req, res) => {
             return handleResponse(res, 400, "Invalid or expired OTP");
         }
 
-        delivery.isVerified = true;
-        delivery.isOnline = true; // Auto-activate delivery boy on login
+        delivery.isEmailVerified = true;
         delivery.otp = undefined;
         delivery.otpExpiry = undefined;
         delivery.lastLogin = new Date();

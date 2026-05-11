@@ -1440,7 +1440,7 @@ const Home = () => {
                   if (idxA !== -1 && idxB !== -1) return idxA - idxB;
                   if (idxA !== -1) return -1;
                   if (idxB !== -1) return 1;
-                  return new Date(b.createdAt) - new Date(a.createdAt);
+                  return new Date(a.createdAt) - new Date(b.createdAt);
                 }),
             };
           })

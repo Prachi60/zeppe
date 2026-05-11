@@ -52,6 +52,7 @@ const Orders = () => {
     const { showToast } = useToast();
     const [refreshKey, setRefreshKey] = useState(0);
     const [page, setPage] = useState(1);
+    const [sortBy, setSortBy] = useState('newest');
 
     const refreshOrders = () => setRefreshKey(prev => prev + 1);
 
@@ -59,8 +60,9 @@ const Orders = () => {
         startDate,
         endDate,
         search: searchTerm,
+        sort: sortBy,
         status: activeTab === 'All' ? '' : (activeTab === 'Out for Delivery' ? 'out_for_delivery' : activeTab.toLowerCase())
-    }), [startDate, endDate, searchTerm, activeTab]);
+    }), [startDate, endDate, searchTerm, activeTab, sortBy]);
 
     const tabs = ['All', 'Pending', 'Confirmed', 'Packed', 'Out for Delivery', 'Delivered', 'Cancelled'];
     const todayStr = new Date().toISOString().split('T')[0];
@@ -310,6 +312,14 @@ const Orders = () => {
                             />
                         </div>
                         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="w-full sm:w-auto px-4 py-2.5 bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-primary/5 outline-none cursor-pointer"
+                            >
+                                <option value="newest">Newest first</option>
+                                <option value="oldest">Oldest first</option>
+                            </select>
                             <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <div className="flex-1 sm:w-36">
                                     <DatePicker
@@ -356,7 +366,7 @@ const Orders = () => {
                         apiService={sellerApi}
                         refreshSelected={refreshKey}
                         endpoint="orders/seller-orders"
-                        searchPlaceholder="Search orders..."
+                        showToolbox={false}
                         renderMobileRow={(o) => {
                             const status = getLegacyStatusFromOrder(o);
                             return (

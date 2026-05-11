@@ -51,7 +51,11 @@ const ActiveDeliveryBoys = () => {
     const fetchRiders = async (requestedPage = 1) => {
         setIsLoading(true);
         try {
-            const params = { page: requestedPage, limit: pageSize };
+            const params = { 
+                page: requestedPage, 
+                limit: pageSize,
+                applicationStatus: 'approved'
+            };
             if (searchTerm.trim()) params.search = searchTerm.trim();
             if (statusFilter !== 'all') params.status = statusFilter;
 

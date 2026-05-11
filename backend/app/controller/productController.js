@@ -461,9 +461,9 @@ export const updateProduct = async (req, res) => {
           console.error("Cloudinary upload failed during update:", err);
         }
       }
-      if (galleryUrls.length > 0) {
-        productData.galleryImages = galleryUrls;
-      }
+      // Merge existing gallery images with new ones
+      const existingGallery = parseImageList(productData.galleryImages);
+      productData.galleryImages = [...existingGallery, ...galleryUrls];
     }
 
     // Parse JSON fields

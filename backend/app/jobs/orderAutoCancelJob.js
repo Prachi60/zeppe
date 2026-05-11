@@ -22,7 +22,7 @@ const AUTO_CANCEL_INTERVAL_MS = parseInt(
  */
 const autoCancelExpiredOrders = async () => {
   const startTime = Date.now();
-  
+
   try {
     const now = new Date();
 
@@ -141,9 +141,9 @@ const autoCancelExpiredOrders = async () => {
       v2DeliveryExpired.length +
       paymentExpiredOrders.length +
       legacyExpired.length;
-    
+
     const duration = Date.now() - startTime;
-    
+
     if (n > 0) {
       logger.info('Order auto-cancel job completed', {
         jobName: 'orderAutoCancelJob',

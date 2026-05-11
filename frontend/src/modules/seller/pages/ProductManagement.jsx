@@ -220,6 +220,12 @@ const ProductManagement = () => {
         formData.galleryFiles.forEach((file) => data.append("galleryImages", file));
       }
 
+      // Also send existing gallery URLs to keep them
+      const existingGallery = (formData.galleryImages || []).filter(img => typeof img === 'string' && img.startsWith('http'));
+      if (existingGallery.length > 0) {
+        data.append("galleryImages", JSON.stringify(existingGallery));
+      }
+
       if (editingItem) {
         await sellerApi.updateProduct(editingItem._id || editingItem.id, data);
         toast.success("Product updated successfully");
@@ -297,6 +303,7 @@ const ProductManagement = () => {
         brand: item.brand || "",
         mainImage: item.mainImage || null,
         galleryImages: item.galleryImages || [],
+        galleryFiles: [],
         variants: (item.variants && item.variants.length > 0) ? item.variants.map(v => ({ ...v, id: v._id || Date.now() })) : [
           {
             id: Date.now(),
@@ -327,6 +334,7 @@ const ProductManagement = () => {
         brand: "",
         mainImage: null,
         galleryImages: [],
+        galleryFiles: [],
         variants: [
           {
             id: Date.now(),
@@ -496,6 +504,7 @@ const ProductManagement = () => {
       <DynamicDataTable
         apiService={sellerApi}
         refreshSelected={refreshKey}
+        showToolbox={false}
         endpoint="products/seller/me"
         defaultParams={memoizedDefaultParams}
         renderMobileRow={(p) => (

@@ -287,6 +287,7 @@ const Returns = () => {
                                 apiService={sellerApi}
                                 endpoint="orders/seller-returns"
                                 refreshSelected={refreshKey}
+                                showToolbox={false}
                                 defaultParams={{
                                     status: activeTab === 'Requested' ? 'return_requested' : (activeTab === 'Approved' ? 'return_approved' : (activeTab === 'Completed' ? 'returned' : '')),
                                     search: searchTerm

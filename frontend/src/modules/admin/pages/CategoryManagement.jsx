@@ -592,7 +592,7 @@ const CategoryManagement = () => {
                                     }
                                 ]}
                                 searchPlaceholder="Search subcategories..."
-                                hideHeader={true} // Since we have a custom header above
+                                showToolbox={false}
                             />
                         </div>
                     )
