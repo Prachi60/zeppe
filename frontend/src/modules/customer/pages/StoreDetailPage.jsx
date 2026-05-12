@@ -124,10 +124,18 @@ const StoreDetailPage = () => {
         const raw = products.find(r => r._id === p._id);
         if (!raw) return false;
         
+        // Helper to check ID match against possible populated or string fields
+        const matches = (field, targetId) => {
+          if (!field) return false;
+          if (typeof field === "string") return field === targetId;
+          if (typeof field === "object" && field._id) return String(field._id) === targetId;
+          return false;
+        };
+
         // Match against any of the category levels
-        return raw.categoryId === activeCategoryId || 
-               raw.headerId === activeCategoryId || 
-               raw.subcategoryId === activeCategoryId ||
+        return matches(raw.categoryId, activeCategoryId) || 
+               matches(raw.headerId, activeCategoryId) || 
+               matches(raw.subcategoryId, activeCategoryId) ||
                raw.category === activeCategoryId; // Support legacy string category if present
       });
     }
