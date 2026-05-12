@@ -1,7 +1,6 @@
 import Seller from "../models/seller.js";
 import UserSubscription from "../models/userSubscription.js";
 import Setting from "../models/setting.js";
-import UserSubscription from "../models/userSubscription.js";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import fs from "fs/promises";
@@ -396,14 +395,6 @@ export const loginSeller = async (req, res) => {
             deletedAt: null
         });
 
-        // Verify subscription status dynamically
-        const activeSub = await UserSubscription.findOne({
-            userId: seller._id,
-            role: "seller",
-            status: "active",
-            endDate: { $gt: new Date() }
-        });
-
         const token = generateToken(seller);
 
         // Verify subscription status dynamically
@@ -419,13 +410,10 @@ export const loginSeller = async (req, res) => {
 
         const sellerObj = seller.toObject();
         sellerObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
-        const sellerObj = seller.toObject();
-        sellerObj.subscriptionStatus = activeSub ? "active" : "inactive";
         sellerObj.plansAvailable = activePlansCount > 0;
 
         return handleResponse(res, 200, "Login successful", {
             token,
-            seller: sellerObj,
             seller: sellerObj,
         });
     } catch (error) {

@@ -180,14 +180,6 @@ export const verifyDeliveryOTP = async (req, res) => {
             deletedAt: null
         });
 
-        // Verify subscription status dynamically
-        const activeSub = await UserSubscription.findOne({
-            userId: delivery._id,
-            role: "delivery",
-            status: "active",
-            endDate: { $gt: new Date() }
-        });
-
         const token = generateToken(delivery);
 
         // Verify subscription status dynamically
@@ -203,13 +195,10 @@ export const verifyDeliveryOTP = async (req, res) => {
 
         const deliveryObj = delivery.toObject();
         deliveryObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
-        const deliveryObj = delivery.toObject();
-        deliveryObj.subscriptionStatus = activeSub ? "active" : "inactive";
         deliveryObj.plansAvailable = activePlansCount > 0;
 
         return handleResponse(res, 200, "Login successful", {
             token,
-            delivery: deliveryObj,
             delivery: deliveryObj,
         });
     } catch (error) {
@@ -246,7 +235,6 @@ export const getDeliveryProfile = async (req, res) => {
 
         const deliveryObj = delivery.toObject();
         deliveryObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
-        deliveryObj.subscriptionStatus = activeSub ? "active" : "inactive";
         deliveryObj.plansAvailable = activePlansCount > 0;
 
         return handleResponse(res, 200, "Profile fetched successfully", deliveryObj);
