@@ -26,7 +26,7 @@ const LOCAL_SELLER_DOCS_DIR = path.resolve(__dirname, "../../uploads/seller-docu
 
 const generateToken = (seller) =>
     jwt.sign({ id: seller._id, role: "seller" }, process.env.JWT_SECRET, {
-        expiresIn: "7d",
+        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
     });
 
 const SELLER_DOCUMENT_FIELDS = {

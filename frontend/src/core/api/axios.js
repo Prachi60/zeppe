@@ -78,8 +78,7 @@ function getRoleFromRequestUrl(url = '') {
         normalizedUrl.startsWith('/customer') ||
         normalizedUrl.startsWith('customer') ||
         normalizedUrl.includes('/cart') ||
-        normalizedUrl.includes('/wishlist') ||
-        normalizedUrl.includes('/payments')
+        normalizedUrl.includes('/wishlist')
     ) {
         return 'customer';
     }
@@ -91,8 +90,14 @@ function getCandidateRoles(url = '', pathname = '') {
     const currentRole = getRoleFromPath(pathname);
     const requestRole = getRoleFromRequestUrl(url);
 
+    // If we're on a role-specific page (e.g. /seller/*), ALWAYS prioritize that role's token
+    // even for shared APIs, to prevent cross-role autologout.
+    if (currentRole && currentRole !== 'customer') {
+        return [currentRole, requestRole].filter(Boolean);
+    }
+
     if (requestRole) {
-        return [...new Set([requestRole, currentRole === requestRole ? currentRole : null].filter(Boolean))];
+        return [...new Set([requestRole, currentRole].filter(Boolean))];
     }
 
     return [currentRole];
