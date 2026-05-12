@@ -145,8 +145,16 @@ export const getSellerProfile = async (req, res) => {
       endDate: { $gt: new Date() }
     });
 
+    // Check if any active plans are configured by admin for sellers
+    const activePlansCount = await mongoose.model("SubscriptionPlan").countDocuments({
+      targetRole: "seller",
+      isActive: true,
+      deletedAt: null
+    });
+
     const sellerObj = seller.toObject();
     sellerObj.subscriptionStatus = activeSub ? "active" : "inactive";
+    sellerObj.plansAvailable = activePlansCount > 0;
 
     return handleResponse(
       res,

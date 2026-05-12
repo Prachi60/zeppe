@@ -24,6 +24,8 @@ const SubscriptionStatus = lazy(() => import("../pages/profile/SubscriptionStatu
 const Notifications = lazy(() => import("../pages/Notifications"));
 const Subscription = lazy(() => import("../pages/Subscription"));
 
+import { useAuth } from "@core/context/AuthContext";
+
 const LoadingFallback = () => (
   <div className="flex h-screen w-full items-center justify-center bg-slate-50 text-xs font-bold uppercase tracking-widest text-slate-400">
     Initializing...
@@ -31,6 +33,23 @@ const LoadingFallback = () => (
 );
 
 const DeliveryRoutes = () => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingFallback />;
+  }
+
+  const isDemoActive = localStorage.getItem('demo_subscription_active') === 'true';
+  const plansAvailable = user?.plansAvailable !== false;
+  const isSubscribed = user?.subscriptionStatus === "active" || isDemoActive || !plansAvailable;
+
+  const isAuthPage = window.location.pathname.includes("/delivery/auth") || window.location.pathname.includes("/delivery/splash");
+  const isSubscriptionPage = window.location.pathname.includes("/delivery/subscription");
+
+  if (!isSubscribed && !isSubscriptionPage && !isAuthPage) {
+    return <Navigate to="subscription" replace />;
+  }
+
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
@@ -57,7 +76,15 @@ const DeliveryRoutes = () => {
           <Route path="profile/withdrawals" element={<Withdrawals />} />
           <Route path="profile/subscription" element={<SubscriptionStatus />} />
           <Route path="notifications" element={<Notifications />} />
-          <Route path="/" element={<Navigate to="subscription" replace />} />
+          <Route 
+            path="/" 
+            element={
+              isSubscribed 
+                ? <Navigate to="dashboard" replace /> 
+                : <Navigate to="subscription" replace />
+            } 
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </Suspense>

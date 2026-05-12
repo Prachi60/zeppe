@@ -738,35 +738,47 @@ const SellerProfile = () => {
                     Plan Status
                   </p>
                   <p className="text-base font-black text-emerald-900 uppercase">
-                    {profile?.subscriptionStatus === 'active' || localStorage.getItem('demo_subscription_active') ? "Active Partner" : "Inactive"}
+                    {!profile?.plansAvailable 
+                      ? "Not Required" 
+                      : (profile?.subscriptionStatus === 'active' || localStorage.getItem('demo_subscription_active') ? "Active Partner" : "Inactive")}
                   </p>
                 </div>
               </div>
               
-              <div className="pt-4 border-t border-emerald-100 grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800/60 mb-1">
-                    Activated On
-                  </p>
-                  <p className="text-sm font-bold text-emerald-900">
-                    23 April 2026
+              {!profile?.plansAvailable ? (
+                <div className="mt-4 p-4 bg-white/60 rounded-2xl border border-emerald-200/50">
+                  <p className="text-[10px] font-bold text-emerald-800 leading-relaxed italic">
+                    Note: Currently, no subscription plans are active for your region. You have full access to the dashboard.
                   </p>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800/60 mb-1">
-                    Valid Until
-                  </p>
-                  <p className="text-sm font-bold text-emerald-900">
-                    23 April 2027
-                  </p>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="pt-4 border-t border-emerald-100 grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800/60 mb-1">
+                        Activated On
+                      </p>
+                      <p className="text-sm font-bold text-emerald-900">
+                        {profile?.subscriptionStartDate ? new Date(profile.subscriptionStartDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-800/60 mb-1">
+                        Valid Until
+                      </p>
+                      <p className="text-sm font-bold text-emerald-900">
+                        {profile?.subscriptionEndDate ? new Date(profile.subscriptionEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : "N/A"}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="mt-4 p-4 bg-white/60 rounded-2xl border border-emerald-200/50">
-                <p className="text-[10px] font-bold text-emerald-800 leading-relaxed italic">
-                  Note: Your partnership is valid for 1 year. Renewal notifications will be sent 30 days before expiry.
-                </p>
-              </div>
+                  <div className="mt-4 p-4 bg-white/60 rounded-2xl border border-emerald-200/50">
+                    <p className="text-[10px] font-bold text-emerald-800 leading-relaxed italic">
+                      Note: Your partnership is valid for 1 year. Renewal notifications will be sent 30 days before expiry.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </Card>
         </div>

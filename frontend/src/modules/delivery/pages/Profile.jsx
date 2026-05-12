@@ -27,7 +27,7 @@ import { useEffect } from 'react';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { settings } = useSettings();
   const appName = settings?.appName || "App";
   const [faqs, setFaqs] = useState([]);
@@ -62,7 +62,7 @@ const Profile = () => {
     {
       icon: CreditCard,
       label: "Bank Account",
-      sub: "HDFC Bank **** 8921",
+      sub: "Bank details for payouts",
       color: "text-brand-600 bg-brand-50",
       path: "/delivery/profile/bank-account",
     },
@@ -94,13 +94,13 @@ const Profile = () => {
       color: "text-gray-600 bg-gray-50",
       path: "/delivery/profile/settings",
     },
-    {
+    ...(user?.plansAvailable !== false ? [{
       icon: CheckCircle,
       label: "Subscription Status",
-      sub: "Valid until 23 April 2027",
+      sub: "Manage your subscription",
       color: "text-emerald-600 bg-emerald-50",
       path: "/delivery/profile/subscription",
-    },
+    }] : []),
     {
       icon: HelpCircle,
       label: "Help & Support",
@@ -142,25 +142,27 @@ const Profile = () => {
           <div className="relative">
             <div className="w-20 h-20 bg-white rounded-full p-1 shadow-lg">
               <img
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Rider"}`}
                 alt="Profile"
                 className="w-full h-full rounded-full object-cover bg-gray-100"
               />
             </div>
-            <div className="absolute bottom-0 right-0 w-6 h-6 bg-brand-500 border-2 border-white rounded-full"></div>
+            {user?.isOnline && <div className="absolute bottom-0 right-0 w-6 h-6 bg-brand-500 border-2 border-white rounded-full"></div>}
           </div>
           <div className="text-white">
-            <h2 className="font-bold text-xl">Rahul Kumar</h2>
+            <h2 className="font-bold text-xl">{user?.name || "Partner"}</h2>
             <p className="text-white/80 text-sm flex items-center mb-1">
-              <Phone size={14} className="mr-1" /> +91 98765 43210
+              <Phone size={14} className="mr-1" /> +91 {user?.phone || "00000 00000"}
             </p>
             <div className="flex items-center space-x-2">
               <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-medium backdrop-blur-sm">
-                ID: 882190
+                ID: {String(user?._id || "000000").slice(-6).toUpperCase()}
               </span>
-              <span className="bg-brand-500 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm">
-                VERIFIED
-              </span>
+              {user?.isVerified && (
+                <span className="bg-brand-500 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm">
+                  VERIFIED
+                </span>
+              )}
             </div>
           </div>
         </div>

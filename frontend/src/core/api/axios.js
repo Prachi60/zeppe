@@ -54,16 +54,24 @@ function getStoredToken(storageKey) {
 }
 
 function getRoleFromPath(pathname = '') {
-    if (pathname.startsWith('/seller')) return 'seller';
-    if (pathname.startsWith('/admin')) return 'admin';
-    if (pathname.startsWith('/delivery')) return 'delivery';
+    const normalizedPath = String(pathname || '').toLowerCase();
+    if (normalizedPath.startsWith('/seller') || normalizedPath.startsWith('/vendor')) return 'seller';
+    if (normalizedPath.startsWith('/admin')) return 'admin';
+    if (normalizedPath.startsWith('/delivery')) return 'delivery';
     return 'customer';
 }
 
 function getRoleFromRequestUrl(url = '') {
     const normalizedUrl = String(url || '').trim().toLowerCase();
 
-    if (normalizedUrl.startsWith('/seller') || normalizedUrl.startsWith('seller')) return 'seller';
+    if (
+        normalizedUrl.startsWith('/seller') ||
+        normalizedUrl.startsWith('seller') ||
+        normalizedUrl.startsWith('/vendor') ||
+        normalizedUrl.startsWith('vendor')
+    ) {
+        return 'seller';
+    }
     if (normalizedUrl.startsWith('/admin') || normalizedUrl.startsWith('admin')) return 'admin';
     if (normalizedUrl.startsWith('/delivery') || normalizedUrl.startsWith('delivery')) return 'delivery';
     if (
@@ -95,13 +103,17 @@ function resolveAuthToken(url = '', pathname = '') {
 
     for (const role of candidates) {
         const token = getStoredToken(ROLE_STORAGE_KEYS[role]);
-        if (token) {
+        if (token && token !== 'undefined' && token !== 'null') {
             return { token, role };
         }
     }
 
     const legacyToken = getStoredToken(LEGACY_TOKEN_KEY);
-    return legacyToken ? { token: legacyToken, role: getRoleFromPath(pathname) } : { token: null, role: null };
+    if (legacyToken && legacyToken !== 'undefined' && legacyToken !== 'null') {
+        return { token: legacyToken, role: getRoleFromPath(pathname) };
+    }
+
+    return { token: null, role: null };
 }
 
 function isAuthEndpoint(url = '') {
@@ -135,6 +147,7 @@ function redirectToLogin(role) {
 
 const axiosInstance = axios.create({
     baseURL: resolveApiBaseUrl(),
+    withCredentials: true,
 });
 
 // Request interceptor for API calls
@@ -152,7 +165,7 @@ axiosInstance.interceptors.request.use(
 
         if (isMultipartRequest) {
             // Let the browser set the multipart boundary for FormData uploads.
-            if (typeof config.headers?.delete === 'function') {
+            if (config.headers && typeof config.headers.delete === 'function') {
                 config.headers.delete('Content-Type');
             } else if (config.headers) {
                 delete config.headers['Content-Type'];
@@ -162,11 +175,16 @@ axiosInstance.interceptors.request.use(
         const { token } = resolveAuthToken(url, pagePath);
 
         if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        } else if (config.headers?.Authorization) {
-            if (typeof config.headers.delete === 'function') {
-                config.headers.delete('Authorization');
+            if (config.headers && typeof config.headers.set === 'function') {
+                config.headers.set('Authorization', `Bearer ${token}`);
             } else {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+        } else {
+            // Explicitly remove Authorization header if no token is found
+            if (config.headers && typeof config.headers.delete === 'function') {
+                config.headers.delete('Authorization');
+            } else if (config.headers) {
                 delete config.headers.Authorization;
             }
         }
@@ -177,6 +195,7 @@ axiosInstance.interceptors.request.use(
         return Promise.reject(error);
     }
 );
+
 
 // Response interceptor for API calls
 axiosInstance.interceptors.response.use(

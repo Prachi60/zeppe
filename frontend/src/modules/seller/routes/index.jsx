@@ -79,7 +79,8 @@ const SellerRoutes = () => {
   // We check for seller role and ensure we don't redirect if already on the subscription page
   // If subscriptionStatus is missing or not active, we treat it as inactive
   const isDemoActive = localStorage.getItem('demo_subscription_active') === 'true';
-  const isSubscribed = user?.subscriptionStatus === "active" || isDemoActive;
+  const plansAvailable = user?.plansAvailable !== false; // Default to true if undefined to maintain safety
+  const isSubscribed = user?.subscriptionStatus === "active" || isDemoActive || !plansAvailable;
   
   if (user?.role === "seller" && !isSubscribed && !isSubscriptionPage) {
     return <Navigate to="/seller/subscription" replace />;

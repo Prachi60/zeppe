@@ -339,7 +339,10 @@ const Auth = () => {
         });
         toast.success("Welcome back, Partner!");
 
-        if (seller.subscriptionStatus === "active") {
+        const plansAvailable = seller.plansAvailable !== false;
+        const isSubscribed = seller.subscriptionStatus === "active" || !plansAvailable;
+
+        if (isSubscribed) {
           navigate("/seller");
         } else {
           navigate("/seller/subscription");
@@ -544,12 +547,12 @@ const Auth = () => {
                         <Mail size={18} />
                       </div>
                       <input
-                        type="email"
+                        type={isLogin ? "text" : "email"}
                         name="email"
                         required
-                        inputMode="email"
-                        autoComplete="email"
-                        placeholder="Business Email"
+                        inputMode={isLogin ? "text" : "email"}
+                        autoComplete={isLogin ? "username" : "email"}
+                        placeholder={isLogin ? "Email or Phone Number" : "Business Email"}
                         className="w-full pl-12 pr-28 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
                         value={formData.email}
                         onChange={handleChange}
@@ -611,20 +614,22 @@ const Auth = () => {
                       </div>
                     )}
 
-                    <div className="relative group">
-                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
-                        <Phone size={18} />
+                    {!isLogin && (
+                      <div className="relative group">
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                          <Phone size={18} />
+                        </div>
+                        <input
+                          type="tel"
+                          name="phone"
+                          required
+                          placeholder="Contact Number"
+                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                          value={formData.phone}
+                          onChange={handleChange}
+                        />
                       </div>
-                      <input
-                        type="tel"
-                        name="phone"
-                        required
-                        placeholder="Contact Number"
-                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
-                        value={formData.phone}
-                        onChange={handleChange}
-                      />
-                    </div>
+                    )}
 
                     <div className="relative group">
                       <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
