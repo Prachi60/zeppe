@@ -19,31 +19,36 @@ export function parseCustomerCoordinates(query = {}) {
 }
 
 export async function getNearbySellerIdsForCustomer(lat, lng) {
+  // Fetch all active and verified sellers
   const sellers = await Seller.find({
     isActive: true,
-    location: {
-      $near: {
-        $geometry: {
-          type: "Point",
-          coordinates: [lng, lat],
-        },
-        $maxDistance: MAX_SELLER_SEARCH_DISTANCE_M,
-      },
-    },
+    isVerified: true,
   })
     .select("_id location serviceRadius")
     .lean();
 
+  // If no coordinates provided, return all active/verified sellers
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return sellers.map((s) => String(s._id));
+  }
+
   return sellers
     .filter((seller) => {
       const coords = seller?.location?.coordinates;
-      if (!Array.isArray(coords) || coords.length < 2) return false;
+      // Fallback: If no location is set (0,0), include them so they show up for everyone
+      // This matches the admin panel visibility
+      if (!Array.isArray(coords) || coords.length < 2 || (coords[0] === 0 && coords[1] === 0)) {
+        return true; 
+      }
+
       const [sellerLng, sellerLat] = coords;
       if (!Number.isFinite(sellerLat) || !Number.isFinite(sellerLng)) {
-        return false;
+        return true;
       }
+
       const distanceKm = calculateDistance(lat, lng, sellerLat, sellerLng);
-      return distanceKm <= (seller.serviceRadius || 5);
+      // Include if within radius OR if radius is very large (fallback)
+      return distanceKm <= (seller.serviceRadius || 5) || distanceKm <= MAX_SELLER_SEARCH_DISTANCE_M / 1000;
     })
     .map((seller) => String(seller._id));
 }
