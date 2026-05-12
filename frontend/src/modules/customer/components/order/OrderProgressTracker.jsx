@@ -18,45 +18,50 @@ const OrderProgressTracker = ({
   totalDistanceText = "—",
 }) => {
   const status = getLegacyStatusFromOrder(order);
-  const currentStage = STATUS_TO_STAGE[status] || "confirmed";
+  const workflowStatus = order?.workflowStatus?.toUpperCase() || "CREATED";
 
-  const steps = [
-    {
-      id: "confirmed",
-      label: "Order Confirmed",
-      icon: CheckCircle,
-      statuses: ["confirmed"],
-    },
-    {
-      id: "out_for_delivery",
-      label: "Out for delivery",
-      icon: Truck,
-      statuses: ["out_for_delivery", "delivered"],
-    },
-    {
-      id: "delivered",
-      label: "Delivered",
-      icon: Home,
-      statuses: ["delivered"],
-    },
-  ];
+  const steps = React.useMemo(() => {
+    const isPending = status === "pending";
+    const isConfirmed = status === "confirmed" || status === "packed";
+    
+    return [
+      {
+        id: "confirmed",
+        label: isPending ? "Order Placed" : "Order Confirmed",
+        icon: isPending ? Clock : CheckCircle,
+      },
+      {
+        id: "out_for_delivery",
+        label: isConfirmed ? (() => {
+          if (workflowStatus === "DELIVERY_SEARCH") return "Finding rider";
+          if (workflowStatus === "DELIVERY_ASSIGNED") return "Rider assigned";
+          if (workflowStatus === "PICKUP_READY") return "Rider at store";
+          return "Preparing order";
+        })() : "Out for delivery",
+        icon: Truck,
+      },
+      {
+        id: "delivered",
+        label: "Delivered",
+        icon: Home,
+      },
+    ];
+  }, [status, workflowStatus]);
 
-  const getStepStatus = (step) => {
+  const getStepStatus = (index) => {
     if (status === "cancelled") return "cancelled";
 
-    const stepIndex = steps.findIndex((s) => s.id === step.id);
-
     if (status === "pending") {
-      return stepIndex === 0 ? "active" : "pending";
+      return index === 0 ? "active" : "pending";
     }
 
-    if (status === "confirmed" || status === "packed") {
-      return stepIndex === 0 ? "completed" : "pending";
-    }
-
-    if (status === "out_for_delivery") {
-      if (stepIndex === 0) return "completed";
-      if (stepIndex === 1) return "active";
+    if (status === "confirmed" || status === "packed" || status === "out_for_delivery") {
+      if (index === 0) return "completed";
+      if (status === "out_for_delivery") {
+        return index === 1 ? "active" : index === 0 ? "completed" : "pending";
+      }
+      // For confirmed/packed
+      if (index === 1) return "active";
       return "pending";
     }
 
@@ -64,7 +69,7 @@ const OrderProgressTracker = ({
       return "completed";
     }
 
-    return step.id === "confirmed" ? "active" : "pending";
+    return index === 0 ? "active" : "pending";
   };
 
   if (status === "cancelled") {
@@ -79,7 +84,7 @@ const OrderProgressTracker = ({
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
       <div className="space-y-4">
         {steps.map((step, index) => {
-          const stepStatus = getStepStatus(step);
+          const stepStatus = getStepStatus(index);
           const Icon = step.icon;
           const isCompleted = stepStatus === "completed";
           const isActive = stepStatus === "active";
