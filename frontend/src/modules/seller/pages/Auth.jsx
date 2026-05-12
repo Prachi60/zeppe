@@ -340,9 +340,8 @@ const Auth = () => {
         toast.success("Welcome back, Partner!");
 
         const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
-        if (seller.subscriptionStatus === "active" || !isGlobalEnabled) {
         const plansAvailable = seller.plansAvailable !== false;
-        const isSubscribed = seller.subscriptionStatus === "active" || !plansAvailable;
+        const isSubscribed = seller.subscriptionStatus === "active" || !isGlobalEnabled || !plansAvailable;
 
         if (isSubscribed) {
           navigate("/seller");
