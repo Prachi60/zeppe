@@ -134,6 +134,16 @@ const DeliveryAuth = () => {
 
       login({ ...delivery, token, role: "delivery" });
 
+      const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+      const isSubscribed = delivery.subscriptionStatus === "active" || !isGlobalEnabled;
+
+      toast.success(mode === "login" ? "Welcome back! Redirecting..." : "Welcome! Complete your account to start.");
+      
+      if (isSubscribed) {
+        navigate("/delivery/dashboard");
+      } else {
+        navigate("/delivery/subscription");
+      }
       const plansAvailable = delivery.plansAvailable !== false;
       const isSubscribed = delivery.subscriptionStatus === "active" || !plansAvailable;
 

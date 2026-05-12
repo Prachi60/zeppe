@@ -94,7 +94,7 @@ export const verifyDeliveryOtp = async (req, res) => {
     const result = await verifyHandoffOtpAndDeliver(req.user.id, orderId, code || otp);
     return handleResponse(res, 200, "Order delivered", result);
   } catch (e) {
-    return handleResponse(res, e.statusCode || 500, e.message);
+    return handleResponse(res, e.statusCode || 500, e.message, { code: e.code });
   }
 };
 
@@ -117,7 +117,7 @@ export const getOrderRoute = async (req, res) => {
       return handleResponse(res, 404, "Order not found");
     }
 
-    const order = await Order.findOne(orderKey).populate("seller").lean();
+    const order = await Order.findOne(orderKey).populate("seller", "name shopName phone location").lean();
 
     if (!order) {
       return handleResponse(res, 404, "Order not found");
@@ -376,7 +376,7 @@ export const requestReturnDropOtp = async (req, res) => {
     const { id: userId } = req.user;
 
     const orderKey = orderMatchQueryFromRouteParam(orderId);
-    const order = await Order.findOne(orderKey).populate("seller", "name phone email").lean();
+    const order = await Order.findOne(orderKey).populate("seller", "name phone email location").lean();
     if (!order) return handleResponse(res, 404, "Order not found");
 
     if (order.returnDeliveryBoy?.toString() !== userId) {

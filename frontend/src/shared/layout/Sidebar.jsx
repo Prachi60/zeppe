@@ -33,13 +33,12 @@ const colorMap = {
   dark: "text-gray-800 bg-gray-100 border-gray-200 group-hover:bg-gray-200/50",
 };
 
-const SidebarItem = ({
+const SidebarItem = React.memo(({
   item,
   isOpen,
   onToggle,
   isHovered,
   onMouseEnter,
-  onMouseLeave,
 }) => {
   const location = useLocation();
 
@@ -54,7 +53,6 @@ const SidebarItem = ({
         <button
           onClick={onToggle}
           onMouseEnter={onMouseEnter}
-          onMouseLeave={onMouseLeave}
           className={cn(
             "w-full flex items-center justify-between rounded-lg px-3 py-2.5 transition-all duration-300 group relative overflow-hidden",
             isChildActive || isOpen
@@ -142,7 +140,6 @@ const SidebarItem = ({
       to={item.path}
       end={item.end !== undefined ? item.end : false}
       onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
       className={({ isActive }) =>
         cn(
           "flex items-center space-x-2.5 rounded-lg px-3 py-2.5 transition-all duration-300 group relative overflow-hidden",
@@ -193,9 +190,9 @@ const SidebarItem = ({
       )}
     </NavLink>
   );
-};
+});
 
-const SidebarContent = ({ items, title, onClose, openMenu, handleToggle, hoveredIdx, setHoveredIdx }) => {
+const SidebarContent = React.memo(({ items, title, onClose, openMenu, handleToggle, hoveredIdx, setHoveredIdx }) => {
   const { settings } = useSettings();
   const appName = settings?.appName || 'App';
 
@@ -216,7 +213,6 @@ const SidebarContent = ({ items, title, onClose, openMenu, handleToggle, hovered
           </div>
         </div>
 
-        {/* Mobile Close Button */}
         <button
           onClick={onClose}
           className="p-2 md:hidden text-gray-500 hover:text-white transition-colors"
@@ -234,22 +230,16 @@ const SidebarContent = ({ items, title, onClose, openMenu, handleToggle, hovered
         <p className="px-3 text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] mb-3">
           Core Management
         </p>
-        <AnimatePresence>
-          {items.map((item, idx) => (
-            <SidebarItem
-              key={idx}
-              item={item}
-              isOpen={openMenu === item.label}
-              onToggle={() => handleToggle(item.label)}
-              isHovered={hoveredIdx === idx}
-              onMouseEnter={() => setHoveredIdx(idx)}
-              onMouseEnterWithClose={() => {
-                setHoveredIdx(idx);
-              }}
-              onMouseLeave={() => { }} // Handle in nav container
-            />
-          ))}
-        </AnimatePresence>
+        {items.map((item, idx) => (
+          <SidebarItem
+            key={idx}
+            item={item}
+            isOpen={openMenu === item.label}
+            onToggle={() => handleToggle(item.label)}
+            isHovered={hoveredIdx === idx}
+            onMouseEnter={() => setHoveredIdx(idx)}
+          />
+        ))}
       </nav>
 
       <div className="p-4 border-t border-white/5 bg-gradient-to-t from-white/[0.02] to-transparent flex-shrink-0">
@@ -274,16 +264,20 @@ const SidebarContent = ({ items, title, onClose, openMenu, handleToggle, hovered
       </div>
     </div>
   );
-};
+});
 
 const Sidebar = ({ items, title, isOpen, onClose }) => {
   const { role } = useAuth();
   const [openMenu, setOpenMenu] = useState(null);
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
-  const handleToggle = (label) => {
+  const handleToggle = React.useCallback((label) => {
     setOpenMenu((prev) => (prev === label ? null : label));
-  };
+  }, []);
+
+  const setHoveredIdxMemo = React.useCallback((idx) => {
+    setHoveredIdx(idx);
+  }, []);
 
   const commonProps = {
     items,
@@ -292,12 +286,11 @@ const Sidebar = ({ items, title, isOpen, onClose }) => {
     openMenu,
     handleToggle,
     hoveredIdx,
-    setHoveredIdx
+    setHoveredIdx: setHoveredIdxMemo
   };
 
   return (
     <>
-      {/* Desktop Sidebar */}
       <aside className={cn(
         "fixed left-0 inset-y-0 w-56 bg-[#0a0c10] text-gray-400 border-r border-white/5 shadow-[20px_0_60px_rgba(0,0,0,0.4)] md:flex flex-col z-50 transition-all duration-300",
         (role === "admin" || role === "seller") ? "hidden md:flex" : "flex",
@@ -305,11 +298,9 @@ const Sidebar = ({ items, title, isOpen, onClose }) => {
         <SidebarContent {...commonProps} />
       </aside>
 
-      {/* Mobile Sidebar (Drawer) */}
       <AnimatePresence mode="wait">
         {isOpen && (
           <div className="fixed inset-0 z-[100] md:hidden">
-            {/* Backdrop Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -318,9 +309,7 @@ const Sidebar = ({ items, title, isOpen, onClose }) => {
               className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
             />
 
-            {/* Outer Container (Fixed Shell - NO TRANSFORM) */}
             <div className="absolute left-0 inset-y-0 w-56 flex flex-col pointer-events-none">
-              {/* Inner Animation Wrapper (TRANSFORM APPLIED HERE) */}
               <motion.div
                 initial={{ x: "-100%" }}
                 animate={{ x: 0 }}

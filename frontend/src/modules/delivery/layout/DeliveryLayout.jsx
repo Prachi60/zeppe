@@ -4,19 +4,21 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import { Toaster, toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { BellRing, MapPin } from "lucide-react";
+import { BellRing, MapPin, AlertTriangle } from "lucide-react";
 import { deliveryApi } from "../services/deliveryApi";
 import { useAuth } from "@core/context/AuthContext";
 import {
   getOrderSocket,
   onDeliveryBroadcast,
   onDeliveryBroadcastWithdrawn,
+  onCashLimitAlert,
 } from "@/core/services/orderSocket";
 import {
   loadHandledIncomingOrderIds,
   markIncomingOrderHandled,
 } from "../utils/deliveryHandledOrders";
 import { saveDeliveryPartnerLocation } from "../utils/deliveryLastLocation";
+import { showSystemNotification } from "@/core/firebase/pushClient";
 
 /** Match server `deliverySearchExpiresAt` — progress bar + countdown stay aligned when modal opens late. */
 function secondsLeftUntilDeliveryExpiry(expiresAt) {
@@ -45,6 +47,71 @@ const DeliveryLayout = () => {
   const availableOrdersRequestRef = useRef({ inFlight: false, controller: null });
   const notificationsRequestRef = useRef({ inFlight: false, controller: null });
   const locationRequestRef = useRef({ inFlight: false, controller: null });
+  const [cashAlert, setCashAlert] = useState(null);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    const shouldPlay = !!activeOrder || !!cashAlert;
+
+    if (shouldPlay) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+        audioRef.current.loop = true;
+      }
+      audioRef.current.play().catch(() => { });
+    } else if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [activeOrder, cashAlert]);
+
+  // Handle browser autoplay policy + desktop notifications
+  useEffect(() => {
+    const hasAlert = !!activeOrder || !!cashAlert;
+    if (hasAlert) {
+      // 1. Try to play audio immediately
+      if (audioRef.current && audioRef.current.paused) {
+        audioRef.current.play().catch(() => {
+          console.log("Audio autoplay blocked by browser policy");
+        });
+      }
+
+      // 2. Also show desktop notification (OS will play system sound)
+      const title = activeOrder ? (activeOrder.isReturnPickup ? "Return Pickup Request" : "New Order Request") : "Cash Limit Alert";
+      const body = activeOrder
+        ? `${activeOrder.pickup} → ${activeOrder.drop} | Earnings: ₹${activeOrder.earnings}`
+        : (cashAlert?.message || "Please check your cash limit");
+
+      showSystemNotification({ title, body }).catch(() => { });
+    }
+
+    const unlockAudio = () => {
+      if (hasAlert && audioRef.current && audioRef.current.paused) {
+        audioRef.current.play().catch(() => { });
+      }
+    };
+    window.addEventListener("click", unlockAudio);
+    window.addEventListener("touchstart", unlockAudio);
+    return () => {
+      window.removeEventListener("click", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+    };
+  }, [activeOrder, cashAlert]);
+
+  useEffect(() => {
+    if (!user?.isOnline) return undefined;
+    const getToken = () => localStorage.getItem("auth_delivery");
+    return onCashLimitAlert(getToken, (payload) => {
+      setCashAlert(payload);
+    });
+  }, [user?.isOnline]);
 
   useEffect(() => {
     activeOrderRef.current = activeOrder;
@@ -95,8 +162,6 @@ const DeliveryLayout = () => {
       isReturnPickup: payload.type === "RETURN_PICKUP" || payload.isReturnPickup === true,
       items: payload.items || [],
     });
-    const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
-    audio.play().catch(() => {});
     return true;
   }, []);
 
@@ -135,8 +200,6 @@ const DeliveryLayout = () => {
       isReturnPickup,
       items: newOrder.items || [],
     });
-    const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
-    audio.play().catch(() => {});
   }, []);
 
   const hideBottomNavRoutes = [
@@ -308,7 +371,7 @@ const DeliveryLayout = () => {
       (pos) => {
         postLocationOnce(pos.coords.latitude, pos.coords.longitude);
       },
-      () => {},
+      () => { },
       { enableHighAccuracy: false, maximumAge: 30000, timeout: 20000 },
     );
 
@@ -333,7 +396,7 @@ const DeliveryLayout = () => {
           const list = res.data.results || res.data.result || [];
           applyAvailableOrdersList(list);
         })
-        .catch(() => {});
+        .catch(() => { });
     });
   }, [
     user?.isOnline,
@@ -392,7 +455,7 @@ const DeliveryLayout = () => {
             orderId: oid,
             preview: n.data.preview,
             deliverySearchExpiresAt: n.data.deliverySearchExpiresAt,
-            type: n.data.type || (n.data.preview?.type), 
+            type: n.data.type || (n.data.preview?.type),
           });
           if (fromStored) return;
           const r2 = await fetchAvailableOrders();
@@ -646,6 +709,50 @@ const DeliveryLayout = () => {
             )}
           </AnimatePresence>,
           document.body,
+        )}
+
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {cashAlert && (
+              <div
+                className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md"
+                role="dialog"
+                aria-modal="true"
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                  className="bg-white rounded-[32px] p-8 w-full max-w-[340px] shadow-2xl border-4 border-amber-500/20 text-center"
+                >
+                  <div className="h-20 w-20 bg-amber-100 rounded-full flex items-center justify-center mb-6 mx-auto animate-pulse">
+                    <AlertTriangle className="h-10 w-10 text-amber-600" />
+                  </div>
+
+                  <h2 className="text-2xl font-black text-slate-900 mb-2">
+                    {cashAlert.title}
+                  </h2>
+                  <p className="text-sm font-medium text-slate-500 mb-8 leading-relaxed">
+                    {cashAlert.message}
+                  </p>
+
+                  <div className="bg-slate-50 rounded-2xl p-4 mb-8 border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Current Cash In Hand</p>
+                    <p className="text-3xl font-black text-amber-600">₹{cashAlert.cashAmount}</p>
+                  </div>
+
+                  <button
+                    onClick={() => setCashAlert(null)}
+                    className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-sm uppercase tracking-wider shadow-xl active:scale-95 transition-transform"
+                  >
+                    I Understand
+                  </button>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
 
       <main

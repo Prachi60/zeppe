@@ -10,13 +10,27 @@ import { cn } from '@/lib/utils';
 import ProductDetailSheet from '../components/shared/ProductDetailSheet';
 import { useProductDetail } from '../context/ProductDetailContext';
 import { customerApi } from '../services/customerApi';
-import MiniCart from '../components/shared/MiniCart';
 import { useSettings } from '@core/context/SettingsContext';
 import { useCartAnimation } from '../context/CartAnimationContext';
 import Lottie from 'lottie-react';
 import noServiceAnimation from '@/assets/lottie/animation.json';
 import { getCategoryLocation } from '../utils/categoryNavigation';
 import { useLocation as useAppLocation } from '../context/LocationContext';
+
+const MANUAL_SUBCAT_ORDER = [
+  "Vegetables",
+  "Fresh Fruits",
+  "Rice, Dals & Atta",
+  "Masala, Oil & Ghee",
+  "Frozen Food",
+  "Milk, Bakery & Eggs",
+  "Biscuits & Cookies",
+  "Cereals & Nuts",
+  "Dry Fruits",
+  "Sweets",
+  "Puja Samagri",
+  "Kitchen Tools & Appliances"
+];
 
 /* ─── Compact Kuiklo-style card ─────────────────────────────────────────── */
 const KuikloCard = React.memo(({ product }) => {
@@ -161,101 +175,86 @@ const KuikloCard = React.memo(({ product }) => {
 const EmptyCategoryView = ({ categoryName }) => {
     const navigate = useNavigate();
     return (
-        <div className="w-full flex flex-col items-center justify-start pt-6 px-6 text-center bg-[#F9F9F9]">
-            {/* Main Graphic Container */}
-            <div className="relative mb-8 mt-0">
-                {/* Outer soft glow */}
-                <div className="absolute inset-0 bg-[#5E17EB] opacity-10 blur-3xl rounded-full scale-150" />
-                
-                {/* Purple Box */}
-                <motion.div 
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                    className="relative w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-[#6b48ff] to-[#501dee] rounded-[32px] md:rounded-[40px] shadow-[0_20px_40px_rgba(94,23,235,0.25)] flex items-center justify-center z-10"
-                >
-                    <ShoppingBag size={56} className="text-white" strokeWidth={2.5} />
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center animate-in fade-in duration-700 bg-white min-h-[70vh]">
+            {/* Coming Soon UI - Premium Look */}
+            <div className="relative mb-8">
+                <div className="h-40 w-40 bg-indigo-50 rounded-[40px] flex items-center justify-center relative overflow-hidden shadow-2xl shadow-indigo-100/50">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent" />
+                    <motion.div 
+                        animate={{ 
+                            y: [0, -10, 0],
+                            rotate: [0, 5, -5, 0]
+                        }}
+                        transition={{ 
+                            duration: 4, 
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                        }}
+                        className="relative z-10"
+                    >
+                        <div className="h-20 w-20 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                            <Search size={40} className="text-white" strokeWidth={2.5} />
+                        </div>
+                    </motion.div>
                     
-                    {/* Top Right Yellow Sparkle */}
-                    <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20">
-                        <Sparkles size={36} className="text-[#FFC107] fill-[#FFC107] rotate-12" />
-                    </div>
-                    {/* Bottom Left Blue Sparkle */}
-                    <div className="absolute -bottom-2 -left-2 md:-bottom-3 md:-left-3 z-20">
-                        <Sparkles size={28} className="text-[#E0E7FF] fill-[#E0E7FF] -rotate-12" />
-                    </div>
-                </motion.div>
+                    {/* Floating Decorative Elements */}
+                    <div className="absolute top-4 right-4 h-3 w-3 bg-yellow-400 rounded-full blur-[1px]" />
+                    <div className="absolute bottom-8 left-6 h-2 w-2 bg-indigo-300 rounded-full" />
+                </div>
             </div>
 
-            {/* Pill */}
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-[#F0EDFF] rounded-full px-4 py-1.5 flex items-center gap-2 mb-5 border border-[#EBE5FF]"
-            >
-                <Bell size={12} className="text-[#5E17EB]" strokeWidth={3} />
-                <span className="text-[10px] font-black text-[#5E17EB] tracking-[0.1em] uppercase">STAY TUNED</span>
-            </motion.div>
+            <div className="inline-flex items-center gap-2 bg-indigo-50 px-4 py-1.5 rounded-full mb-6">
+                <span className="h-2 w-2 bg-indigo-600 rounded-full animate-pulse" />
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-600">Stay Tuned</span>
+            </div>
 
-            {/* Headings */}
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mb-4"
-            >
-                <h2 className="text-[32px] md:text-[36px] font-black tracking-tighter leading-none flex gap-[6px] justify-center">
-                    <span className="text-[#1A1A1A]">COMING</span>
-                    <span className="text-[#5E17EB]">SOON</span>
-                </h2>
-            </motion.div>
+            <h3 className="text-[32px] font-black text-slate-900 leading-tight mb-4 tracking-tighter">
+                COMING <span className="text-indigo-600">SOON</span>
+            </h3>
 
-            {/* Description */}
-            <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-[#64748B] font-bold text-[13px] md:text-[14px] leading-relaxed max-w-[280px] md:max-w-[320px] mx-auto mb-8"
-            >
-                Our awesome products for "{categoryName}" are almost ready. Prepare to discover the best items very soon!
-            </motion.p>
+            <p className="text-sm font-medium text-slate-500 leading-relaxed mb-10 max-w-[280px] mx-auto">
+                Our awesome products for <span className="text-slate-900 font-bold">"{categoryName}"</span> are almost ready. Prepare to discover the best items very soon!
+            </p>
 
-            {/* Action Cards */}
-            <motion.div 
-                 initial={{ opacity: 0, y: 10 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 transition={{ delay: 0.4 }}
-                 className="w-full max-w-[300px] flex flex-col gap-3 mx-auto"
-            >
-                {/* Card 1 */}
-                <button onClick={() => navigate(getCategoryLocation('all'))} className="bg-white border border-[#F1F3F5] rounded-2xl p-4 flex items-center gap-4 hover:border-[#E2E8F0] active:scale-[0.98] transition-all text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-                    <div className="w-11 h-11 bg-[#F9FAFB] rounded-[14px] flex items-center justify-center flex-shrink-0 border border-[#F1F5F9]">
-                         <LayoutGrid size={20} className="text-[#5E17EB]" strokeWidth={2.5} />
+            <div className="w-full flex flex-col gap-3 max-w-[280px] mx-auto">
+                <button 
+                    onClick={() => navigate(getCategoryLocation('all'))}
+                    className="flex items-center justify-between bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all group active:scale-[0.98]"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
+                            <LayoutGrid size={20} className="text-slate-400 group-hover:text-indigo-600" />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-sm font-black text-slate-800">Keep Exploring</p>
+                            <p className="text-[10px] font-bold text-slate-400">Browse other categories</p>
+                        </div>
                     </div>
-                    <div className="flex-1">
-                        <h4 className="text-[#1A1A1A] font-black text-[13px] tracking-tight">Keep Exploring</h4>
-                        <p className="text-[#888] font-bold text-[11px] mt-0.5 select-none">Browse other categories.</p>
-                    </div>
-                    <div className="text-[#CBD5E1]">
-                        <ChevronRight size={18} strokeWidth={3} />
-                    </div>
+                    <ChevronRight size={18} className="text-slate-300" />
                 </button>
 
-                {/* Card 2 */}
-                <button onClick={() => navigate('/search')} className="bg-white border border-[#F1F3F5] rounded-2xl p-4 flex items-center gap-4 hover:border-[#E2E8F0] active:scale-[0.98] transition-all text-left shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-                    <div className="w-11 h-11 bg-[#F9FAFB] rounded-[14px] flex items-center justify-center flex-shrink-0 border border-[#F1F5F9]">
-                         <Search size={20} className="text-[#10B981]" strokeWidth={2.5} />
+                <button 
+                    onClick={() => navigate('/')}
+                    className="flex items-center justify-between bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all group active:scale-[0.98]"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
+                            <Search size={20} className="text-slate-400 group-hover:text-emerald-600" />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-sm font-black text-slate-800">Search Items</p>
+                            <p className="text-[10px] font-bold text-slate-400">Find exactly what you need</p>
+                        </div>
                     </div>
-                    <div className="flex-1">
-                        <h4 className="text-[#1A1A1A] font-black text-[13px] tracking-tight">Search Items</h4>
-                        <p className="text-[#888] font-bold text-[11px] mt-0.5 select-none">Find exactly what you need.</p>
-                    </div>
-                    <div className="text-[#CBD5E1]">
-                        <ChevronRight size={18} strokeWidth={3} />
-                    </div>
+                    <ChevronRight size={18} className="text-slate-300" />
                 </button>
-            </motion.div>
+            </div>
+            
+            <div className="mt-16 mb-4 text-center">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                    - End of Catalog -
+                </p>
+            </div>
         </div>
     );
 };
@@ -342,11 +341,20 @@ const CategoryProductsPage = () => {
                 if (!currentCat) return;
 
                 setCategory(currentCat);
-                const subs = (currentCat.children || []).map((s) => ({
-                    id: s._id,
-                    name: s.name,
-                    image: s.image || s.mainImage || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
-                }));
+                const subs = (currentCat.children || [])
+                    .sort((a, b) => {
+                        const idxA = MANUAL_SUBCAT_ORDER.indexOf(a.name);
+                        const idxB = MANUAL_SUBCAT_ORDER.indexOf(b.name);
+                        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                        if (idxA !== -1) return -1;
+                        if (idxB !== -1) return 1;
+                        return new Date(a.createdAt) - new Date(b.createdAt);
+                    })
+                    .map((s) => ({
+                        id: s._id,
+                        name: s.name,
+                        image: s.image || s.mainImage || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
+                    }));
 
                 setSubCategories([
                     {
@@ -458,7 +466,7 @@ const CategoryProductsPage = () => {
                                 </div>
                             ))}
                         </div>
-                    ) : safeProducts.length === 0 ? (
+                    ) : filteredProducts.length === 0 ? (
                         <EmptyCategoryView categoryName={subCategories.find(c => c.id === selectedSubCategory)?.name || 'this category'} />
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pb-[120px] bg-white">
@@ -469,9 +477,6 @@ const CategoryProductsPage = () => {
                     )}
                 </div>
             </div>
-
-            <MiniCart />
-            <ProductDetailSheet />
 
             <style dangerouslySetInnerHTML={{
                 __html: `

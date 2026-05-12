@@ -29,8 +29,9 @@ const OfferSectionsManagement = () => {
   const [editingSection, setEditingSection] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
-    backgroundColor: "#FCD34D",
-    sideImageKey: "hair-care",
+    backgroundColor: "#f59931",
+    sideImageKey: "none",
+    sideImageUrl: "",
     categoryIds: [],
     sellerIds: [],
     productIds: [],
@@ -129,8 +130,9 @@ const OfferSectionsManagement = () => {
   const resetForm = () => {
     setFormData({
       title: "",
-      backgroundColor: "#FCD34D",
-      sideImageKey: "hair-care",
+      backgroundColor: "#f59931",
+      sideImageKey: "none",
+      sideImageUrl: "",
       categoryIds: [],
       sellerIds: [],
       productIds: [],
@@ -157,6 +159,7 @@ const OfferSectionsManagement = () => {
       title: section.title || "",
       backgroundColor: section.backgroundColor || "#FCD34D",
       sideImageKey: section.sideImageKey || "hair-care",
+      sideImageUrl: section.sideImageUrl || "",
       categoryIds: catIds,
       sellerIds: selIds,
       productIds: section.productIds || [],
@@ -181,6 +184,7 @@ const OfferSectionsManagement = () => {
       title: formData.title.trim(),
       backgroundColor: formData.backgroundColor,
       sideImageKey: formData.sideImageKey,
+      sideImageUrl: formData.sideImageUrl,
       categoryIds: formData.categoryIds,
       sellerIds: formData.sellerIds || [],
       productIds: formData.productIds,
@@ -238,6 +242,25 @@ const OfferSectionsManagement = () => {
     } catch (e) {
       console.error(e);
       showToast("Failed to reorder", "error");
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const uploadData = new FormData();
+    uploadData.append("image", file);
+
+    try {
+      showToast("Uploading image...", "info");
+      const res = await adminApi.uploadOfferSectionImage(uploadData);
+      const url = res.data.result?.url || res.data.url;
+      setFormData((prev) => ({ ...prev, sideImageUrl: url }));
+      showToast("Image uploaded", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to upload image", "error");
     }
   };
 
@@ -302,9 +325,12 @@ const OfferSectionsManagement = () => {
                     className="h-14 w-14 rounded-2xl flex-shrink-0 bg-cover bg-center ring-2 ring-slate-100"
                     style={{
                       backgroundColor: section.backgroundColor || "#FCD34D",
-                      backgroundImage: sideOpt?.imageUrl
-                        ? `url(${sideOpt.imageUrl})`
-                        : undefined,
+                      backgroundImage:
+                        section.sideImageKey === "custom" && section.sideImageUrl
+                          ? `url(${section.sideImageUrl})`
+                          : sideOpt?.imageUrl
+                            ? `url(${sideOpt.imageUrl})`
+                            : undefined,
                     }}
                   />
                   <div>
@@ -325,7 +351,7 @@ const OfferSectionsManagement = () => {
                     title={section.backgroundColor}
                   />
                   <span className="text-[10px] font-bold text-slate-500">
-                    {section.sideImageKey || "—"}
+                    {section.sideImageKey === "custom" ? "Custom Image" : (section.sideImageKey || "—")}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -346,7 +372,7 @@ const OfferSectionsManagement = () => {
                       className={cn(
                         "p-1.5 rounded-xl border text-slate-400 hover:text-slate-700 hover:bg-slate-50",
                         idx === sections.length - 1 &&
-                          "opacity-30 cursor-not-allowed"
+                        "opacity-30 cursor-not-allowed"
                       )}
                     >
                       <HiOutlineArrowDownCircle className="h-4 w-4" />
@@ -496,7 +522,7 @@ const OfferSectionsManagement = () => {
                           }))
                         }
                         className={cn(
-                          "px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all",
+                          "px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all",
                           selected
                             ? "bg-primary text-white border-primary"
                             : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
@@ -541,6 +567,36 @@ const OfferSectionsManagement = () => {
                   {opt.label}
                 </button>
               ))}
+
+              {/* Custom Color Selector */}
+              <div className="relative group">
+                <input
+                  type="color"
+                  id="customBannerColor"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  value={BACKGROUND_COLOR_OPTIONS.some(o => o.value === formData.backgroundColor) ? "#ffffff" : formData.backgroundColor}
+                  onChange={(e) => setFormData(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-2xl text-[11px] font-bold border-2 transition-all",
+                    !BACKGROUND_COLOR_OPTIONS.some(o => o.value === formData.backgroundColor)
+                      ? "border-slate-900 ring-2 ring-offset-2 ring-slate-400"
+                      : "border-slate-200 hover:border-slate-300"
+                  )}
+                >
+                  <span
+                    className="w-5 h-5 rounded-full border border-slate-200"
+                    style={{
+                      backgroundColor: BACKGROUND_COLOR_OPTIONS.some(o => o.value === formData.backgroundColor)
+                        ? "#ffffff"
+                        : formData.backgroundColor
+                    }}
+                  />
+                  Custom
+                </button>
+              </div>
             </div>
           </div>
 
@@ -567,7 +623,7 @@ const OfferSectionsManagement = () => {
                   )}
                 >
                   <img
-                    src={opt.imageUrl}
+                    src={opt.key === 'custom' && formData.sideImageUrl ? formData.sideImageUrl : opt.imageUrl}
                     alt={opt.label}
                     className="w-full h-full object-cover"
                   />
@@ -578,6 +634,51 @@ const OfferSectionsManagement = () => {
               ))}
             </div>
           </div>
+
+          {formData.sideImageKey === "custom" && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Upload custom image
+              </label>
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                {formData.sideImageUrl ? (
+                  <div className="relative group">
+                    <img
+                      src={formData.sideImageUrl}
+                      alt="Custom preview"
+                      className="w-20 h-20 rounded-xl object-cover ring-2 ring-white shadow-md"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, sideImageUrl: "" }))}
+                      className="absolute -top-2 -right-2 p-1.5 bg-rose-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <HiOutlineTrash className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="h-20 w-20 bg-slate-100 rounded-xl flex items-center justify-center text-slate-300 border-2 border-dashed border-slate-200">
+                    <HiOutlinePhoto className="h-8 w-8" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="text-[11px] font-bold text-slate-600 mb-2">
+                    JPG, PNG or WEBP. Max 2MB.
+                  </p>
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+                    <HiOutlinePlus className="h-4 w-4" />
+                    {formData.sideImageUrl ? "Change Image" : "Select Image"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

@@ -32,22 +32,66 @@ export async function reserveStockForItems({
   const stockType = String(paymentMode || "").toUpperCase() === "ONLINE" ? "Reservation" : "Sale";
 
   for (const item of items) {
-    const updated = await Product.findOneAndUpdate(
-      {
-        _id: item.productId,
-        stock: { $gte: item.quantity },
-      },
-      {
-        $inc: { stock: -item.quantity },
-      },
-      {
-        new: true,
-        session,
-      },
-    );
+    const variantId = item.variantSku || item.variantSlot;
+    let updated;
+
+    if (variantId) {
+      // Update specific variant stock
+      updated = await Product.findOneAndUpdate(
+        {
+          _id: item.productId,
+          "variants.sku": variantId,
+          "variants.stock": { $gte: item.quantity },
+        },
+        {
+          $inc: { "variants.$.stock": -item.quantity },
+        },
+        {
+          new: true,
+          session,
+        }
+      );
+
+      // Fallback: If variant SKU not found, try matching by variant name or slot
+      if (!updated) {
+        updated = await Product.findOneAndUpdate(
+          {
+            _id: item.productId,
+            variants: {
+              $elemMatch: {
+                name: variantId,
+                stock: { $gte: item.quantity }
+              }
+            }
+          },
+          {
+            $inc: { "variants.$.stock": -item.quantity }
+          },
+          {
+            new: true,
+            session
+          }
+        );
+      }
+    } else {
+      // Update top-level master stock
+      updated = await Product.findOneAndUpdate(
+        {
+          _id: item.productId,
+          stock: { $gte: item.quantity },
+        },
+        {
+          $inc: { stock: -item.quantity },
+        },
+        {
+          new: true,
+          session,
+        },
+      );
+    }
 
     if (!updated) {
-      const err = new Error(`Insufficient stock for product: ${item.productName}`);
+      const err = new Error(`Insufficient stock for product: ${item.productName || 'Item'}`);
       err.statusCode = 409;
       throw err;
     }
@@ -59,7 +103,7 @@ export async function reserveStockForItems({
           seller: sellerId,
           type: stockType,
           quantity: -item.quantity,
-          note: `Order #${orderId} ${stockType.toLowerCase()}`,
+          note: `Order #${orderId} ${stockType.toLowerCase()}${variantId ? ` (Variant: ${variantId})` : ''}`,
         },
       ],
       { session },
@@ -78,11 +122,27 @@ export async function releaseReservedStockForOrder(order, { session = null, reas
   }
 
   for (const item of order.items) {
-    await Product.updateOne(
-      { _id: item.product },
-      { $inc: { stock: item.quantity } },
-      session ? { session } : {},
-    );
+    const variantId = item.variantSku || item.variantSlot;
+    
+    if (variantId) {
+      await Product.updateOne(
+        { 
+          _id: item.product,
+          $or: [
+            { "variants.sku": variantId },
+            { "variants.name": variantId }
+          ]
+        },
+        { $inc: { "variants.$.stock": item.quantity } },
+        session ? { session } : {}
+      );
+    } else {
+      await Product.updateOne(
+        { _id: item.product },
+        { $inc: { stock: item.quantity } },
+        session ? { session } : {},
+      );
+    }
 
     await StockHistory.create(
       [
@@ -91,7 +151,7 @@ export async function releaseReservedStockForOrder(order, { session = null, reas
           seller: order.seller,
           type: "Release",
           quantity: item.quantity,
-          note: `Order #${order.orderId} ${reason}`,
+          note: `Order #${order.orderId} ${reason}${variantId ? ` (Variant: ${variantId})` : ''}`,
           order: order._id,
         },
       ],

@@ -24,44 +24,52 @@ import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
 import axiosInstance from '@core/api/axios';
 import { useEffect } from 'react';
+import { deliveryApi } from "../services/deliveryApi";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
   const { user, logout } = useAuth();
   const { settings } = useSettings();
   const appName = settings?.appName || "App";
-  const [faqs, setFaqs] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   useEffect(() => {
-    const fetchFaqs = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axiosInstance.get('/public/faqs', { params: { category: 'Delivery', status: 'published' } });
-        setFaqs(response.data.results || []);
+        const statsRes = await deliveryApi.getStats();
+        setStats(statsRes.data.result);
       } catch (error) {
-        console.error("Error fetching FAQs:", error);
+        console.error("Error fetching profile data:", error);
+      } finally {
+        setIsLoadingStats(false);
       }
     };
-    fetchFaqs();
+    fetchData();
   }, []);
 
   const menuItems = [
     {
       icon: User,
       label: "Personal Details",
-      sub: "Name, Address, Email",
+      sub: user ? `${user.name}, ${user.email}` : "Name, Address, Email",
       color: "text-blue-600 bg-blue-50",
       path: "/delivery/profile/personal-details",
     },
     {
       icon: Truck,
       label: "Vehicle Information",
-      sub: "Bike, License, Insurance",
+      sub: user ? `${user.vehicleType?.toUpperCase()} - ${user.vehicleNumber || 'N/A'}` : "Bike, License, Insurance",
       color: "text-orange-600 bg-orange-50",
       path: "/delivery/profile/vehicle-info",
     },
     {
       icon: CreditCard,
       label: "Bank Account",
+      sub: user?.accountNumber ? `**** ${user.accountNumber.slice(-4)}` : "Not linked",
       sub: "Bank details for payouts",
       color: "text-brand-600 bg-brand-50",
       path: "/delivery/profile/bank-account",
@@ -76,16 +84,9 @@ const Profile = () => {
     {
       icon: FileText,
       label: "Documents",
-      sub: "Aadhar, PAN, DL (Verified)",
+      sub: user?.documents?.aadhar ? "Aadhar, PAN, DL (Verified)" : "Upload documents",
       color: "text-purple-600 bg-purple-50",
       path: "/delivery/profile/documents",
-    },
-    {
-      icon: Shield,
-      label: "Safety & Privacy",
-      sub: "Emergency contacts, App permissions",
-      color: "text-red-600 bg-red-50",
-      path: "/delivery/profile/safety-privacy",
     },
     {
       icon: Settings,
@@ -97,6 +98,7 @@ const Profile = () => {
     ...(user?.plansAvailable !== false ? [{
       icon: CheckCircle,
       label: "Subscription Status",
+      sub: user?.subscriptionStatus === 'active' ? "Active Member" : "Inactive",
       sub: "Manage your subscription",
       color: "text-emerald-600 bg-emerald-50",
       path: "/delivery/profile/subscription",
@@ -142,6 +144,7 @@ const Profile = () => {
           <div className="relative">
             <div className="w-20 h-20 bg-white rounded-full p-1 shadow-lg">
               <img
+                src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Felix'}`}
                 src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Rider"}`}
                 alt="Profile"
                 className="w-full h-full rounded-full object-cover bg-gray-100"
@@ -150,14 +153,22 @@ const Profile = () => {
             {user?.isOnline && <div className="absolute bottom-0 right-0 w-6 h-6 bg-brand-500 border-2 border-white rounded-full"></div>}
           </div>
           <div className="text-white">
+            <h2 className="font-bold text-xl">{user?.name || "Delivery Partner"}</h2>
             <h2 className="font-bold text-xl">{user?.name || "Partner"}</h2>
             <p className="text-white/80 text-sm flex items-center mb-1">
+              <Phone size={14} className="mr-1" /> {user?.phone || "+91 XXXXX XXXXX"}
               <Phone size={14} className="mr-1" /> +91 {user?.phone || "00000 00000"}
             </p>
             <div className="flex items-center space-x-2">
               <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-medium backdrop-blur-sm">
+                ID: {user?._id?.slice(-6).toUpperCase() || "------"}
                 ID: {String(user?._id || "000000").slice(-6).toUpperCase()}
               </span>
+              {user?.isVerified && (
+                <span className="bg-brand-500 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm">
+                  VERIFIED
+                </span>
+              )}
               {user?.isVerified && (
                 <span className="bg-brand-500 text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm">
                   VERIFIED
@@ -178,14 +189,18 @@ const Profile = () => {
           <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
             Joined
           </p>
-          <p className="font-bold text-gray-900 text-lg">Jan '24</p>
+          <p className="font-bold text-gray-900 text-lg">
+            {user?.createdAt ? format(new Date(user.createdAt), "MMM ''yy") : "---"}
+          </p>
         </div>
         <div className="w-px bg-gray-100"></div>
         <div className="flex-1">
           <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">
             Trips
           </p>
-          <p className="font-bold text-gray-900 text-lg">1,240</p>
+          <p className="font-bold text-gray-900 text-lg">
+            {isLoadingStats ? "..." : (stats?.deliveries || 0).toLocaleString()}
+          </p>
         </div>
         <div className="w-px bg-gray-100"></div>
         <div className="flex-1">
@@ -204,7 +219,14 @@ const Profile = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible">
-        {menuItems.map((item, index) => (
+        {menuItems
+          .filter(item => {
+            if (item.label === "Subscription Status") {
+              return settings?.subscriptionsEnabled !== false;
+            }
+            return true;
+          })
+          .map((item, index) => (
           <motion.button
             key={index}
             variants={itemVariants}
@@ -230,24 +252,6 @@ const Profile = () => {
           </motion.button>
         ))}
 
-        {/* FAQ Section */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 overflow-hidden">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 px-2">Delivery Partner FAQs</p>
-          <div className="divide-y divide-gray-50">
-            {faqs.length > 0 ? (
-              faqs.map((faq) => (
-                <DeliveryFAQItem
-                  key={faq._id}
-                  question={faq.question}
-                  answer={faq.answer}
-                />
-              ))
-            ) : (
-              <div className="py-4 text-center text-xs text-gray-400">No FAQs available</div>
-            )}
-          </div>
-        </div>
-
         <motion.div variants={itemVariants} className="pt-4">
           <Button
             onClick={logout}
@@ -263,27 +267,6 @@ const Profile = () => {
         <br />
         Version 1.2.0 (Build 450)
       </div>
-    </div>
-  );
-};
-
-const DeliveryFAQItem = ({ question, answer }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="py-4 px-2 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setIsOpen(!isOpen)}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-gray-700">{question}</h3>
-        {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-      </div>
-      {isOpen && (
-        <motion.p
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="mt-2 text-xs text-gray-500 font-medium leading-relaxed"
-        >
-          {answer}
-        </motion.p>
-      )}
     </div>
   );
 };

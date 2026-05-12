@@ -47,7 +47,7 @@ async function ensureServiceWorkerRegistration() {
   return registration;
 }
 
-async function showSystemNotification({ title, body, data } = {}) {
+export async function showSystemNotification({ title, body, data } = {}) {
   const safeTitle = String(title || "Notification");
   const safeBody = String(body || "");
   const link = data?.link || "/";
@@ -194,4 +194,5 @@ export default {
   hasRegisteredFcmToken,
   removeStoredFcmToken,
   startForegroundPushListener,
+  showSystemNotification,
 };

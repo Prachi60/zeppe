@@ -208,8 +208,7 @@ function eventDefinition(eventType) {
           normalizeIdList(payload.customerId || payload.userId),
         title: () => "Return Request Rejected",
         body: (payload) =>
-          `Your return request for order #${payload.orderId || ""} was rejected.${
-            payload.data?.reason ? " Reason: " + payload.data.reason : ""
+          `Your return request for order #${payload.orderId || ""} was rejected.${payload.data?.reason ? " Reason: " + payload.data.reason : ""
           }`,
       };
     case NOTIFICATION_EVENTS.NEW_RETURN_BROADCAST:
@@ -228,10 +227,9 @@ function eventDefinition(eventType) {
         recipientIds: (payload) => normalizeIdList(payload.deliveryId),
         title: () => "Return Pickup Assigned",
         body: (payload) =>
-          `Return pickup for order #${payload.orderId || ""}.${
-            payload.data?.commission
-              ? " Commission: ₹" + payload.data.commission + "."
-              : ""
+          `Return pickup for order #${payload.orderId || ""}.${payload.data?.commission
+            ? " Commission: ₹" + payload.data.commission + "."
+            : ""
           } Check app for details.`,
       };
     case NOTIFICATION_EVENTS.RETURN_PICKUP_OTP:
@@ -270,8 +268,7 @@ function eventDefinition(eventType) {
           normalizeIdList(payload.customerId || payload.userId),
         title: () => "QC Passed — Refund Initiated 💸",
         body: (payload) =>
-          `Quality check passed for order #${payload.orderId || ""}. Refund of ₹${
-            payload.data?.refundAmount || 0
+          `Quality check passed for order #${payload.orderId || ""}. Refund of ₹${payload.data?.refundAmount || 0
           } credited to your wallet.`,
       };
     case NOTIFICATION_EVENTS.RETURN_QC_FAILED:
@@ -281,9 +278,16 @@ function eventDefinition(eventType) {
           normalizeIdList(payload.customerId || payload.userId),
         title: () => "QC Failed — No Refund",
         body: (payload) =>
-          `Quality check failed for order #${payload.orderId || ""}. No refund will be issued.${
-            payload.data?.note ? " Note: " + payload.data.note : ""
+          `Quality check failed for order #${payload.orderId || ""}. No refund will be issued.${payload.data?.note ? " Note: " + payload.data.note : ""
           }`,
+      };
+    case NOTIFICATION_EVENTS.CASH_OVER_LIMIT:
+      return {
+        role: NOTIFICATION_ROLES.DELIVERY,
+        recipientIds: (payload) => normalizeIdList(payload.userId || payload.deliveryId),
+        title: () => "Cash Limit Exceeded! ⚠️",
+        body: (payload) =>
+          `Your cash in hand (₹${payload.data?.cashAmount || 0}) has exceeded the safety limit. Please visit the hub to deposit cash immediately.`,
       };
     default:
       return null;
@@ -293,8 +297,22 @@ function eventDefinition(eventType) {
 function eventData(eventType, payload = {}) {
   const orderId = String(payload.orderId || "").trim() || undefined;
   const checkoutGroupId = String(payload.checkoutGroupId || "").trim() || undefined;
+
+  // SELLER_IN_COMMAND: Informational notifications should not trigger mobile action buttons.
+  // We append _INFO to the eventType in the data payload to prevent the mobile app
+  // from matching these to its "actionable" event list (Accept/Reject).
+  let dataEventType = eventType;
+  if (
+    eventType === NOTIFICATION_EVENTS.DELIVERY_ASSIGNED ||
+    eventType === NOTIFICATION_EVENTS.ORDER_DELIVERED ||
+    eventType === NOTIFICATION_EVENTS.ORDER_READY ||
+    eventType === NOTIFICATION_EVENTS.RETURN_PICKUP_ASSIGNED
+  ) {
+    dataEventType = `${eventType}_INFO`;
+  }
+
   return {
-    eventType,
+    eventType: dataEventType,
     orderId,
     checkoutGroupId,
     link: buildOrderLink(orderId),

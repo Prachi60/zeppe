@@ -104,7 +104,7 @@ const SupportPage = () => {
                         sub="Formal Request"
                         onClick={() => setIsTicketModalOpen(true)}
                     />
-                    <ContactCard icon={Phone} label="Call Us" sub="+91 98765..." />
+                    <ContactCard icon={Phone} label="Call Us" sub="+91 6203858268" />
                     <ContactCard icon={Mail} label="Email Us" sub={supportEmailShort} />
                 </div>
 

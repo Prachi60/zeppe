@@ -380,18 +380,26 @@ export default function HeroCategoriesPerPage() {
                           </div>
                         </div>
                       </div>
-                      {formBanners.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeBannerItem(idx)}
-                          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                        >
-                          <HiOutlineXMark className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeBannerItem(idx)}
+                        className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                      >
+                        <HiOutlineXMark className="w-4 h-4" />
+                      </button>
                     </div>
                   </Card>
                 ))}
+                {formBanners.length === 0 && (
+                  <div className="py-8 text-center bg-slate-50 rounded-xl border-2 border-dashed border-slate-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      No banners added yet
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Click "Add banner" to start designing this section.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

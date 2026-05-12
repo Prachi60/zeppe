@@ -43,6 +43,7 @@ const CashCollection = () => {
     const [historyTotal, setHistoryTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [detailsLoading, setDetailsLoading] = useState(false);
+    const [loadingId, setLoadingId] = useState(null);
 
     const fetchData = async (cashPage = 1, histPage = 1) => {
         try {
@@ -139,6 +140,20 @@ const CashCollection = () => {
     const handleSettlement = (rider) => {
         setSettlementData({ rider, amount: rider.currentCash });
         setIsSettleModalOpen(true);
+    };
+
+    const handleNotify = async (riderId) => {
+        try {
+            setLoadingId(riderId);
+            const res = await adminApi.notifyRiderCashLimit({ riderId });
+            if (res.data.success) {
+                toast.success("Notification sent to rider");
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to send notification");
+        } finally {
+            setLoadingId(null);
+        }
     };
 
     const confirmSettlement = async () => {
@@ -325,12 +340,23 @@ const CashCollection = () => {
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => handleSettlement(rider)}
-                                                    className="px-4 py-2 bg-brand-50 text-brand-600 rounded-xl text-[10px] font-black hover:bg-brand-600 hover:text-white transition-all shadow-sm active:scale-95 uppercase tracking-widest"
+                                                    className="px-6 py-2.5 bg-slate-50 text-slate-900 rounded-xl text-[10px] font-black hover:bg-slate-100 transition-colors duration-200 shadow-sm active:scale-95 uppercase tracking-widest border border-slate-100"
                                                 >
                                                     Settle
                                                 </button>
-                                                <button className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-200 transition-all active:scale-95">
-                                                    <Bell className="h-4 w-4" />
+                                                <button 
+                                                    onClick={() => handleNotify(rider.id)}
+                                                    disabled={loadingId === rider.id}
+                                                    className={cn(
+                                                        "p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-200 transition-all active:scale-95 disabled:opacity-50",
+                                                        (rider.currentCash || 0) >= (rider.limit || 5000) && "text-amber-500 bg-amber-50"
+                                                    )}
+                                                >
+                                                    {loadingId === rider.id ? (
+                                                        <RotateCw className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Bell className="h-4 w-4" />
+                                                    )}
                                                 </button>
                                                 <button
                                                     onClick={() => setSelectedRider(rider)}
@@ -419,20 +445,29 @@ const CashCollection = () => {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <Card className="p-6 border-none bg-slate-900 text-white rounded-xl relative overflow-hidden">
+                            {/* Primary Wallet - Enforced Dark Style */}
+                            <div className="p-6 bg-slate-900 text-white rounded-2xl relative overflow-hidden shadow-xl border border-white/5">
                                 <p className="text-[10px] opacity-60 font-black uppercase tracking-widest mb-2">Primary Wallet</p>
-                                <h4 className="text-3xl font-black italic">₹{selectedRider.currentCash.toLocaleString()}</h4>
+                                <h4 className="text-3xl font-black italic">
+                                    ₹{(selectedRider.currentCash || 0).toLocaleString()}
+                                </h4>
                                 <div className="mt-4 flex items-center gap-2">
                                     <div className="h-1.5 flex-1 bg-white/10 rounded-full overflow-hidden">
-                                        <div className="h-full bg-brand-400" style={{ width: `${Math.min((selectedRider.currentCash / selectedRider.limit) * 100, 100)}%` }} />
+                                        <div 
+                                            className="h-full bg-brand-400" 
+                                            style={{ width: `${Math.min(((selectedRider.currentCash || 0) / (selectedRider.limit || 5000)) * 100, 100)}%` }} 
+                                        />
                                     </div>
-                                    <span className="text-[10px] font-bold opacity-60">{Math.min(Math.round((selectedRider.currentCash / selectedRider.limit) * 100), 100)}%</span>
+                                    <span className="text-[10px] font-bold opacity-60">
+                                        {Math.min(Math.round(((selectedRider.currentCash || 0) / (selectedRider.limit || 5000)) * 100), 100)}%
+                                    </span>
                                 </div>
                                 <CircleDollarSign className="absolute -bottom-4 -right-4 h-20 w-20 opacity-10" />
-                            </Card>
-                            <Card className="p-6 border-none bg-slate-50 ring-1 ring-slate-100 rounded-xl">
+                            </div>
+
+                            <Card className="p-6 border-none bg-slate-50 ring-1 ring-slate-100 rounded-2xl">
                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-2">Pending COD Orders</p>
-                                <h4 className="text-3xl font-black text-slate-900">{selectedRider.pendingOrders}</h4>
+                                <h4 className="text-3xl font-black text-slate-900">{selectedRider.pendingOrders || 0}</h4>
                                 <p className="text-[10px] font-bold text-slate-400 mt-4 uppercase">Requires immediate sync</p>
                             </Card>
                         </div>
@@ -454,13 +489,18 @@ const CashCollection = () => {
                                             <div className="flex items-center gap-3">
                                                 <div className="h-2 w-2 rounded-full bg-brand-500 group-hover:scale-125 transition-transform" />
                                                 <div>
-                                                    <p className="text-xs font-black text-slate-900">{item.reference || item.id}</p>
+                                                    <p className="text-xs font-black text-slate-900">{item.id}</p>
                                                     <p className="text-[9px] font-bold text-slate-400 uppercase">
-                                                        {new Date(item.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                        {item.date ? new Date(item.date).toLocaleString('en-IN', { 
+                                                            day: 'numeric', 
+                                                            month: 'short', 
+                                                            hour: '2-digit', 
+                                                            minute: '2-digit' 
+                                                        }) : 'Recent'}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <span className="text-sm font-black text-slate-700">₹{item.amount.toLocaleString()}</span>
+                                            <span className="text-sm font-black text-slate-700">₹{(item.amount || 0).toLocaleString()}</span>
                                         </div>
                                     ))
                                 ) : (

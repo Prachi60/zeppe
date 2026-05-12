@@ -28,7 +28,8 @@ const DynamicForm = ({
         register,
         handleSubmit,
         formState: { errors },
-        reset
+        reset,
+        watch
     } = useForm({
         resolver: zodResolver(schema),
         defaultValues
@@ -36,6 +37,19 @@ const DynamicForm = ({
 
     const onFormSubmit = async (data) => {
         await onSubmit(data, reset);
+    };
+
+    const renderFieldWithData = (field) => {
+        const value = watch(field.name);
+        // Handle image preview logic: if it's a FileList (from input type=file), create a temporary URL
+        let currentValue = value;
+        if (field.type === 'image' && value instanceof FileList && value.length > 0) {
+            currentValue = URL.createObjectURL(value[0]);
+        } else if (field.type === 'image' && !value) {
+            currentValue = defaultValues[field.name];
+        }
+
+        return renderField({ ...field, currentValue }, register, errors);
     };
 
     return (
@@ -51,14 +65,14 @@ const DynamicForm = ({
                                 </div>
                             )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {fields.filter(f => f.section === sectionName).map(f => renderField(f, register, errors))}
+                                {fields.filter(f => f.section === sectionName).map(f => renderFieldWithData(f))}
                             </div>
                         </div>
                     ))}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {fields.map(f => renderField(f, register, errors))}
+                    {fields.map(f => renderFieldWithData(f))}
                 </div>
             )}
 
@@ -111,6 +125,34 @@ const renderField = (field, register, errors) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
             </select>
+        ) : field.type === 'image' ? (
+            <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                    <div className="h-20 w-20 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
+                        {field.currentValue ? (
+                            <img src={field.currentValue} alt="Preview" className="h-full w-full object-cover" />
+                        ) : (
+                            <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest text-center px-2">No Image</div>
+                        )}
+                    </div>
+                    <div className="flex-1">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            {...register(field.name)}
+                            className="hidden"
+                            id={`file-${field.name}`}
+                        />
+                        <label 
+                            htmlFor={`file-${field.name}`}
+                            className="inline-flex items-center px-4 py-2 bg-white ring-1 ring-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 cursor-pointer transition-all shadow-sm"
+                        >
+                            Change Photo
+                        </label>
+                        <p className="mt-1.5 text-[9px] font-bold text-slate-400">Recommended: 800x800px PNG/JPG</p>
+                    </div>
+                </div>
+            </div>
         ) : (
             <input
                 {...register(field.name)}

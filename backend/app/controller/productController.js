@@ -40,7 +40,10 @@ function makeProductSku(name, index = 1) {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "")
     .slice(0, 5) || "item";
-  return `${prefix}-${String(index).padStart(3, "0")}`;
+  
+  // Add a 4-character random suffix for global uniqueness
+  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}-${String(index).padStart(2, "0")}-${randomSuffix}`;
 }
 
 function parseJsonIfString(value) {
@@ -458,9 +461,9 @@ export const updateProduct = async (req, res) => {
           console.error("Cloudinary upload failed during update:", err);
         }
       }
-      if (galleryUrls.length > 0) {
-        productData.galleryImages = galleryUrls;
-      }
+      // Merge existing gallery images with new ones
+      const existingGallery = parseImageList(productData.galleryImages);
+      productData.galleryImages = [...existingGallery, ...galleryUrls];
     }
 
     // Parse JSON fields

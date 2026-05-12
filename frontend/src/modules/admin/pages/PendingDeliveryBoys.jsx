@@ -15,7 +15,9 @@ import {
     IdCard,
     RotateCw,
     Check,
-    X
+    X,
+    Edit2,
+    Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,13 +49,17 @@ const PendingDeliveryBoys = () => {
                 name: r.name,
                 phone: r.phone,
                 email: r.email,
-                avatar: r.profilePic,
+                avatar: r.avatar || r.profilePic,
                 appliedDate: new Date(r.createdAt).toLocaleDateString(),
                 location: r.currentArea || 'Unknown',
                 vehicle: r.vehicleType,
+                vehicleNumber: r.vehicleNumber || 'N/A',
+                vehicleModel: r.vehicleModel || 'N/A',
+                dob: r.dob || 'Not Specified',
+                bloodGroup: r.bloodGroup || 'N/A',
+                address: r.address || 'Not Specified',
                 documents: Object.keys(r.documents || {}).filter(key => r.documents[key]),
                 status: r.applicationStatus === 'approved' ? 'approved' : 'pending_review',
-                experience: 'Not Specified', // Mock for now
                 preferredArea: r.currentArea || 'Not Specified'
             }));
 
@@ -111,6 +117,46 @@ const handleReject = async (id) => {
         } finally {
             setIsProcessing(false);
         }
+    }
+};
+
+const handleDelete = async (id) => {
+    if (window.confirm('PERMANENT DELETE: Are you sure? This will remove the rider from the database.')) {
+        setIsProcessing(true);
+        try {
+            await adminApi.deleteDeliveryPartner(id);
+            toast.success('Rider deleted permanently');
+            setPendingRiders(pendingRiders.filter(r => r.id !== id));
+        } catch (error) {
+            console.error('Delete Error:', error);
+            toast.error('Failed to delete rider');
+        } finally {
+            setIsProcessing(false);
+        }
+    }
+};
+
+const handleEdit = (rider) => {
+    setViewingRider({ ...rider, isEditing: true });
+};
+
+const handleUpdate = async () => {
+    setIsProcessing(true);
+    try {
+        await adminApi.updateDeliveryPartner(viewingRider.id, {
+            name: viewingRider.name,
+            phone: viewingRider.phone,
+            email: viewingRider.email,
+            vehicleType: viewingRider.vehicle
+        });
+        toast.success('Rider details updated');
+        setPendingRiders(pendingRiders.map(r => r.id === viewingRider.id ? { ...viewingRider, isEditing: false } : r));
+        setViewingRider(null);
+    } catch (error) {
+        console.error('Update Error:', error);
+        toast.error('Failed to update rider');
+    } finally {
+        setIsProcessing(false);
     }
 };
 
@@ -191,7 +237,9 @@ return (
                             <th className="ds-table-header-cell px-4">Applicant Details</th>
                             <th className="ds-table-header-cell px-4">Operational Intel</th>
                             <th className="ds-table-header-cell px-4">Submission Status</th>
-                            <th className="ds-table-header-cell px-4 text-right">Action</th>
+                            <th className="ds-table-header-cell px-4 w-80">
+                                <div className="text-center w-full">Action</div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -252,13 +300,29 @@ return (
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-6 text-right">
-                                        <button
-                                            onClick={() => setViewingRider(rider)}
-                                            className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95"
-                                        >
-                                            VIEW APPLICATION
-                                        </button>
+                                    <td className="px-4 py-6 text-center w-80">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button
+                                                onClick={() => handleEdit(rider)}
+                                                className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all active:scale-90"
+                                                title="Edit Details"
+                                            >
+                                                <Edit2 className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(rider.id)}
+                                                className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all active:scale-90"
+                                                title="Delete Rider"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setViewingRider(rider)}
+                                                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95 ml-2"
+                                            >
+                                                VIEW APPLICATION
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
@@ -299,17 +363,35 @@ return (
 
                             <div className="space-y-6">
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preferred Area</p>
-                                    <div className="flex items-center gap-2 text-slate-700">
-                                        <MapPin className="h-4 w-4 text-slate-400" />
-                                        <span className="text-xs font-bold">{viewingRider.preferredArea}</span>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Residential Address</p>
+                                    <div className="flex items-start gap-2 text-slate-700">
+                                        <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
+                                        <span className="text-xs font-bold leading-relaxed">{viewingRider.address}</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Born On</p>
+                                        <div className="flex items-center gap-2 text-slate-700">
+                                            <Calendar className="h-4 w-4 text-slate-400" />
+                                            <span className="text-xs font-bold">{viewingRider.dob}</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Blood Group</p>
+                                        <div className="flex items-center gap-2 text-slate-700">
+                                            <div className="h-4 w-4 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-[8px] font-black">
+                                                {viewingRider.bloodGroup ? viewingRider.bloodGroup.charAt(0) : '?'}
+                                            </div>
+                                            <span className="text-xs font-bold uppercase">{viewingRider.bloodGroup}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Experience</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vehicle Plate</p>
                                     <div className="flex items-center gap-2 text-slate-700">
-                                        <Calendar className="h-4 w-4 text-slate-400" />
-                                        <span className="text-xs font-bold">{viewingRider.experience}</span>
+                                        <IdCard className="h-4 w-4 text-slate-400" />
+                                        <span className="text-xs font-bold uppercase tracking-widest">{viewingRider.vehicleNumber}</span>
                                     </div>
                                 </div>
                                 <div className="pt-6 border-t border-slate-200">
@@ -342,13 +424,31 @@ return (
                                             <div className="h-10 w-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-primary">
                                                 <Phone className="h-5 w-5" />
                                             </div>
-                                            <span className="text-sm font-bold text-slate-900">{viewingRider.phone}</span>
+                                            {viewingRider.isEditing ? (
+                                                <input 
+                                                    type="text" 
+                                                    value={viewingRider.phone} 
+                                                    onChange={(e) => setViewingRider({...viewingRider, phone: e.target.value})}
+                                                    className="flex-1 bg-white border border-slate-200 rounded-lg p-2 text-sm font-bold"
+                                                />
+                                            ) : (
+                                                <span className="text-sm font-bold text-slate-900">{viewingRider.phone}</span>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="h-10 w-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-primary">
                                                 <Mail className="h-5 w-5" />
                                             </div>
-                                            <span className="text-sm font-bold text-slate-900">{viewingRider.email}</span>
+                                            {viewingRider.isEditing ? (
+                                                <input 
+                                                    type="text" 
+                                                    value={viewingRider.email} 
+                                                    onChange={(e) => setViewingRider({...viewingRider, email: e.target.value})}
+                                                    className="flex-1 bg-white border border-slate-200 rounded-lg p-2 text-sm font-bold"
+                                                />
+                                            ) : (
+                                                <span className="text-sm font-bold text-slate-900">{viewingRider.email}</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -361,7 +461,19 @@ return (
                                                 <Truck className="h-6 w-6" />
                                             </div>
                                             <div>
-                                                <p className="text-sm font-black text-slate-900">{viewingRider.vehicle}</p>
+                                                {viewingRider.isEditing ? (
+                                                    <select 
+                                                        value={viewingRider.vehicle} 
+                                                        onChange={(e) => setViewingRider({...viewingRider, vehicle: e.target.value})}
+                                                        className="bg-white border border-slate-200 rounded-lg p-1 text-sm font-bold"
+                                                    >
+                                                        <option value="bike">bike</option>
+                                                        <option value="cycle">cycle</option>
+                                                        <option value="electric_bike">electric_bike</option>
+                                                    </select>
+                                                ) : (
+                                                    <p className="text-sm font-black text-slate-900">{viewingRider.vehicle}</p>
+                                                )}
                                                 <p className="text-[9px] font-bold text-brand-600 uppercase tracking-widest mt-0.5">Eco-Friendly Ready</p>
                                             </div>
                                         </div>
@@ -385,29 +497,51 @@ return (
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-4">
-                                <button
-                                    disabled={isProcessing}
-                                    onClick={() => handleApprove(viewingRider.id)}
-                                    className="flex-1 py-5 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                                >
-                                    {isProcessing ? (
-                                        <>
-                                            <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                            Processing Vetting...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Check className="h-4 w-4" />
-                                            APPROVE & ACTIVATE RIDER
-                                        </>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => handleReject(viewingRider.id)}
-                                    className="py-5 px-5 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-all active:scale-95"
-                                >
-                                    REJECT APPLICATION
-                                </button>
+                                {viewingRider.isEditing ? (
+                                    <button
+                                        disabled={isProcessing}
+                                        onClick={handleUpdate}
+                                        className="flex-1 py-5 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                    >
+                                        {isProcessing ? (
+                                            <>
+                                                <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                                SAVING CHANGES...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Check className="h-4 w-4" />
+                                                SAVE CHANGES
+                                            </>
+                                        )}
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            disabled={isProcessing}
+                                            onClick={() => handleApprove(viewingRider.id)}
+                                            className="flex-1 py-5 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                        >
+                                            {isProcessing ? (
+                                                <>
+                                                    <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                                    Processing Vetting...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Check className="h-4 w-4" />
+                                                    APPROVE & ACTIVATE RIDER
+                                                </>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => handleReject(viewingRider.id)}
+                                            className="py-5 px-5 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-all active:scale-95"
+                                        >
+                                            REJECT APPLICATION
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </motion.div>

@@ -1,5 +1,7 @@
 import Seller from "../models/seller.js";
 import UserSubscription from "../models/userSubscription.js";
+import Setting from "../models/setting.js";
+import UserSubscription from "../models/userSubscription.js";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import fs from "fs/promises";
@@ -13,6 +15,7 @@ import {
     verifySellerVerificationToken,
 } from "../services/sellerVerificationService.js";
 import { uploadToCloudinary } from "../services/mediaService.js";
+import { generateUniqueSlug } from "../utils/slugify.js";
 
 /* ===============================
    Utils
@@ -259,6 +262,13 @@ export const signupSeller = async (req, res) => {
             isActive: false,
         };
 
+        const slugResult = await generateUniqueSlug({
+            Model: Seller,
+            name: shopName,
+            sellerId: null // Stores must be globally unique
+        });
+        sellerData.slug = slugResult.slug;
+
         if (parsedLat !== undefined && parsedLng !== undefined) {
             sellerData.location = {
                 type: "Point",
@@ -395,12 +405,27 @@ export const loginSeller = async (req, res) => {
         });
 
         const token = generateToken(seller);
+
+        // Verify subscription status dynamically
+        const settings = await Setting.findOne({});
+        const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+
+        const activeSub = await UserSubscription.findOne({
+            userId: seller._id,
+            role: "seller",
+            status: "active",
+            endDate: { $gt: new Date() }
+        });
+
+        const sellerObj = seller.toObject();
+        sellerObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
         const sellerObj = seller.toObject();
         sellerObj.subscriptionStatus = activeSub ? "active" : "inactive";
         sellerObj.plansAvailable = activePlansCount > 0;
 
         return handleResponse(res, 200, "Login successful", {
             token,
+            seller: sellerObj,
             seller: sellerObj,
         });
     } catch (error) {

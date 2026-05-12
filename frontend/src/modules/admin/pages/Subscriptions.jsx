@@ -27,6 +27,8 @@ import {
   updatePlanAdmin,
   fetchUserSubscriptionsAdmin 
 } from "@core/services/subscriptionService";
+import { adminApi } from "../services/adminApi";
+import { useSettings } from "@core/context/SettingsContext";
 import { toast } from "sonner";
 
 const Subscriptions = () => {
@@ -35,7 +37,9 @@ const Subscriptions = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [plans, setPlans] = useState([]);
   const [userSubscriptions, setUserSubscriptions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { settings, refetch } = useSettings();
+  const [isGlobalEnabled, setIsGlobalEnabled] = useState(settings?.subscriptionsEnabled !== false);
+  const [isUpdatingGlobal, setIsUpdatingGlobal] = useState(false);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,6 +71,25 @@ const Subscriptions = () => {
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    setIsGlobalEnabled(settings?.subscriptionsEnabled !== false);
+  }, [settings]);
+
+  const handleToggleGlobal = async () => {
+    setIsUpdatingGlobal(true);
+    const newVal = !isGlobalEnabled;
+    try {
+      await adminApi.updateSettings({ subscriptionsEnabled: newVal });
+      setIsGlobalEnabled(newVal);
+      await refetch();
+      toast.success(`Mandatory subscriptions ${newVal ? 'enabled' : 'disabled'} globally.`);
+    } catch (error) {
+      toast.error("Failed to update global setting");
+    } finally {
+      setIsUpdatingGlobal(false);
+    }
+  };
 
   const handleSavePlan = async (e) => {
     e.preventDefault();
@@ -199,6 +222,44 @@ const Subscriptions = () => {
           </div>
         </Card>
       </div>
+
+      {/* Global Toggle Card */}
+      <Card className="bg-white border-slate-200 border-2 shadow-xl mb-8 overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-2 h-full bg-slate-900" />
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-2">
+          <div className="flex items-center gap-4">
+            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-colors ${isGlobalEnabled ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+              <ShieldCheck size={24} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Mandatory Subscriptions</h3>
+              <p className="text-xs text-slate-500 font-bold mt-0.5">
+                {isGlobalEnabled 
+                  ? "Sellers and Delivery Partners MUST have an active plan to operate." 
+                  : "Sellers and Delivery Partners can operate without any active plan (Bypass Mode)."}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <Badge 
+              variant={isGlobalEnabled ? "success" : "warning"} 
+              className="px-3 py-1 text-[10px] font-black uppercase tracking-widest"
+            >
+              {isGlobalEnabled ? "System Active" : "System Bypassed"}
+            </Badge>
+            <button 
+              onClick={handleToggleGlobal}
+              disabled={isUpdatingGlobal}
+              className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 ${isGlobalEnabled ? 'bg-slate-900' : 'bg-slate-200'} ${isUpdatingGlobal ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${isGlobalEnabled ? 'translate-x-8' : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
+        </div>
+      </Card>
 
       {/* Tabs & Filters */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">

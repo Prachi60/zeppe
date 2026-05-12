@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import Sidebar from './Sidebar';
@@ -7,12 +7,13 @@ import BottomNav from './BottomNav';
 import { sellerApi } from '@/modules/seller/services/sellerApi';
 import { useAuth } from "@core/context/AuthContext";
 import { motion, AnimatePresence } from 'framer-motion';
-import { BellRing, Check, X, Clock, Truck } from 'lucide-react';
+import { BellRing, Check, X, Clock, Truck, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SellerOrdersProvider } from '@/modules/seller/context/SellerOrdersContext';
 import { SellerEarningsProvider, defaultEarnings } from '@/modules/seller/context/SellerEarningsContext';
-import { getOrderSocket, onSellerOrderNew, onReturnDropOtp } from '@/core/services/orderSocket';
+import { getOrderSocket, onSellerOrderNew, onReturnDropOtp, onSellerReturnRequested } from '@/core/services/orderSocket';
+import { showSystemNotification } from '@/core/firebase/pushClient';
 
 const POLL_INTERVAL_MS = 15000;
 
@@ -28,10 +29,6 @@ function secondsLeftUntilSellerExpiry(order) {
 const isEarningsRoute = (path) =>
     path.includes('earnings') || path.includes('withdrawals') || path.includes('transactions');
 
-function playAlertSound() {
-    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    audio.play().catch(() => { });
-}
 
 const DashboardLayout = ({ children, navItems, title }) => {
     const [newOrderAlert, setNewOrderAlert] = useState(null);
@@ -43,6 +40,63 @@ const DashboardLayout = ({ children, navItems, title }) => {
     const acceptWindowTotalRef = useRef(60);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [returnDropOtpAlert, setReturnDropOtpAlert] = useState(null); // { orderId, otp, expiresAt }
+    const audioRef = useRef(null);
+
+    useEffect(() => {
+        const shouldPlay = !!newOrderAlert || !!newReturnAlert || !!returnDropOtpAlert;
+
+        if (shouldPlay) {
+            if (!audioRef.current) {
+                audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audioRef.current.loop = true;
+            }
+            audioRef.current.play().catch(() => { });
+        } else if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+            }
+        };
+    }, [newOrderAlert, newReturnAlert, returnDropOtpAlert]);
+
+    // Handle browser autoplay policy + desktop notifications
+    useEffect(() => {
+        const hasAlert = !!newOrderAlert || !!newReturnAlert || !!returnDropOtpAlert;
+        if (hasAlert) {
+            // 1. Try to play audio immediately
+            if (audioRef.current && audioRef.current.paused) {
+                audioRef.current.play().catch(() => {
+                    console.log("Audio autoplay blocked by browser policy");
+                });
+            }
+
+            // 2. Also show desktop notification (OS will play system sound)
+            const title = newOrderAlert ? "New Order!" : (newReturnAlert ? "Return Request" : "Rider at Store");
+            const body = newOrderAlert 
+                ? `Order #${newOrderAlert.orderId} - ₹${newOrderAlert.pricing?.total || newOrderAlert.total}`
+                : (newReturnAlert ? `Return for #${newReturnAlert.orderId}` : `Rider waiting for OTP for #${returnDropOtpAlert?.orderId}`);
+            
+            showSystemNotification({ title, body }).catch(() => {});
+        }
+
+        const unlockAudio = () => {
+            if (hasAlert && audioRef.current && audioRef.current.paused) {
+                audioRef.current.play().catch(() => { });
+            }
+        };
+        window.addEventListener("click", unlockAudio);
+        window.addEventListener("touchstart", unlockAudio);
+        return () => {
+            window.removeEventListener("click", unlockAudio);
+            window.removeEventListener("touchstart", unlockAudio);
+        };
+    }, [newOrderAlert, newReturnAlert, returnDropOtpAlert]);
+
     const { user, logout, role } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
@@ -59,6 +113,7 @@ const DashboardLayout = ({ children, navItems, title }) => {
     const newOrderAlertRef = useRef(null);
     const newReturnAlertRef = useRef(null);
     const fetchOrdersRef = useRef(null);
+    const playedSoundIdsRef = useRef(new Set());
     const earningsFetchedRef = useRef(false);
 
     useEffect(() => {
@@ -108,15 +163,22 @@ const DashboardLayout = ({ children, navItems, title }) => {
                     return;
                 }
 
-                const newOrder = pendingOrders.find((o) => !shownOrderIdsRef.current.has(o.orderId));
-                if (!newOrder || newOrderAlertRef.current) return;
+                // 1. SOUND ALERT: Play sound for any order we haven't alerted yet
+                const unalertedOrders = pendingOrders.filter(o => !playedSoundIdsRef.current.has(o.orderId));
+                if (unalertedOrders.length > 0) {
+                    unalertedOrders.forEach(o => playedSoundIdsRef.current.add(o.orderId));
+                }
 
-                setNewOrderAlert(newOrder);
-                setShownOrderIds((prev) => new Set(prev).add(newOrder.orderId));
-                shownOrderIdsRef.current = new Set(shownOrderIdsRef.current).add(newOrder.orderId);
-                newOrderAlertRef.current = newOrder;
+                // 2. MODAL DISPLAY: Only show if no modal is currently active
+                if (newOrderAlertRef.current) return;
 
-                playAlertSound();
+                const nextOrderToShow = pendingOrders.find((o) => !shownOrderIdsRef.current.has(o.orderId));
+                if (!nextOrderToShow) return;
+
+                setNewOrderAlert(nextOrderToShow);
+                setShownOrderIds((prev) => new Set(prev).add(nextOrderToShow.orderId));
+                shownOrderIdsRef.current = new Set(shownOrderIdsRef.current).add(nextOrderToShow.orderId);
+                newOrderAlertRef.current = nextOrderToShow;
             } catch (error) {
                 console.error("Polling Error:", error);
             } finally {
@@ -140,12 +202,16 @@ const DashboardLayout = ({ children, navItems, title }) => {
         const unsubscribeDrop = onReturnDropOtp(getToken, (payload) => {
             console.log("[DashboardLayout] Received return drop OTP:", payload);
             setReturnDropOtpAlert(payload);
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-            audio.play().catch(() => { });
+        });
+
+        const unsubscribeReturn = onSellerReturnRequested(getToken, (payload) => {
+            console.log("[DashboardLayout] Received return request:", payload);
+            setNewReturnAlert(payload);
         });
 
         return () => {
             unsubscribeDrop();
+            unsubscribeReturn();
         };
     }, [role]);
 
@@ -236,6 +302,9 @@ const DashboardLayout = ({ children, navItems, title }) => {
             await sellerApi.updateOrderStatus(orderId, { status: 'confirmed' });
             toast.success(`Order #${orderId} Accepted!`);
             setNewOrderAlert(null);
+            newOrderAlertRef.current = null;
+            // Check for next order in queue
+            setTimeout(() => refreshOrders(), 500);
         } catch (error) {
             const msg =
                 error?.response?.data?.message ||
@@ -249,6 +318,9 @@ const DashboardLayout = ({ children, navItems, title }) => {
             await sellerApi.updateOrderStatus(orderId, { status: 'cancelled' });
             toast.error(`Order #${orderId} Declined`);
             setNewOrderAlert(null);
+            newOrderAlertRef.current = null;
+            // Check for next order in queue
+            setTimeout(() => refreshOrders(), 500);
         } catch (error) {
             const msg =
                 error?.response?.data?.message ||
@@ -257,34 +329,34 @@ const DashboardLayout = ({ children, navItems, title }) => {
         }
     };
 
-    return (
-        <div className="min-h-screen mesh-gradient-light relative overflow-x-hidden">
-            {/* Background Blobs for depth */}
-            <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] -z-10 animate-pulse pointer-events-none"></div>
-            <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/5 rounded-full blur-[120px] -z-10 animate-pulse pointer-events-none" style={{ animationDelay: '2s' }}></div>
+    const handleSidebarClose = React.useCallback(() => setIsSidebarOpen(false), []);
+    const handleSidebarOpen = React.useCallback(() => setIsSidebarOpen(true), []);
 
+    return (
+        <div className="min-h-screen bg-slate-50 relative overflow-x-hidden">
+            {/* background depth removed for performance */}
             <Sidebar
                 items={navItems}
                 title={title}
                 isOpen={isSidebarOpen}
-                onClose={() => setIsSidebarOpen(false)}
+                onClose={handleSidebarClose}
             />
             <div className={cn("transition-all duration-300", (role === "admin" || role === "seller") ? "pl-0 md:pl-56" : "pl-56")}>
-                <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
+                <Topbar onMenuClick={handleSidebarOpen} />
                 <main className={cn("p-4 md:p-6 min-h-screen", (role === "admin" || role === "seller") ? "pt-20 md:pt-6 pb-24 md:pb-6" : "pt-20")}>
                     <div className="w-full pb-12">
                         <SellerOrdersProvider
-                            value={{
+                            value={useMemo(() => ({
                                 orders: role === 'seller' ? sellerOrders : [],
                                 ordersLoading: role === 'seller' ? ordersLoading : false,
                                 refreshOrders,
-                            }}>
+                            }), [role, sellerOrders, ordersLoading])}>
                             <SellerEarningsProvider
-                                value={{
+                                value={useMemo(() => ({
                                     earningsData: role === 'seller' ? sellerEarningsData : defaultEarnings,
                                     earningsLoading: role === 'seller' ? earningsLoading : false,
                                     refreshEarnings,
-                                }}>
+                                }), [role, sellerEarningsData, earningsLoading])}>
                                 {children}
                             </SellerEarningsProvider>
                         </SellerOrdersProvider>
@@ -391,6 +463,54 @@ const DashboardLayout = ({ children, navItems, title }) => {
                                 >
                                     Dismiss Alert
                                 </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+                {/* Global Return Request Alert Modal */}
+                {newReturnAlert && (
+                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-orange-100"
+                        >
+                            <div className="flex flex-col items-center text-center">
+                                <div className="h-20 w-20 bg-orange-50 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                                    <BellRing className="h-10 w-10 text-orange-600" />
+                                </div>
+
+                                <h2 className="text-2xl font-black text-slate-900 mb-2">Return Requested!</h2>
+                                <p className="text-slate-600 font-medium mb-4">
+                                    A customer has requested a return for order <span className="text-orange-600 font-bold">#{newReturnAlert.orderId}</span>.
+                                </p>
+                                
+                                <div className="w-full bg-orange-50 rounded-2xl p-4 mb-6 border border-orange-100 text-left">
+                                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Reason</p>
+                                    <p className="text-sm font-bold text-slate-800 line-clamp-3">
+                                        {newReturnAlert.returnReason || "No reason provided."}
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 w-full">
+                                    <button
+                                        onClick={() => setNewReturnAlert(null)}
+                                        className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors"
+                                    >
+                                        Dismiss
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setNewReturnAlert(null);
+                                            navigate('/seller/returns');
+                                        }}
+                                        className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-orange-600 text-white font-bold hover:bg-orange-700 shadow-xl shadow-orange-200 transition-all active:scale-95"
+                                    >
+                                        <Eye className="h-5 w-5" />
+                                        Review
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </div>

@@ -70,8 +70,8 @@ const FleetTrackingTable = () => {
 
   const filteredFleet = fleet.filter(
     (item) =>
-      item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.deliveryBoy.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      (item.id || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.deliveryBoy?.name || "").toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -135,31 +135,31 @@ const FleetTrackingTable = () => {
                       onClick={() => setSelectedBoy(item.deliveryBoy)}
                       className="text-left hover:text-primary transition-colors focus:outline-none">
                       <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors underline decoration-dotted underline-offset-4 decoration-slate-300 group-hover:decoration-primary">
-                        {item.deliveryBoy.name}
+                        {item.deliveryBoy?.name || "Unknown"}
                       </p>
                       <p className="text-xs text-primary font-medium">
-                        {item.deliveryBoy.phone}
+                        {item.deliveryBoy?.phone || "N/A"}
                       </p>
                     </button>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-3 text-slate-600">
                       <span className="text-xs font-semibold bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100">
-                        {item.seller.name}
+                        {item.seller?.name || "N/A"}
                       </span>
                       <HiOutlineArrowRight className="text-slate-300" />
                       <span className="text-xs font-semibold bg-brand-50 text-brand-700 px-2 py-1 rounded border border-brand-100">
-                        {item.customer.name}
+                        {item.customer?.name || "N/A"}
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div>
                       <p className="text-sm font-bold text-slate-900">
-                        {item.customer.name}
+                        {item.customer?.name || "N/A"}
                       </p>
                       <p className="text-xs text-slate-500 font-medium">
-                        {item.customer.phone}
+                        {item.customer?.phone || "N/A"}
                       </p>
                     </div>
                   </td>

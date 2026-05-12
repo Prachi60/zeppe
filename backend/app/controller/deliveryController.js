@@ -53,20 +53,30 @@ export const getDeliveryStats = async (req, res) => {
         const deliveryBoyId = new mongoose.Types.ObjectId(req.user.id);
         console.log(`[Stats] Fetching for Partner: ${deliveryBoyId}`);
 
-        const totalDeliveries = await Order.countDocuments({
-            deliveryBoy: deliveryBoyId,
-            status: 'delivered',
-            $or: [
-                { returnStatus: 'none' },
-                { returnStatus: { $exists: false } },
-                { returnStatus: { $in: ['return_rejected', 'refund_completed'] } }
-            ]
-        });
-        console.log(`[Stats] Delivered Orders found: ${totalDeliveries}`);
-
-        // Today's earnings - Using a more robust date check
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
+
+        const [totalDeliveries, todayDeliveries] = await Promise.all([
+            Order.countDocuments({
+                deliveryBoy: deliveryBoyId,
+                status: 'delivered',
+                $or: [
+                    { returnStatus: 'none' },
+                    { returnStatus: { $exists: false } },
+                    { returnStatus: { $in: ['return_rejected', 'refund_completed'] } }
+                ]
+            }),
+            Order.countDocuments({
+                deliveryBoy: deliveryBoyId,
+                status: 'delivered',
+                deliveredAt: { $gte: startOfToday },
+                $or: [
+                    { returnStatus: 'none' },
+                    { returnStatus: { $exists: false } },
+                    { returnStatus: { $in: ['return_rejected', 'refund_completed'] } }
+                ]
+            })
+        ]);
 
         const [earningResult] = await Transaction.aggregate([
             {
@@ -104,7 +114,8 @@ export const getDeliveryStats = async (req, res) => {
 
         return handleResponse(res, 200, "Stats fetched", {
             today: todayEarnings,
-            deliveries: totalDeliveries,
+            deliveries: todayDeliveries,
+            lifetimeDeliveries: totalDeliveries,
             incentives,
             cashCollected
         });
@@ -129,9 +140,15 @@ export const getDeliveryEarnings = async (req, res) => {
             .select("cashInHand")
             .lean();
 
-        const totalEarnings = transactions
+        const settledEarnings = transactions
             .filter(t => t.status === 'Settled' && (t.type === 'Delivery Earning' || t.type === 'Incentive' || t.type === 'Bonus'))
             .reduce((acc, t) => acc + t.amount, 0);
+
+        const pendingWithdrawalsTotal = transactions
+            .filter(t => (t.status === 'Pending' || t.status === 'Processing') && t.type === 'Withdrawal')
+            .reduce((acc, t) => acc + Math.abs(t.amount), 0);
+
+        const spendableBalance = Math.max(settledEarnings - pendingWithdrawalsTotal, 0);
 
         const tipsReceived = transactions
             .filter(t => t.type === 'Delivery Earning' && t.status === 'Settled')
@@ -195,13 +212,16 @@ export const getDeliveryEarnings = async (req, res) => {
         }
 
         return handleResponse(res, 200, "Earnings fetched", {
-            totalEarnings,
+            lifetimeEarnings: settledEarnings,
+            totalEarnings: spendableBalance,
+            pendingWithdrawalsTotal,
             onlinePay,
             incentives,
             tipsReceived,
             cashCollected,
             chartData,
-            transactions: transactions.slice(0, 20)
+            recentTransactions: transactions.slice(0, 50),
+            transactions: transactions.slice(0, 20) // Keep for backward compat
         });
     } catch (error) {
         return handleResponse(res, 500, error.message);
@@ -518,7 +538,7 @@ export const getMyDeliveryOrders = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
-                .populate("seller", "shopName address")
+                .populate("seller", "shopName address location")
                 .populate("customer", "name phone")
                 .lean(),
             Order.countDocuments(query),

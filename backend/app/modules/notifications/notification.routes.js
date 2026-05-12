@@ -9,7 +9,10 @@ import {
   updateNotificationPreferences,
   testPushNotification,
   getTestPushNotificationStatus,
+  sendCampaign,
+  getCampaignStats,
 } from "./notification.controller.js";
+import { allowRoles } from "../../middleware/authMiddleware.js";
 
 const notificationRouter = express.Router();
 notificationRouter.use(verifyToken);
@@ -31,6 +34,8 @@ pushRouter.post("/test", testPushNotification);
 pushRouter.get("/test-status/:orderId", getTestPushNotificationStatus);
 pushRouter.get("/preferences", getNotificationPreferences);
 pushRouter.patch("/preferences", updateNotificationPreferences);
+pushRouter.post("/broadcast", allowRoles("admin"), sendCampaign);
+pushRouter.get("/stats", allowRoles("admin"), getCampaignStats);
 
 export { notificationRouter, pushRouter };
 export default notificationRouter;

@@ -7,6 +7,7 @@ import { fetchPlansByRole, createSubscriptionOrder, verifySubscriptionPayment } 
 import { openRazorpayCheckout } from '@core/services/razorpayService';
 import { toast } from 'sonner';
 import { useAuth } from '@core/context/AuthContext';
+import { useSettings } from '@core/context/SettingsContext';
 
 const PlanCard = ({ 
   title, 
@@ -89,6 +90,13 @@ const Subscription = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
+  const { settings } = useSettings();
+
+  useEffect(() => {
+    if (settings?.subscriptionsEnabled === false) {
+      navigate('/delivery/dashboard');
+    }
+  }, [settings, navigate]);
 
   useEffect(() => {
     const loadPlans = async () => {

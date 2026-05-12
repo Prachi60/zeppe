@@ -1,4 +1,5 @@
 import Order from "../models/order.js";
+import logger from "../services/logger.js";
 import Cart from "../models/cart.js";
 import Product from "../models/product.js";
 import Transaction from "../models/transaction.js";
@@ -108,7 +109,7 @@ function parsePositiveInt(value, fallback) {
 }
 
 function getReturnEligibilityDelayMinutes() {
-  return parsePositiveInt(process.env.RETURN_ELIGIBILITY_DELAY_MINUTES, 2);
+  return parsePositiveInt(process.env.RETURN_ELIGIBILITY_DELAY_MINUTES, 0);
 }
 
 function getReturnWindowMinutes() {
@@ -120,8 +121,8 @@ function computeReturnWindowForOrder(order) {
   const deliveredAt = base instanceof Date ? base : new Date(base);
   const eligibleDelay = getReturnEligibilityDelayMinutes();
   const windowMinutes = getReturnWindowMinutes();
-  const eligibleAt = order?.returnEligibleAt || new Date(deliveredAt.getTime() + eligibleDelay * 60 * 1000);
-  let windowExpiresAt = order?.returnWindowExpiresAt || new Date(deliveredAt.getTime() + windowMinutes * 60 * 1000);
+  const eligibleAt = new Date(deliveredAt.getTime() + eligibleDelay * 60 * 1000);
+  let windowExpiresAt = new Date(deliveredAt.getTime() + windowMinutes * 60 * 1000);
   if (windowExpiresAt < eligibleAt) {
     windowExpiresAt = eligibleAt;
   }
@@ -705,7 +706,7 @@ export const getReturnDetails = async (req, res) => {
 
     const order = await Order.findOne(orderKey)
       .populate("customer", "name phone")
-      .populate("seller", "shopName name")
+      .populate("seller", "shopName name location")
       .populate("returnDeliveryBoy", "name phone");
 
     if (!order) {
@@ -817,6 +818,27 @@ export const updateOrderStatus = async (req, res) => {
         } catch (e) {
           return handleResponse(res, e.statusCode || 500, e.message);
         }
+      }
+
+      // SELLER_IN_COMMAND: Separation of Powers
+      // 1. If pending, clear the timer and start logistics.
+      if (order.workflowStatus === WORKFLOW_STATUS.SELLER_PENDING) {
+        logger.info("Seller initiated logistics from pending. Transitioning to DELIVERY_SEARCH.", {
+          orderId: order.orderId,
+          action: status
+        });
+        order.workflowStatus = WORKFLOW_STATUS.DELIVERY_SEARCH;
+      } 
+      // 2. If already in logistics, DO NOT touch workflowStatus. 
+      // The rider app is now the source of truth for the machine state.
+      else {
+        logger.info("Order in logistics phase. Seller status update is informational-only.", {
+          orderId: order.orderId,
+          action: status,
+          currentWorkflow: order.workflowStatus
+        });
+        // We fall through to the standard status update below, 
+        // which only updates order.status for the UI labels.
       }
     }
 

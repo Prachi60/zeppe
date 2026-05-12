@@ -7,7 +7,10 @@ const LenisScroll = () => {
         // Check if we're on login/signup page
         const isAuthPage = window.location.pathname === '/login' || window.location.pathname === '/signup';
         
-        if (isAuthPage) {
+        // Disable Lenis on mobile/tablet for better native performance and to avoid scroll-blocking issues
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isAuthPage || isMobile) {
             return;
         }
 
@@ -18,7 +21,7 @@ const LenisScroll = () => {
             gestureDirection: 'vertical',
             smooth: true,
             mouseMultiplier: 1,
-            smoothTouch: false,
+            smoothTouch: false, // Ensure native touch is preserved
             touchMultiplier: 2,
         });
 

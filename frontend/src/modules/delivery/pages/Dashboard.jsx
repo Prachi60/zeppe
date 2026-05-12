@@ -141,7 +141,7 @@ const Dashboard = () => {
                 4.8
               </span>
               <span className="text-gray-300 mx-2">•</span>
-              <span className="ds-caption text-gray-500">ID: 882190</span>
+              <span className="ds-caption text-gray-500">ID: {user?._id?.slice(-6).toUpperCase() || "------"}</span>
             </div>
           </div>
         </div>
@@ -212,8 +212,8 @@ const Dashboard = () => {
               whileTap={{ scale: 0.98 }}
               className={cn(
                 "w-1/2 h-full rounded-xl shadow-md flex items-center justify-center gap-2 z-10 border transition-all duration-500 cursor-grab active:cursor-grabbing",
-                isOnline 
-                  ? "bg-gradient-to-r from-[#45B0E2] to-[#38bdf8] border-[#389ecb] text-white" 
+                isOnline
+                  ? "bg-gradient-to-r from-[#45B0E2] to-[#38bdf8] border-[#389ecb] text-white"
                   : "bg-gradient-to-r from-slate-700 to-slate-800 border-slate-900 text-white"
               )}
               animate={{ x: isOnline ? "100%" : "0%" }}
@@ -422,7 +422,7 @@ const Dashboard = () => {
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Commission</span>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2 mb-5">
                       <div className="flex items-center text-xs text-gray-600">
                         <MapPin size={12} className="mr-2 text-gray-400" />
@@ -435,17 +435,17 @@ const Dashboard = () => {
                     </div>
 
                     <div className="flex gap-2">
-                       <Button 
-                        variant="primary" 
-                        size="sm" 
+                      <Button
+                        variant="primary"
+                        size="sm"
                         className="flex-1 font-black text-[10px] tracking-widest uppercase h-10 shadow-lg shadow-primary/20"
                         onClick={() => handleAcceptReturn(order.orderId)}
                       >
                         Accept Pickup
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="px-4 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-600 hover:bg-gray-100 h-10"
                         onClick={() => navigate(`/delivery/order-details/${order.orderId}`)}
                       >

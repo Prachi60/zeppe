@@ -83,8 +83,7 @@ const MUI_ICON_MAP = {
   kitchen: KitchenIcon,
 };
 
-const FORTUNE_SUGAR_PACK_IMAGE =
-  "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png";
+
 
 /** Map category names to Lucide React SVG icons */
 function getCategoryIcon(categoryName) {
@@ -257,10 +256,10 @@ const MainLocationHeader = ({
   activeCategory,
   onCategorySelect,
   featuredOffer = {
-    title: "Sugar",
-    image: "https://www.fortunefoods.com/wp-content/uploads/2022/12/1kg-front.png",
-    subtitle: "Rs. 1 per Kg*",
-    description: "On Order above 399",
+    title: "",
+    image: null,
+    subtitle: "",
+    description: "",
   },
 }) => {
   const { scrollY } = useScroll();
@@ -470,33 +469,24 @@ const MainLocationHeader = ({
           backgroundImage: buildHeaderGradient(baseHeaderColor, true),
         }}
         className={cn(
-          "relative w-full z-[900] h-auto pt-[calc(env(safe-area-inset-top,0px)+8px)] md:hidden",
+          "relative w-full z-[900] h-auto pt-[12px] md:hidden",
           isProductDetailOpen && "hidden",
           isLocationOpen && "hidden"
         )}>
         <div className="w-full z-10 px-4">
 
           <div className="flex flex-col pt-1">
-            {isServiceable && (
-              <div
-                id="header-distance-chip"
-                className="absolute top-[calc(env(safe-area-inset-top,0px)+30px)] right-[4.55rem] z-30 flex h-7 items-center gap-1 rounded-full px-2.5 shadow-[0_8px_18px_rgba(0,0,0,0.16)]"
-                style={{ backgroundColor: "rgba(102, 218, 190, 0.85)", border: "1.5px solid rgba(255,255,255,0.2)" }}>
-                <MapPin size={14} className="text-emerald-900/80" />
-                <span className="text-[11px] font-black text-emerald-950/90 tracking-tight">
-                  2.7 kms
-                </span>
-              </div>
-            )}
+
             {/* Profile Button — absolute top-right corner */}
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleProfileClick}
-              className="absolute top-[calc(env(safe-area-inset-top,0px)+30px)] right-4 z-30 flex items-center justify-center w-12 h-12 rounded-full shadow-lg overflow-hidden"
+              className="absolute top-4 right-4 z-30 flex items-center justify-center w-12 h-12 rounded-full shadow-lg overflow-hidden"
               style={{ backgroundColor: "rgba(30, 16, 8, 0.85)", border: "1.5px solid rgba(255,255,255,0.15)" }}>
               <PersonRoundedIcon sx={{ fontSize: 28, color: "rgba(255,255,255,0.9)" }} />
             </motion.button>
+
 
             {/* Top Row: Location only (full width) */}
             <div className="flex flex-col pt-0.5 pb-2 pr-14 relative">
@@ -509,7 +499,7 @@ const MainLocationHeader = ({
               )}>
                 {!isServiceable ? "Coming soon in your city" : deliveryTimeText}
               </div>
-              {isServiceable && (
+              {isServiceable && featuredOffer?.title && (
                 <div className="mt-1.5 mb-1 overflow-hidden relative w-full flex items-center h-[28px] bg-white/10 rounded-md px-2">
                   <style>{`
                     @keyframes scrollingTextShine {
@@ -543,7 +533,7 @@ const MainLocationHeader = ({
                     }}
                     className="inline-flex items-center whitespace-nowrap h-full">
                     <span className="text-[14px] font-bold tracking-[0.02em] text-glass-flare">
-                      Our favourite offer is back "{featuredOffer?.title || "Sugar"} @ {featuredOffer?.subtitle || "Rs. 1 per Kg*"}"
+                      Our favourite offer is back "{featuredOffer.title}{featuredOffer.subtitle ? ` @ ${featuredOffer.subtitle}` : ""}"
                     </span>
                   </motion.div>
                 </div>
@@ -594,7 +584,8 @@ const MainLocationHeader = ({
             transition: "all 0.3s ease"
           }}
           className={cn(
-            "w-full z-10 rounded-b-none px-4 pt-safe pb-0 md:rounded-none md:pt-4 md:pb-3 md:border-b md:border-black/10 transition-all duration-300 border-b-0",
+            "w-full z-10 rounded-b-none px-4 pt-0 md:rounded-none md:pt-4 md:pb-3 md:border-b md:border-black/10 transition-all duration-300 border-b-0",
+            routeLocation.pathname === '/categories' ? "pb-4" : "pb-0",
             isScrolled && !isDesktopViewport
               ? "shadow-[0_4px_20px_rgba(0,0,0,0.3)] rounded-b-[24px]"
               : "shadow-none"
@@ -735,10 +726,10 @@ const MainLocationHeader = ({
           </div>
 
           {/* Categories Navigation - Smooth Collapse */}
-          {categories.length > 0 && (
+          {categories.length > 0 && routeLocation.pathname !== '/categories' && (
             <>
               <div
-                className="no-scrollbar relative z-20 mt-0 flex min-h-[52px] items-center gap-2 overflow-x-auto pt-0 pb-0 scroll-smooth md:hidden border-t-0 border-b-0 shadow-none">
+                className="no-scrollbar relative z-20 mt-2.5 flex min-h-[52px] items-center gap-2 overflow-x-auto pt-0 pb-0 scroll-smooth md:hidden border-t-0 border-b-0 shadow-none">
                 {categories.map((cat, index) => {
                   const isActive = (activeCategory?._id || activeCategory?.id) === (cat._id || cat.id);
                   return (

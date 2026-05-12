@@ -47,6 +47,7 @@ const SellerTransactions = () => {
     const [pageSize, setPageSize] = useState(25);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [apiStats, setApiStats] = useState(null);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -80,15 +81,15 @@ const SellerTransactions = () => {
                         minute: '2-digit'
                     }),
                     seller: t.user?.shopName || t.user?.name || 'Unknown',
-                    type: t.type === 'Seller Earning' ? 'sale' :
+                    type: (t.type === 'Seller Earning' || t.type === 'Order Payment') ? 'sale' :
                         (t.type === 'Withdrawal' || t.type === 'Payout') ? 'payout' :
                             t.type.toLowerCase(),
                     amount: t.amount,
                     commissionRate: t.order?.pricing?.platformFeeRate || 0,
-                    commissionAmount: t.order?.pricing?.platformFee || 0,
+                    commissionAmount: t.order?.pricing?.adminProductCommissionTotal || t.order?.pricing?.platformFee || 0,
                     taxAmount: t.order?.pricing?.tax || 0,
                     netPayable: t.amount,
-                    status: t.status.toLowerCase(),
+                    status: t.status?.toLowerCase() || 'pending',
                     paymentMethod: t.paymentMethod || 'Wallet',
                     bankDetails: t.bankDetails || t.user?.bankDetails || 'N/A',
                     items: t.order?.items?.map(item => ({
@@ -100,6 +101,7 @@ const SellerTransactions = () => {
                 setTransactions(mapped);
                 setTotal(typeof payload.total === 'number' ? payload.total : mapped.length);
                 setPage(typeof payload.page === 'number' ? payload.page : requestedPage);
+                if (payload.stats) setApiStats(payload.stats);
             }
         } catch (error) {
             toast.error("Failed to fetch transactions");
@@ -115,13 +117,21 @@ const SellerTransactions = () => {
     }, [transactions]);
 
     const stats = useMemo(() => {
+        if (apiStats) {
+            return {
+                totalGross: apiStats.totalGross || 0,
+                totalCommission: apiStats.totalCommission || 0,
+                totalPayouts: apiStats.totalPayouts || 0,
+                pendingSettlements: apiStats.pendingSettlements || 0
+            };
+        }
         return {
-            totalGross: transactions.filter(t => t.type === 'sale').reduce((acc, t) => acc + t.amount, 0),
-            totalCommission: transactions.filter(t => t.type === 'sale').reduce((acc, t) => acc + (t.commissionAmount || 0), 0),
-            totalPayouts: Math.abs(transactions.filter(t => t.type === 'payout').reduce((acc, t) => acc + t.amount, 0)),
-            pendingSettlements: transactions.filter(t => t.status === 'pending').reduce((acc, t) => acc + Math.abs(t.amount), 0)
+            totalGross: transactions.filter(t => t.type === 'sale').reduce((acc, t) => acc + (Number(t.amount) || 0), 0),
+            totalCommission: transactions.filter(t => t.type === 'sale').reduce((acc, t) => acc + (Number(t.commissionAmount) || 0), 0),
+            totalPayouts: transactions.filter(t => t.type === 'payout' && t.status === 'settled').reduce((acc, t) => acc + Math.abs(Number(t.amount) || 0), 0),
+            pendingSettlements: transactions.filter(t => t.status === 'pending').reduce((acc, t) => acc + Math.abs(Number(t.amount) || 0), 0)
         };
-    }, [transactions]);
+    }, [transactions, apiStats]);
 
     const filteredTransactions = useMemo(() => {
         return transactions.filter(t => {
@@ -136,12 +146,33 @@ const SellerTransactions = () => {
         });
     }, [transactions, searchTerm, filterStatus, filterType, selectedSeller]);
 
-    const handleExport = () => {
-        setIsExporting(true);
-        setTimeout(() => {
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            const params = {
+                type: filterType !== 'all' ? filterType : undefined,
+                status: filterStatus !== 'all' ? filterStatus : undefined,
+                search: searchTerm.trim() || undefined,
+            };
+
+            const response = await adminApi.exportFinanceStatement(params);
+            
+            // Create a link element and trigger the download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `zeppe-master-ledger-${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            
+            toast.success('Financial ledger exported successfully');
+        } catch (error) {
+            console.error("Export error:", error);
+            toast.error("Failed to export ledger");
+        } finally {
             setIsExporting(false);
-            alert('Financial ledger exported successfully.');
-        }, 1500);
+        }
     };
 
     if (loading) {

@@ -13,6 +13,9 @@ import {
     approveDeliveryPartner,
     rejectDeliveryPartner,
     getActiveFleet,
+    updateRider,
+    deleteRider,
+    createRider,
     getAdminWalletData,
     getDeliveryTransactions,
     settleTransaction,
@@ -29,9 +32,12 @@ import {
     getRiderCashDetails,
     settleRiderCash,
     getCashSettlementHistory,
+    notifyRiderCashLimit,
     getUsers,
     getUserById,
     getSellers,
+    updateSeller,
+    deleteSeller,
     getSellerLocations,
     getPlatformSettings,
     updatePlatformSettings
@@ -164,6 +170,8 @@ router.get("/sellers/active", verifyToken, allowRoles("admin"), getActiveSellers
 router.get("/sellers/pending", verifyToken, allowRoles("admin"), getPendingSellers);
 router.patch("/sellers/approve/:id", verifyToken, allowRoles("admin"), approveSellerApplication);
 router.patch("/sellers/reject/:id", verifyToken, allowRoles("admin"), rejectSellerApplication);
+router.put("/sellers/:id", verifyToken, allowRoles("admin"), updateSeller);
+router.delete("/sellers/:id", verifyToken, allowRoles("admin"), deleteSeller);
 
 router.get(
     "/delivery-partners",
@@ -187,6 +195,9 @@ router.patch(
 );
 
 router.get("/active-fleet", verifyToken, allowRoles("admin"), getActiveFleet);
+router.put("/delivery-partners/:id", verifyToken, allowRoles("admin"), updateRider);
+router.delete("/delivery-partners/:id", verifyToken, allowRoles("admin"), deleteRider);
+router.post("/delivery-partners", verifyToken, allowRoles("admin"), createRider);
 router.get("/wallet-data", verifyToken, allowRoles("admin"), getAdminWalletData);
 
 // Delivery Payouts / Funds
@@ -198,6 +209,7 @@ router.put("/transactions/bulk-settle-delivery", verifyToken, allowRoles("admin"
 router.get("/delivery-cash", verifyToken, allowRoles("admin"), getDeliveryCashBalances);
 router.get("/rider-cash-details/:id", verifyToken, allowRoles("admin"), getRiderCashDetails);
 router.post("/settle-cash", verifyToken, allowRoles("admin"), financialMutationRateLimiter, settleRiderCash);
+router.post("/notify-cash-limit", verifyToken, allowRoles("admin"), notifyRiderCashLimit);
 router.get("/cash-history", verifyToken, allowRoles("admin"), getCashSettlementHistory);
 
 // Seller Withdrawal Management

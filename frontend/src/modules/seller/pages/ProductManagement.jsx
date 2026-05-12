@@ -63,6 +63,7 @@ const ProductManagement = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [modalTab, setModalTab] = useState("general");
   const [refreshKey, setRefreshKey] = useState(0);
+  const sessionRandom = useMemo(() => Math.random().toString(36).substring(2, 6).toUpperCase(), []);
 
   // --- Filter & pagination state (consumed by UI & DDT defaultParams) ---
   const [filterCategory, setFilterCategory] = useState("all");
@@ -73,6 +74,16 @@ const ProductManagement = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState([]);
 
+  // Memoize defaultParams to prevent DynamicDataTable from re-fetching on every ProductManagement render
+  const memoizedDefaultParams = useMemo(() => ({
+    search: searchTerm,
+    category: filterCategory !== "all" ? filterCategory : undefined,
+    status: filterStatus !== "All" ? filterStatus.toLowerCase().replace(" ", "-") : undefined,
+    sort: sortBy,
+    priceMin: priceMin || undefined,
+    priceMax: priceMax || undefined,
+  }), [searchTerm, filterCategory, filterStatus, sortBy, priceMin, priceMax]);
+
   const refreshTable = () => setRefreshKey(prev => prev + 1);
 
   const makeSku = (name, index = 1) => {
@@ -80,7 +91,7 @@ const ProductManagement = () => {
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "")
       .slice(0, 5) || "item";
-    return `${prefix}-${String(index).padStart(3, "0")}`;
+    return `${prefix}-${String(index).padStart(2, "0")}-${sessionRandom}`;
   };
 
   const isAutoSku = (sku, name, index = 1) =>
@@ -178,7 +189,9 @@ const ProductManagement = () => {
 
   const handleSave = async () => {
     try {
-      if (!formData.name || !formData.price || !formData.stock || !formData.header || !formData.category || !formData.subcategory) {
+      const isInvalid = (val) => val === undefined || val === null || val === "";
+      
+      if (isInvalid(formData.name) || isInvalid(formData.price) || isInvalid(formData.stock) || isInvalid(formData.header) || isInvalid(formData.category) || isInvalid(formData.subcategory)) {
         toast.error("Please fill all required fields, including categories");
         return;
       }
@@ -205,6 +218,12 @@ const ProductManagement = () => {
       }
       if (formData.galleryFiles && formData.galleryFiles.length > 0) {
         formData.galleryFiles.forEach((file) => data.append("galleryImages", file));
+      }
+
+      // Also send existing gallery URLs to keep them
+      const existingGallery = (formData.galleryImages || []).filter(img => typeof img === 'string' && img.startsWith('http'));
+      if (existingGallery.length > 0) {
+        data.append("galleryImages", JSON.stringify(existingGallery));
       }
 
       if (editingItem) {
@@ -271,10 +290,10 @@ const ProductManagement = () => {
         slug: item.slug || "",
         sku: item.sku || "",
         description: item.description || "",
-        price: item.price || "",
-        salePrice: item.salePrice || "",
-        stock: item.stock || "",
-        lowStockAlert: item.lowStockAlert || 5,
+        price: item.price !== undefined && item.price !== null ? item.price : "",
+        salePrice: item.salePrice !== undefined && item.salePrice !== null ? item.salePrice : "",
+        stock: item.stock !== undefined && item.stock !== null ? item.stock : "",
+        lowStockAlert: item.lowStockAlert !== undefined && item.lowStockAlert !== null ? item.lowStockAlert : 5,
         header: item.headerId?._id || item.headerId || "",
         category: item.categoryId?._id || item.categoryId || "",
         subcategory: item.subcategoryId?._id || item.subcategoryId || "",
@@ -284,13 +303,14 @@ const ProductManagement = () => {
         brand: item.brand || "",
         mainImage: item.mainImage || null,
         galleryImages: item.galleryImages || [],
+        galleryFiles: [],
         variants: (item.variants && item.variants.length > 0) ? item.variants.map(v => ({ ...v, id: v._id || Date.now() })) : [
           {
             id: Date.now(),
             name: "",
-            price: item.price || "",
-            salePrice: item.salePrice || "",
-            stock: item.stock || "",
+            price: item.price !== undefined && item.price !== null ? item.price : "",
+            salePrice: item.salePrice !== undefined && item.salePrice !== null ? item.salePrice : "",
+            stock: item.stock !== undefined && item.stock !== null ? item.stock : "",
             sku: item.sku || "",
           },
         ],
@@ -314,6 +334,7 @@ const ProductManagement = () => {
         brand: "",
         mainImage: null,
         galleryImages: [],
+        galleryFiles: [],
         variants: [
           {
             id: Date.now(),
@@ -483,15 +504,75 @@ const ProductManagement = () => {
       <DynamicDataTable
         apiService={sellerApi}
         refreshSelected={refreshKey}
+        showToolbox={false}
         endpoint="products/seller/me"
-        defaultParams={{
-          search: searchTerm,
-          category: filterCategory !== "all" ? filterCategory : undefined,
-          status: filterStatus !== "All" ? filterStatus.toLowerCase().replace(" ", "-") : undefined,
-          sort: sortBy,
-          priceMin: priceMin || undefined,
-          priceMax: priceMax || undefined,
-        }}
+        defaultParams={memoizedDefaultParams}
+        renderMobileRow={(p) => (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-xl overflow-hidden bg-slate-100 ring-1 ring-slate-200 shrink-0">
+                <img
+                  src={p.mainImage || p.image || "https://images.unsplash.com/photo-1550989460-0adf9ea622e2"}
+                  alt={p.name}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex justify-between items-start">
+                  <p className="text-xs font-black text-slate-900 truncate pr-2">
+                    {p.name}
+                  </p>
+                  <span className={cn(
+                    "text-[10px] font-black shrink-0",
+                    p.stock === 0 ? "text-rose-600" : p.stock <= 10 ? "text-amber-600" : "text-emerald-600"
+                  )}>
+                    {p.stock} IN STOCK
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                    {p.brand || "Generics"}
+                  </p>
+                  <span className="text-[9px] font-black text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
+                    {p.sku || "N/A"}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between items-center bg-slate-50 p-2 rounded-xl border border-slate-100">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">
+                  {p.headerId?.name || "No Header"}
+                </span>
+                <span className="text-[10px] font-bold text-slate-700">
+                  {p.categoryId?.name || "No Category"}
+                </span>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-black text-primary">₹{Number(p.price).toLocaleString()}</p>
+                {p.variants?.length > 0 && (
+                  <span className="text-[9px] font-black text-indigo-600 uppercase bg-indigo-50 px-1.5 py-0.5 rounded-full">
+                    {p.variants.length} VARS
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white ring-1 ring-slate-200 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-widest"
+              >
+                <HiOutlinePencilSquare size={14} /> EDIT
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDeleteClick(p); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 ring-1 ring-rose-100 rounded-lg text-[10px] font-black text-rose-600 uppercase tracking-widest"
+              >
+                <HiOutlineTrash size={14} /> DELETE
+              </button>
+            </div>
+          </div>
+        )}
         columns={[
           {
             header: "Product",
@@ -540,19 +621,25 @@ const ProductManagement = () => {
           },
           {
             header: "Inventory",
-            cell: (p) => (
-              <div className="flex flex-col">
-                <span className={cn(
-                  "text-xs font-black",
-                  p.stock === 0 ? "text-rose-600" : p.stock <= 10 ? "text-amber-600" : "text-emerald-600"
-                )}>
-                  {p.stock} IN STOCK
-                </span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
-                  ₹{Number(p.price).toLocaleString()}
-                </span>
-              </div>
-            )
+            cell: (p) => {
+              const totalStock = p.variants?.length > 0 
+                ? p.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+                : Number(p.stock || 0);
+                
+              return (
+                <div className="flex flex-col">
+                  <span className={cn(
+                    "text-xs font-black",
+                    totalStock === 0 ? "text-rose-600" : totalStock <= 10 ? "text-amber-600" : "text-emerald-600"
+                  )}>
+                    {totalStock} IN STOCK
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                    ₹{Number(p.price).toLocaleString()}
+                  </span>
+                </div>
+              );
+            }
           },
           {
             header: "Variants",

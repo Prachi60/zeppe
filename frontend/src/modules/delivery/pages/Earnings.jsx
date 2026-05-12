@@ -30,15 +30,25 @@ const Earnings = () => {
     chartData: [],
     recentTransactions: []
   });
+  const [codCash, setCodCash] = useState({
+    systemFloatCOD: 0,
+    cashInHand: 0,
+    toRemit: [],
+    toCollect: []
+  });
 
   const fetchEarnings = async () => {
     try {
       setLoading(true);
-      const earningsRes = await deliveryApi.getEarnings();
+      const [earningsRes, codRes] = await Promise.all([
+        deliveryApi.getEarnings(),
+        deliveryApi.getCodCashSummary()
+      ]);
+
       if (earningsRes.data.success && earningsRes.data.result) {
         const result = earningsRes.data.result;
         setEarningsData({
-          totalEarnings: result.totalEarnings || 0,
+          totalEarnings: result.lifetimeEarnings || result.totalEarnings || 0,
           incentives: result.incentives || 0,
           bonuses: result.bonuses || 0,
           onlinePay: result.onlinePay || 0,
@@ -46,6 +56,10 @@ const Earnings = () => {
           chartData: result.chartData || [],
           recentTransactions: result.transactions || result.recentTransactions || []
         });
+      }
+
+      if (codRes.data.success && codRes.data.result) {
+        setCodCash(codRes.data.result);
       }
     } catch (error) {
       toast.error("Failed to fetch earnings data");
@@ -200,10 +214,10 @@ const Earnings = () => {
                   COD Cash Management
                 </p>
                 <p className="text-3xl font-extrabold text-gray-900">
-                  â‚¹{Number(codCash.systemFloatCOD || 0).toLocaleString()}
+                  ₹{Number(codCash.systemFloatCOD || 0).toLocaleString()}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  Net cash to remit (gross âˆ’ your commission)
+                  Net cash to remit (gross – your commission)
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-orange-50 text-orange-600">
@@ -217,7 +231,7 @@ const Earnings = () => {
                   Cash In Hand
                 </p>
                 <p className="text-lg font-bold text-gray-900">
-                  â‚¹{Number(codCash.cashInHand || 0).toLocaleString()}
+                  ₹{Number(codCash.cashInHand || 0).toLocaleString()}
                 </p>
               </div>
               <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
@@ -242,11 +256,11 @@ const Earnings = () => {
                       Order #{row.orderId}
                     </p>
                     <p className="text-xs text-gray-600">
-                      Collect from customer â€¢ Gross â‚¹{Number(row.amountGross || 0).toLocaleString()}
+                      Collect from customer • Gross ₹{Number(row.amountGross || 0).toLocaleString()}
                     </p>
                   </div>
                   <p className="text-sm font-extrabold text-orange-700">
-                    â‚¹{Number(row.amountNetExpected || 0).toLocaleString()}
+                    ₹{Number(row.amountNetExpected || 0).toLocaleString()}
                   </p>
                 </div>
               ))}
@@ -261,11 +275,11 @@ const Earnings = () => {
                       Order #{row.orderId}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Remit to platform â€¢ Net of commission
+                      Remit to platform • Net of commission
                     </p>
                   </div>
                   <p className="text-sm font-extrabold text-gray-900">
-                    â‚¹{Number(row.amountNetPending || 0).toLocaleString()}
+                    ₹{Number(row.amountNetPending || 0).toLocaleString()}
                   </p>
                 </div>
               ))}

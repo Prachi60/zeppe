@@ -10,19 +10,24 @@ const offerSectionSchema = new mongoose.Schema(
     backgroundColor: {
       type: String,
       trim: true,
-      default: "#FCD34D",
+      default: "#f59931",
     },
     sideImageKey: {
       type: String,
       enum: [
-        "hair-care",
+        "none",
         "grocery",
         "electronics",
         "beauty",
         "kitchen",
         "fashion",
+        "custom",
       ],
-      default: "hair-care",
+      default: "none",
+    },
+    sideImageUrl: {
+      type: String,
+      trim: true,
     },
     categoryIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category" }, // legacy single category

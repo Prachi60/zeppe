@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Card from '@shared/components/ui/Card';
 import PageHeader from '@shared/components/ui/PageHeader';
 import StatCard from '@shared/components/ui/StatCard';
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const AdminDashboard = () => {
+    const navigate = useNavigate();
     const [statsData, setStatsData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState(null);
@@ -52,34 +54,9 @@ const AdminDashboard = () => {
         fetchStats();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="ds-section-spacing animate-pulse">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 px-1">
-                    <div className="space-y-3">
-                        <div className="h-10 w-48 bg-gray-200 rounded-2xl" />
-                        <div className="h-4 w-72 bg-gray-100 rounded-xl" />
-                    </div>
-                    <div className="h-8 w-32 bg-gray-100 rounded-xl" />
-                </div>
+    const overview = useMemo(() => statsData?.overview || {}, [statsData]);
 
-                <div className="ds-grid-stats mb-10">
-                    {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="h-32 bg-gray-50 rounded-[2rem] border border-gray-100" />
-                    ))}
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 h-[350px] bg-gray-50 rounded-[2.5rem] border border-gray-100" />
-                    <div className="lg:col-span-1 h-[350px] bg-gray-50 rounded-[2.5rem] border border-gray-100" />
-                </div>
-            </div>
-        );
-    }
-
-    const overview = statsData?.overview || {};
-
-    const stats = [
+    const stats = useMemo(() => [
         {
             label: 'Total Users',
             value: overview.totalUsers?.toLocaleString() || '0',
@@ -116,12 +93,41 @@ const AdminDashboard = () => {
             trend: overview.revenueTrend || null,
             description: 'Net earnings'
         },
-    ];
+    ], [overview]);
 
-    const chartData = statsData?.revenueHistory || [];
-    const categoryData = statsData?.categoryData || [];
-    const recentOrders = statsData?.recentOrders || [];
-    const topProducts = statsData?.topProducts || [];
+    const chartData = useMemo(() => statsData?.revenueHistory || [], [statsData]);
+    const categoryData = useMemo(() => statsData?.categoryData || [], [statsData]);
+    const recentOrders = useMemo(() => statsData?.recentOrders || [], [statsData]);
+    const topProducts = useMemo(() => statsData?.topProducts || [], [statsData]);
+
+    const lastUpdatedText = useMemo(() => 
+        lastUpdated ? lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+    [lastUpdated]);
+
+    if (loading) {
+        return (
+            <div className="ds-section-spacing animate-pulse">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 px-1">
+                    <div className="space-y-3">
+                        <div className="h-10 w-48 bg-gray-200 rounded-2xl" />
+                        <div className="h-4 w-72 bg-gray-100 rounded-xl" />
+                    </div>
+                    <div className="h-8 w-32 bg-gray-100 rounded-xl" />
+                </div>
+
+                <div className="ds-grid-stats mb-10">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-32 bg-gray-50 rounded-[2rem] border border-gray-100" />
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 h-[350px] bg-gray-50 rounded-[2.5rem] border border-gray-100" />
+                    <div className="lg:col-span-1 h-[350px] bg-gray-50 rounded-[2.5rem] border border-gray-100" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="ds-section-spacing">
@@ -131,7 +137,7 @@ const AdminDashboard = () => {
                 actions={
                     <>
                         <Badge variant="outline" className="ds-badge ds-badge-gray">
-                            Last Update: {lastUpdated ? lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                            Last Update: {lastUpdatedText}
                         </Badge>
                     </>
                 }
@@ -300,7 +306,10 @@ const AdminDashboard = () => {
                                 </tbody>
                             </table>
                         </div>
-                        <button className="w-full mt-6 py-3 rounded-xl bg-gray-50 text-xs font-bold text-gray-500 hover:bg-primary hover:text-white transition-all">
+                        <button 
+                            onClick={() => navigate('/admin/orders/all')}
+                            className="w-full mt-6 py-3 rounded-xl bg-gray-50 text-xs font-bold text-gray-500 hover:bg-primary hover:text-white transition-all"
+                        >
                             VIEW ALL ORDERS
                         </button>
                     </Card>
@@ -338,7 +347,10 @@ const AdminDashboard = () => {
                                 <div className="py-12 text-center text-slate-300 italic text-xs">No sales data yet</div>
                             )}
                         </div>
-                        <button className="w-full mt-6 py-3 border-2 border-dashed border-gray-100 rounded-xl text-xs font-bold text-gray-400 hover:border-primary hover:text-primary transition-all">
+                        <button 
+                            onClick={() => navigate('/admin/products')}
+                            className="w-full mt-6 py-3 border-2 border-dashed border-gray-100 rounded-xl text-xs font-bold text-gray-400 hover:border-primary hover:text-primary transition-all"
+                        >
                             VIEW ALL PRODUCTS
                         </button>
                     </Card>

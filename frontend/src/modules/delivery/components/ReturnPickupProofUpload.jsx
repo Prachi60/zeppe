@@ -166,7 +166,6 @@ const ReturnPickupProofUpload = ({ orderId, onSubmitted }) => {
           type="file"
           accept="image/*"
           multiple
-          capture="environment"
           onChange={handleImageSelect}
           className="hidden"
         />

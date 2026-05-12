@@ -4,6 +4,7 @@ import Badge from "@shared/components/ui/Badge";
 import Button from "@shared/components/ui/Button";
 import { sellerApi } from "../services/sellerApi";
 import { useToast } from "@shared/components/ui/Toast";
+import DynamicDataTable from "@shared/components/ui/DynamicDataTable";
 import {
     HiOutlineArrowPath,
     HiOutlineInboxStack,
@@ -98,12 +99,17 @@ const Returns = () => {
 
     useEffect(() => {
         const fetchStats = async () => {
+            setLoading(true);
             try {
                 const res = await sellerApi.getReturns({ limit: 100 });
                 const payload = res.data.result || {};
                 const items = Array.isArray(payload.items) ? payload.items : (res.data.results || []);
                 setReturns(items || []);
-            } catch (error) {}
+            } catch (error) {
+                console.error("Error fetching return stats:", error);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchStats();
         
@@ -213,16 +219,8 @@ const Returns = () => {
                 </div>
             </BlurFade>
 
-            {loading ? (
-                <div className="min-h-[320px] flex flex-col items-center justify-center bg-white rounded-3xl border border-slate-100 shadow-sm">
-                    <Loader2 className="h-10 w-10 text-primary animate-spin" />
-                    <p className="text-slate-600 font-bold mt-4 uppercase tracking-widest text-xs">
-                        Loading Return Requests...
-                    </p>
-                </div>
-            ) : (
-                <>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         {["Requested", "Approved", "Rejected", "Completed"].map(
                             (label, i) => {
                                 const count = returns.filter(
@@ -289,6 +287,7 @@ const Returns = () => {
                                 apiService={sellerApi}
                                 endpoint="orders/seller-returns"
                                 refreshSelected={refreshKey}
+                                showToolbox={false}
                                 defaultParams={{
                                     status: activeTab === 'Requested' ? 'return_requested' : (activeTab === 'Approved' ? 'return_approved' : (activeTab === 'Completed' ? 'returned' : '')),
                                     search: searchTerm
@@ -350,8 +349,6 @@ const Returns = () => {
                             />
                         </Card>
                     </BlurFade>
-                </>
-            )}
 
             <AnimatePresence>
                 {isDetailsOpen && selectedReturn && (

@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import {
   getPublicOffers,
   getAdminOffers,
@@ -14,10 +15,12 @@ import {
   updateOfferSection,
   deleteOfferSection,
   reorderOfferSections,
+  uploadOfferSectionImage,
 } from "../controller/offerSectionController.js";
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.get("/offers", getPublicOffers);
 router.get("/offer-sections", getPublicOfferSections);
@@ -86,6 +89,14 @@ router.delete(
   verifyToken,
   allowRoles("admin"),
   deleteOfferSection,
+);
+
+router.post(
+  "/admin-offer-sections/upload",
+  verifyToken,
+  allowRoles("admin"),
+  upload.single("image"),
+  uploadOfferSectionImage,
 );
 
 export default router;

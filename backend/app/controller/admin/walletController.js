@@ -81,14 +81,14 @@ export const getDeliveryWithdrawals = async (req, res) => {
   }
 };
 
-const VALID_WITHDRAWAL_STATUSES = ["approved", "rejected", "processing"];
+const VALID_WITHDRAWAL_STATUSES = ["Settled", "Failed", "Processing"];
 
 export const updateWithdrawalStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, reason } = req.body;
 
-    if (!status || !VALID_WITHDRAWAL_STATUSES.includes(String(status).toLowerCase())) {
+    if (!status || !VALID_WITHDRAWAL_STATUSES.includes(status)) {
       return handleResponse(
         res,
         400,

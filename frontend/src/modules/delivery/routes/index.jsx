@@ -24,6 +24,8 @@ const SubscriptionStatus = lazy(() => import("../pages/profile/SubscriptionStatu
 const Notifications = lazy(() => import("../pages/Notifications"));
 const Subscription = lazy(() => import("../pages/Subscription"));
 
+import { useSettings } from "@core/context/SettingsContext";
+
 import { useAuth } from "@core/context/AuthContext";
 
 const LoadingFallback = () => (
@@ -33,6 +35,8 @@ const LoadingFallback = () => (
 );
 
 const DeliveryRoutes = () => {
+  const { settings } = useSettings();
+  const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -76,6 +80,7 @@ const DeliveryRoutes = () => {
           <Route path="profile/withdrawals" element={<Withdrawals />} />
           <Route path="profile/subscription" element={<SubscriptionStatus />} />
           <Route path="notifications" element={<Notifications />} />
+          <Route path="/" element={<Navigate to={isGlobalEnabled ? "subscription" : "dashboard"} replace />} />
           <Route 
             path="/" 
             element={

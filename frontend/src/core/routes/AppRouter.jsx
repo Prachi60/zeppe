@@ -18,6 +18,7 @@ import Auth from '../../modules/seller/pages/Auth';
 import ApplicationPending from '../../modules/seller/pages/ApplicationPending';
 import AdminAuth from '../../modules/admin/pages/AdminAuth';
 import DeliveryAuth from '../../modules/delivery/pages/DeliveryAuth';
+import DeliveryApplicationPending from '../../modules/delivery/pages/DeliveryApplicationPending';
 import CustomerAuth from '../../modules/customer/pages/CustomerAuth';
 
 // Customer Pages (lazy-loaded)
@@ -50,6 +51,8 @@ const PaymentStatusPage = lazy(() => import('../../modules/customer/pages/Paymen
 const SearchPage = lazy(() => import('../../modules/customer/pages/SearchPage'));
 const WalletPage = lazy(() => import('../../modules/customer/pages/WalletPage'));
 const MyScratchCards = lazy(() => import('../../modules/customer/pages/MyScratchCards'));
+const ReferEarnPage = lazy(() => import('../../modules/customer/pages/ReferEarnPage'));
+
 
 // Lazy load heavy modules
 const SellerModule = lazy(() => import('../../modules/seller/routes/index'));
@@ -76,6 +79,14 @@ const CustomerLayoutWrapper = () => (
         </WishlistProvider>
     </LocationProvider>
 );
+
+const CatchAllRedirect = () => {
+    const path = window.location.pathname;
+    if (path.startsWith('/delivery')) return <Navigate to="/delivery/dashboard" replace />;
+    if (path.startsWith('/seller')) return <Navigate to="/seller/dashboard" replace />;
+    if (path.startsWith('/admin')) return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/" replace />;
+};
 
 const AppRouter = () => {
     const router = useMemo(() => createBrowserRouter([
@@ -107,6 +118,10 @@ const AppRouter = () => {
                 {
                     path: 'delivery/auth',
                     element: <DeliveryAuth />,
+                },
+                {
+                    path: 'delivery/pending-approval',
+                    element: <DeliveryApplicationPending />,
                 },
                 {
                     path: 'seller/*',
@@ -174,12 +189,14 @@ const AppRouter = () => {
                         { path: 'profile/edit', element: <ProtectedRoute><EditProfilePage /></ProtectedRoute> },
                         { path: 'wallet', element: <ProtectedRoute><WalletPage /></ProtectedRoute> },
                         { path: 'rewards', element: <ProtectedRoute><MyScratchCards /></ProtectedRoute> },
+                        { path: 'refer-earn', element: <ProtectedRoute><ReferEarnPage /></ProtectedRoute> },
+
                         { path: 'search', element: <SearchPage /> },
                     ]
                 },
                 {
                     path: '*',
-                    element: <Navigate to="/" replace />
+                    element: <CatchAllRedirect />
                 }
             ]
         }

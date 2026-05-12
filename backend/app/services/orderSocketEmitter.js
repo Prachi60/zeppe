@@ -4,7 +4,7 @@
 
 import mongoose from "mongoose";
 import Notification from "../models/notification.js";
-import { 
+import {
   getDeliveryPartnerIdsWithinSellerRadius,
   getDeliveryPartnerIdsWithinCustomerRadius
 } from "./deliveryNearbyService.js";
@@ -57,8 +57,8 @@ export function emitOrderStatusUpdate(orderId, payload, customerId) {
   s.to(`order:${orderId}`).emit("order:status:update", body);
   const cid =
     customerId != null &&
-    typeof customerId === "object" &&
-    typeof customerId.toString === "function"
+      typeof customerId === "object" &&
+      typeof customerId.toString === "function"
       ? customerId.toString()
       : customerId;
   if (cid) {
@@ -258,7 +258,7 @@ export async function emitReturnBroadcastForCustomer(customerLocation, payload) 
     console.warn("[emitReturnBroadcastForCustomer] No riders in customer radius", customerLocation);
     // If DEV/Test, fallback to all online riders if no one near
     if (process.env.NODE_ENV !== "production" && s) {
-        s.to("delivery:online").emit("delivery:broadcast", { ...payload, at: new Date().toISOString() });
+      s.to("delivery:online").emit("delivery:broadcast", { ...payload, at: new Date().toISOString() });
     }
     return;
   }

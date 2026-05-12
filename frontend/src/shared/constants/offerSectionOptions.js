@@ -2,11 +2,11 @@
 
 export const BACKGROUND_COLOR_OPTIONS = [
   {
-    id: "yellow",
-    label: "Yellow",
-    value: "#FCD34D",
-    start: "#FEF3C7",
-    end: "#FACC15",
+    id: "orange-brand",
+    label: "Brand Orange",
+    value: "#f59931",
+    start: "#f59931",
+    end: "#d47a1c",
   },
   {
     id: "orange",
@@ -47,10 +47,9 @@ export const BACKGROUND_COLOR_OPTIONS = [
 
 export const SIDE_IMAGE_OPTIONS = [
   {
-    key: "hair-care",
-    label: "Hair Care",
-    imageUrl:
-      "https://images.unsplash.com/photo-1522338242762-594f63bcf581?w=200&h=200&fit=crop",
+    key: "none",
+    label: "None",
+    imageUrl: "https://cdn-icons-png.flaticon.com/128/6711/6711567.png", // No Image icon
   },
   {
     key: "grocery",
@@ -82,20 +81,35 @@ export const SIDE_IMAGE_OPTIONS = [
     imageUrl:
       "https://images.unsplash.com/photo-1445205170230-053b83016050?w=200&h=200&fit=crop",
   },
+  {
+    key: "custom",
+    label: "Custom",
+    imageUrl:
+      "https://cdn-icons-png.flaticon.com/128/1829/1829589.png", // Generic photo icon
+  },
 ];
 
-export const getSideImageByKey = (key) =>
-  SIDE_IMAGE_OPTIONS.find((o) => o.key === key)?.imageUrl ||
-  SIDE_IMAGE_OPTIONS[0].imageUrl;
+export const getSideImageByKey = (key, customUrl) => {
+  if (key === "custom" && customUrl) return customUrl;
+  return SIDE_IMAGE_OPTIONS.find((o) => o.key === key)?.imageUrl ||
+    SIDE_IMAGE_OPTIONS[0].imageUrl;
+};
 
 export const getBackgroundColorByValue = (value) =>
   value || BACKGROUND_COLOR_OPTIONS[0].value;
 
 export const getBackgroundGradientByValue = (value) => {
-  const opt =
-    BACKGROUND_COLOR_OPTIONS.find((o) => o.value === value) ||
-    BACKGROUND_COLOR_OPTIONS[0];
-  return `linear-gradient(135deg, ${opt.start}, ${opt.end})`;
+  const opt = BACKGROUND_COLOR_OPTIONS.find((o) => o.value === value);
+  if (opt) {
+    return `linear-gradient(135deg, ${opt.start}, ${opt.end})`;
+  }
+  
+  // If it's a custom hex color, generate a subtle gradient
+  if (value && value.startsWith('#')) {
+    return `linear-gradient(135deg, ${value}ee, ${value})`;
+  }
+
+  return `linear-gradient(135deg, ${BACKGROUND_COLOR_OPTIONS[0].start}, ${BACKGROUND_COLOR_OPTIONS[0].end})`;
 };
 
 

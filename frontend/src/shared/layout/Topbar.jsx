@@ -14,7 +14,7 @@ import { AnimatePresence } from 'framer-motion';
 import NotificationPopup from './NotificationPopup';
 import { toast } from 'sonner';
 
-const Topbar = ({ onMenuClick }) => {
+const Topbar = React.memo(({ onMenuClick }) => {
     const { user, logout, role } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -27,18 +27,17 @@ const Topbar = ({ onMenuClick }) => {
 
     const isSeller = location.pathname.startsWith('/seller');
 
-    const handleSearchSubmit = (e) => {
+    const handleSearchSubmit = React.useCallback((e) => {
         e?.preventDefault();
         const q = (searchQuery || '').trim();
         if (!q) return;
         if (isSeller) {
             navigate(`/seller/products?q=${encodeURIComponent(q)}`);
         }
-    };
+    }, [searchQuery, isSeller, navigate]);
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = React.useCallback(async () => {
         try {
-            // Only fetch for sellers for now as per request
             if (!isSeller) return;
 
             const response = await sellerApi.getNotifications();
@@ -49,11 +48,11 @@ const Topbar = ({ onMenuClick }) => {
         } catch (error) {
             console.error("Notif Fetch Error:", error);
         }
-    };
+    }, [isSeller]);
 
     React.useEffect(() => {
         fetchNotifications();
-    }, [isSeller]);
+    }, [fetchNotifications]);
 
     // Handle Click Outside
     React.useEffect(() => {
@@ -66,16 +65,16 @@ const Topbar = ({ onMenuClick }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleMarkAsRead = async (id) => {
+    const handleMarkAsRead = React.useCallback(async (id) => {
         try {
             await sellerApi.markNotificationRead(id);
             fetchNotifications();
         } catch (error) {
             toast.error("Failed to mark as read");
         }
-    };
+    }, [fetchNotifications]);
 
-    const handleMarkAllAsRead = async () => {
+    const handleMarkAllAsRead = React.useCallback(async () => {
         try {
             await sellerApi.markAllNotificationsRead();
             fetchNotifications();
@@ -83,11 +82,23 @@ const Topbar = ({ onMenuClick }) => {
         } catch (error) {
             toast.error("Failed to mark all as read");
         }
-    };
+    }, [fetchNotifications]);
 
-    const handleLogout = () => {
+    const handleLogout = React.useCallback(() => {
         logout();
-    };
+    }, [logout]);
+
+    const handleProfileClick = React.useCallback(() => {
+        if (location.pathname.startsWith('/admin')) {
+            navigate('/admin/profile');
+        } else if (location.pathname.startsWith('/seller')) {
+            navigate('/seller/profile');
+        } else if (location.pathname.startsWith('/delivery')) {
+            navigate('/delivery/profile');
+        } else {
+            navigate('/profile');
+        }
+    }, [location.pathname, navigate]);
 
     return (
         <header className={cn(
@@ -146,17 +157,7 @@ const Topbar = ({ onMenuClick }) => {
 
                 <div className="h-8 w-px bg-gray-100 mx-1"></div>
                 <button
-                    onClick={() => {
-                        if (location.pathname.startsWith('/admin')) {
-                            navigate('/admin/profile');
-                        } else if (location.pathname.startsWith('/seller')) {
-                            navigate('/seller/profile');
-                        } else if (location.pathname.startsWith('/delivery')) {
-                            navigate('/delivery/profile');
-                        } else {
-                            navigate('/profile');
-                        }
-                    }}
+                    onClick={handleProfileClick}
                     className="flex items-center space-x-2.5 p-1 pr-3 hover:bg-gray-50 rounded-xl transition-all duration-300 group ring-1 ring-transparent hover:ring-gray-100 shadow-sm hover:shadow-md"
                 >
                     <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
@@ -177,7 +178,7 @@ const Topbar = ({ onMenuClick }) => {
             </div>
         </header>
     );
-};
+});
 
 export default Topbar;
 

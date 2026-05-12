@@ -4,22 +4,56 @@ import { ArrowLeft, Save, User, Mail, Phone, MapPin, Calendar, Droplet } from "l
 import Button from "@/shared/components/ui/Button";
 import Input from "@/shared/components/ui/Input";
 import { toast } from "sonner";
+import { useAuth } from "@core/context/AuthContext";
+import { deliveryApi } from "../../services/deliveryApi";
+import { useEffect } from "react";
 
 const PersonalDetails = () => {
   const navigate = useNavigate();
+  const { user, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "Rahul Kumar",
-    phone: "+91 98765 43210",
-    email: "rahul.kumar@example.com",
-    address: "Flat 302, Green Apts, MG Road, Bangalore - 560001",
-    dob: "1995-08-15",
-    bloodGroup: "O+",
+    fullName: "",
+    phone: "",
+    email: "",
+    address: "",
+    dob: "",
+    bloodGroup: "",
   });
 
-  const handleSave = () => {
-    setIsEditing(false);
-    toast.success("Personal details updated successfully!");
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.name || "",
+        phone: user.phone || "",
+        email: user.email || "",
+        address: user.address || "",
+        dob: user.dob || "",
+        bloodGroup: user.bloodGroup || "",
+      });
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await deliveryApi.updateProfile({
+        name: formData.fullName,
+        email: formData.email,
+        address: formData.address,
+        bloodGroup: formData.bloodGroup,
+        dob: formData.dob,
+      });
+      await refreshUser();
+      setIsEditing(false);
+      toast.success("Personal details updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error(error.response?.data?.message || "Failed to update profile");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -36,7 +70,7 @@ const PersonalDetails = () => {
           <h1 className="ds-h3 text-gray-900">Personal Details</h1>
           <div className="ml-auto">
             {isEditing ? (
-              <Button size="sm" onClick={handleSave} className="h-8 px-3">
+              <Button size="sm" onClick={handleSave} loading={isSaving} className="h-8 px-3">
                 Save
               </Button>
             ) : (
@@ -59,7 +93,7 @@ const PersonalDetails = () => {
           <div className="relative">
             <div className="w-24 h-24 rounded-full p-1 bg-white shadow-md">
               <img
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Felix'}`}
                 alt="Profile"
                 className="w-full h-full rounded-full object-cover bg-gray-100"
               />
@@ -70,7 +104,7 @@ const PersonalDetails = () => {
               </button>
             )}
           </div>
-          <p className="mt-3 text-sm text-gray-500">Delivery Partner ID: 882190</p>
+          <p className="mt-3 text-sm text-gray-500">Delivery Partner ID: {user?._id?.slice(-6).toUpperCase() || "------"}</p>
         </div>
 
         {/* Form Fields */}
@@ -78,7 +112,8 @@ const PersonalDetails = () => {
           <Input
             label="Full Name"
             value={formData.fullName}
-            readOnly={!isEditing} // Usually name is locked after verification
+            readOnly={!isEditing}
+            onChange={(e) => setFormData({...formData, fullName: e.target.value})}
             icon={User}
             className={!isEditing ? "bg-gray-50 border-transparent" : ""}
           />
@@ -124,9 +159,11 @@ const PersonalDetails = () => {
             <Input
               label="Date of Birth"
               value={formData.dob}
-              readOnly={true}
+              readOnly={!isEditing}
+              onChange={(e) => setFormData({...formData, dob: e.target.value})}
               icon={Calendar}
-              className="bg-gray-50 border-transparent"
+              type="date"
+              className={!isEditing ? "bg-gray-50 border-transparent" : ""}
             />
             <Input
               label="Blood Group"

@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Brand colors: overridden at runtime by SettingsContext from API (settings.primaryColor, settings.secondaryColor) */
+  /* ... existing variables ... */
   --primary: oklch(0.55 0.23 260);
   --primary-color: var(--primary);
   --primary-dark: #0369a1;
@@ -28,6 +28,12 @@
   --input: oklch(0.92 0.01 260);
   --ring: oklch(0.6 0.15 260);
 
+  /* Safe Area Variables */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+
   /* Additional UI Variables */
   --sidebar-dark: oklch(0.18 0.03 260);
   --glass-bg: rgba(255, 255, 255, 0.7);
@@ -37,12 +43,15 @@
   --customer-mini-cart-color: #0284c7;
 }
 
-html, body, #root {
-  height: 100%;
+html,
+body,
+#root {
+  width: 100%;
   margin: 0;
   padding: 0;
   background-color: white;
-  overscroll-behavior-y: none;
+  overflow-x: hidden;
+  /* Prevent horizontal scroll on mobile */
 }
 
 body {
@@ -51,9 +60,9 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 13px;
-  min-height: 100vh;
+  font-size: 16px;
   min-height: 100dvh;
+  /* Use dynamic viewport height for mobile reliability */
 }
 
 /* Custom scrollbar */
@@ -246,11 +255,13 @@ body {
 
   /* Global typography tweaks – make text less dull */
   .font-normal {
-    font-weight: 500; /* was 400 */
+    font-weight: 500;
+    /* was 400 */
   }
 
   .font-medium {
-    font-weight: 600; /* was 500 */
+    font-weight: 600;
+    /* was 500 */
   }
 
   /* Custom Scrollbar Utilities */
@@ -294,19 +305,19 @@ body {
   }
 
   .pt-safe {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--sat);
   }
 
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--sab);
   }
 
   .mt-safe {
-    margin-top: env(safe-area-inset-top, 0px);
+    margin-top: var(--sat);
   }
 
   .h-safe-top {
-    height: env(safe-area-inset-top, 0px);
+    height: var(--sat);
   }
 }
 

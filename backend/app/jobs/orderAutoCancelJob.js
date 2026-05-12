@@ -22,7 +22,7 @@ const AUTO_CANCEL_INTERVAL_MS = parseInt(
  */
 const autoCancelExpiredOrders = async () => {
   const startTime = Date.now();
-  
+
   try {
     const now = new Date();
 
@@ -46,26 +46,8 @@ const autoCancelExpiredOrders = async () => {
       }
     }
 
-    const v2DeliveryExpired = await Order.find({
-      workflowVersion: { $gte: 2 },
-      workflowStatus: WORKFLOW_STATUS.DELIVERY_SEARCH,
-      deliverySearchExpiresAt: { $lte: now },
-    })
-      .select("orderId deliverySearchMeta")
-      .lean();
-
-    for (const row of v2DeliveryExpired) {
-      try {
-        const attempt = row.deliverySearchMeta?.attempt || 1;
-        await processDeliveryTimeoutJob({ orderId: row.orderId, attempt });
-      } catch (err) {
-        logger.error('v2 delivery timeout failed', {
-          jobName: 'orderAutoCancelJob',
-          orderId: row.orderId,
-          error: err.message
-        });
-      }
-    }
+    // SELLER_IN_COMMAND: Removed delivery search timeout sweeper. 
+    // We now leave it to the seller to manually cancel if a rider isn't found.
 
     const paymentExpiredOrders = await Order.find({
       workflowVersion: { $gte: 2 },
@@ -129,7 +111,7 @@ const autoCancelExpiredOrders = async () => {
     for (const order of legacyExpired) {
       order.status = "cancelled";
       order.cancelledBy = "system";
-      order.cancelReason = "Seller timeout (60s)";
+      order.cancelReason = "Seller timeout (5m)";
       await order.save();
 
       try {
@@ -159,9 +141,9 @@ const autoCancelExpiredOrders = async () => {
       v2DeliveryExpired.length +
       paymentExpiredOrders.length +
       legacyExpired.length;
-    
+
     const duration = Date.now() - startTime;
-    
+
     if (n > 0) {
       logger.info('Order auto-cancel job completed', {
         jobName: 'orderAutoCancelJob',

@@ -24,12 +24,16 @@ const EMPTY_OBJ = {};
 const DynamicDataTable = ({ 
     endpoint, 
     columns, 
+    renderMobileRow,
     filters = [], 
     searchPlaceholder = "Search...",
     defaultParams = EMPTY_OBJ,
     onRowClick,
     refreshSelected = 0,
-    apiService = adminApi
+    apiService = adminApi,
+    showToolbox = true,
+    showSearch = true,
+    showSort = true
 }) => {
     const [data, setData] = useState([]);
     const [total, setTotal] = useState(0);
@@ -92,51 +96,58 @@ const DynamicDataTable = ({
     return (
         <div className="space-y-4">
             {/* Toolbox: Search & Filters */}
-            <Card className="border-none shadow-sm ring-1 ring-slate-100 p-3 bg-white/60 backdrop-blur-xl">
-                <div className="flex flex-col lg:flex-row gap-3 items-center">
-                    <div className="relative flex-1 group w-full">
-                        <HiOutlineMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-all" />
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder={searchPlaceholder}
-                            className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 border-none rounded-xl text-xs font-semibold text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-primary/5 transition-all outline-none"
-                        />
-                    </div>
-                    
-                    <div className="flex gap-2 shrink-0 w-full lg:w-auto">
-                        {filters.map(filter => (
-                            <select
-                                key={filter.key}
-                                value={activeFilters[filter.key] || ''}
-                                onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                                className="px-4 py-2.5 bg-white ring-1 ring-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-primary/5 outline-none appearance-none cursor-pointer"
-                            >
-                                <option value="">{filter.label}</option>
-                                {filter.options.map(opt => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                            </select>
-                        ))}
+            {showToolbox && (
+                <Card className="border-none shadow-sm ring-1 ring-slate-100 p-3 bg-white/60 backdrop-blur-xl">
+                    <div className="flex flex-col lg:flex-row gap-3 items-center">
+                        {showSearch && (
+                            <div className="relative flex-1 group w-full">
+                                <HiOutlineMagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-all" />
+                                <input
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder={searchPlaceholder}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-100/50 border-none rounded-xl text-xs font-semibold text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-primary/5 transition-all outline-none"
+                                />
+                            </div>
+                        )}
+                        
+                        <div className="flex gap-2 shrink-0 w-full lg:w-auto">
+                            {filters.map(filter => (
+                                <select
+                                    key={filter.key}
+                                    value={activeFilters[filter.key] || ''}
+                                    onChange={(e) => handleFilterChange(filter.key, e.target.value)}
+                                    className="px-4 py-2.5 bg-white ring-1 ring-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-primary/5 outline-none appearance-none cursor-pointer"
+                                >
+                                    <option value="">{filter.label}</option>
+                                    {filter.options.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            ))}
 
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="px-4 py-2.5 bg-white ring-1 ring-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-primary/5 outline-none appearance-none cursor-pointer"
-                        >
-                            <option value="newest">Newest first</option>
-                            <option value="oldest">Oldest first</option>
-                            <option value="name-asc">Name A-Z</option>
-                            <option value="name-desc">Name Z-A</option>
-                        </select>
+                            {showSort && (
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                    className="px-4 py-2.5 bg-white ring-1 ring-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-primary/5 outline-none appearance-none cursor-pointer"
+                                >
+                                    <option value="newest">Newest first</option>
+                                    <option value="oldest">Oldest first</option>
+                                    <option value="name-asc">Name A-Z</option>
+                                    <option value="name-desc">Name Z-A</option>
+                                </select>
+                            )}
+                        </div>
                     </div>
-                </div>
-            </Card>
+                </Card>
+            )}
 
-            {/* Table */}
+            {/* Table/Mobile List */}
             <Card className="border-none shadow-xl ring-1 ring-slate-100 overflow-hidden rounded-xl">
-                <div className="overflow-x-auto">
+                {/* Desktop View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full table-fixed text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -196,6 +207,55 @@ const DynamicDataTable = ({
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile View */}
+                <div className="md:hidden">
+                    {isLoading ? (
+                        <div className="px-6 py-20 text-center">
+                            <div className="flex flex-col items-center gap-3">
+                                <HiOutlineArrowPath className="h-8 w-8 text-primary animate-spin" />
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading...</p>
+                            </div>
+                        </div>
+                    ) : data.length === 0 ? (
+                        <div className="px-6 py-20 text-center text-slate-400 font-bold text-xs uppercase tracking-widest">
+                            No results found
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-slate-100">
+                            {data.map((item, idx) => (
+                                <div 
+                                    key={item._id || idx}
+                                    className={cn(
+                                        "p-4 transition-colors active:bg-slate-50",
+                                        onRowClick && "cursor-pointer"
+                                    )}
+                                    onClick={() => onRowClick && onRowClick(item)}
+                                >
+                                    {renderMobileRow ? renderMobileRow(item) : (
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between">
+                                                <span className="text-xs font-black text-slate-900">
+                                                    {item[columns[0]?.accessor] || item._id || idx}
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                                {columns.slice(1, 5).map((col, cIdx) => (
+                                                    <div key={cIdx}>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{col.header}</p>
+                                                        <div className="text-xs font-bold text-slate-700">
+                                                            {col.cell ? col.cell(item) : (item[col.accessor] || '-')}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Pagination */}

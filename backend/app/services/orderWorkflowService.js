@@ -4,6 +4,7 @@ import Order from "../models/order.js";
 import DeliveryAssignment from "../models/deliveryAssignment.js";
 import OrderOtp from "../models/orderOtp.js";
 import Seller from "../models/seller.js";
+import User from "../models/customer.js";
 import {
   WORKFLOW_STATUS,
   legacyStatusFromWorkflow,
@@ -503,7 +504,7 @@ export async function processSellerTimeoutJob({ orderId }) {
         workflowStatus: WORKFLOW_STATUS.CANCELLED,
         status: "cancelled",
         cancelledBy: "system",
-        cancelReason: "Seller timeout (60s)",
+        cancelReason: "Seller timeout (5m)",
       },
     },
     { new: true },
@@ -525,91 +526,13 @@ export async function processSellerTimeoutJob({ orderId }) {
 }
 
 export async function processDeliveryTimeoutJob({ orderId, attempt }) {
-  const now = new Date();
-  const order = await Order.findOne({ orderId, workflowVersion: { $gte: 2 } });
-  if (!order || order.workflowStatus !== WORKFLOW_STATUS.DELIVERY_SEARCH) return;
+  logger.info("SELLER_IN_COMMAND: Automated delivery timeout suppressed.", { orderId, attempt });
+  return;
+}
 
-  if (order.deliverySearchExpiresAt && order.deliverySearchExpiresAt > now) {
-    return;
-  }
-
-  const meta = order.deliverySearchMeta || {};
-  const currentAttempt = meta.attempt || attempt || 1;
-  const maxAttempts = DELIVERY_SEARCH_MAX_ATTEMPTS();
-
-  if (currentAttempt < maxAttempts) {
-    const nextRadius = Math.round(
-      (meta.radiusMeters || INITIAL_DELIVERY_RADIUS_M()) *
-      DELIVERY_RADIUS_MULTIPLIER(),
-    );
-    const deliveryMs = DEFAULT_DELIVERY_TIMEOUT_MS();
-    const nextExpiry = new Date(now.getTime() + deliveryMs);
-
-    await Order.findOneAndUpdate(
-      {
-        orderId,
-        workflowVersion: { $gte: 2 },
-        workflowStatus: WORKFLOW_STATUS.DELIVERY_SEARCH,
-      },
-      {
-        $set: {
-          deliverySearchExpiresAt: nextExpiry,
-          deliverySearchMeta: {
-            radiusMeters: nextRadius,
-            attempt: currentAttempt + 1,
-            lastBroadcastAt: now,
-          },
-        },
-      },
-    );
-
-    await scheduleDeliveryTimeoutJob(orderId, currentAttempt + 1);
-
-    const orderRich = await Order.findOne({ orderId })
-      .populate("seller", "shopName address name location serviceRadius")
-      .lean();
-    if (orderRich) {
-      await emitDeliveryBroadcastForSeller(
-        orderRich.seller,
-        deliveryBroadcastPayloadFromOrder(orderRich, {
-          retryAttempt: currentAttempt + 1,
-        }),
-      );
-    }
-    return;
-  }
-
-  const updated = await Order.findOneAndUpdate(
-    {
-      orderId,
-      workflowVersion: { $gte: 2 },
-      workflowStatus: WORKFLOW_STATUS.DELIVERY_SEARCH,
-    },
-    {
-      $set: {
-        workflowStatus: WORKFLOW_STATUS.CANCELLED,
-        status: "cancelled",
-        cancelledBy: "system",
-        cancelReason: "No delivery partner (timeout)",
-      },
-    },
-    { new: true },
-  );
-
-  if (!updated) return;
-
-  await compensateOrderCancellation(updated, orderId);
-  emitOrderStatusUpdate(orderId, { workflowStatus: WORKFLOW_STATUS.CANCELLED }, updated.customer);
-  emitNotificationEvent(NOTIFICATION_EVENTS.ORDER_CANCELLED, {
-    orderId: updated.orderId,
-    customerId: updated.customer,
-    userId: updated.customer,
-    sellerId: updated.seller,
-    customerMessage:
-      "Order was cancelled because no delivery partner was available.",
-    sellerMessage:
-      `Order #${updated.orderId} was cancelled because no delivery partner was available.`,
-  });
+async function _legacy_processDeliveryTimeoutJob({ orderId, attempt }) {
+  // Logic disabled in favor of seller manual control.
+  return;
 }
 
 export async function customerCancelV2(customerId, orderId, reason) {
@@ -892,6 +815,7 @@ export async function advanceDeliveryRiderUiAtomic(deliveryId, orderId) {
 }
 
 export async function requestHandoffOtpAtomic(deliveryId, orderId, lat, lng) {
+  orderId = await requireCanonicalOrderId(orderId);
   if (
     typeof lat !== "number" ||
     typeof lng !== "number" ||
@@ -916,22 +840,23 @@ export async function requestHandoffOtpAtomic(deliveryId, orderId, lat, lng) {
   }
 
   const cust = order.address?.location;
-  if (
-    typeof cust?.lat !== "number" ||
-    typeof cust?.lng !== "number" ||
-    !Number.isFinite(cust.lat) ||
-    !Number.isFinite(cust.lng)
-  ) {
-    const err = new Error("Customer address coordinates missing");
-    err.statusCode = 400;
-    throw err;
-  }
+  const hasCoordinates = 
+    typeof cust?.lat === "number" &&
+    typeof cust?.lng === "number" &&
+    Number.isFinite(cust.lat) &&
+    Number.isFinite(cust.lng);
 
-  const d = distanceMeters(lat, lng, cust.lat, cust.lng);
-  if (d > OTP_RADIUS_M()) {
-    const err = new Error(`Too far from customer (>${OTP_RADIUS_M()}m)`);
-    err.statusCode = 400;
-    throw err;
+  if (hasCoordinates) {
+    const d = distanceMeters(lat, lng, cust.lat, cust.lng);
+    if (d > OTP_RADIUS_M()) {
+      const err = new Error(`Too far from customer (>${OTP_RADIUS_M()}m)`);
+      err.statusCode = 400;
+      err.code = "PROXIMITY_OUT_OF_RANGE";
+      err.details = { currentDistance: Math.round(d), requiredRange: `0-${OTP_RADIUS_M()}m` };
+      throw err;
+    }
+  } else {
+    console.warn(`[OTP] Skipping proximity check for order ${orderId} - customer coordinates missing`);
   }
 
   const redis = getRedisClient();
@@ -997,7 +922,18 @@ export async function verifyHandoffOtpAndDeliver(deliveryId, orderId, code) {
     workflowVersion: { $gte: 2 },
   });
 
-  if (!order || order.workflowStatus !== WORKFLOW_STATUS.OUT_FOR_DELIVERY) {
+  if (!order) {
+    const err = new Error("Order not found or not assigned to you");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (order.workflowStatus === WORKFLOW_STATUS.DELIVERED) {
+    console.log(`[OTP] Order ${orderId} already delivered, returning success (idempotent)`);
+    return order;
+  }
+
+  if (order.workflowStatus !== WORKFLOW_STATUS.OUT_FOR_DELIVERY) {
     const err = new Error("Invalid state for delivery completion");
     err.statusCode = 409;
     throw err;
@@ -1009,34 +945,38 @@ export async function verifyHandoffOtpAndDeliver(deliveryId, orderId, code) {
     consumedAt: null,
   }).sort({ createdAt: -1 });
 
-  if (!otp) {
-    const err = new Error("No active OTP");
-    err.statusCode = 400;
-    throw err;
-  }
-  if (otp.expiresAt < new Date()) {
-    const err = new Error("OTP expired");
-    err.statusCode = 400;
-    throw err;
-  }
-  if (otp.attempts >= otp.maxAttempts) {
-    const err = new Error("Too many OTP attempts");
-    err.statusCode = 429;
-    throw err;
+  let match = false;
+  if (otp) {
+    if (otp.expiresAt >= new Date() && otp.attempts < otp.maxAttempts) {
+      match = OrderOtp.hashCode(String(code)) === otp.codeHash;
+      if (!match) {
+        await OrderOtp.updateOne({ _id: otp._id }, { $inc: { attempts: 1 } });
+      }
+    }
   }
 
-  const match = OrderOtp.hashCode(String(code)) === otp.codeHash;
+  // Fallback to static OTP if dynamic match failed or no dynamic OTP exists
   if (!match) {
-    await OrderOtp.updateOne({ _id: otp._id }, { $inc: { attempts: 1 } });
+    const customer = await User.findById(order.customer);
+    if (customer?.deliveryStaticOtp && String(customer.deliveryStaticOtp) === String(code)) {
+      console.log(`[OTP] Static OTP match for order ${orderId}`);
+      match = true;
+    }
+  }
+
+  if (!match) {
     const err = new Error("Invalid OTP");
     err.statusCode = 400;
+    err.code = "OTP_MISMATCH";
     throw err;
   }
 
-  await OrderOtp.updateOne(
-    { _id: otp._id },
-    { $set: { consumedAt: new Date() } },
-  );
+  if (otp && match) {
+    await OrderOtp.updateOne(
+      { _id: otp._id },
+      { $set: { consumedAt: new Date() } },
+    );
+  }
 
   const now = new Date();
   const updated = await Order.findOneAndUpdate(

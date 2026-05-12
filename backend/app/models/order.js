@@ -239,10 +239,13 @@ const orderSchema = new mongoose.Schema(
       distanceKmActual: { type: Number, default: 0 },
       distanceKmRounded: { type: Number, default: 0 },
       snapshots: {
-        deliverySettings: { type: Object, default: {} },
-        categoryCommissionSettings: { type: Array, default: [] },
-        handlingFeeStrategy: { type: String, default: null },
-        handlingCategoryUsed: { type: Object, default: {} },
+        type: Object,
+        default: {
+          deliverySettings: {},
+          categoryCommissionSettings: [],
+          handlingFeeStrategy: null,
+          handlingCategoryUsed: {},
+        },
       },
       lineItems: {
         type: Array,

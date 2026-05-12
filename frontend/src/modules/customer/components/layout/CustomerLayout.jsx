@@ -79,9 +79,11 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     // Route-based visibility logic
     const path = location.pathname.replace(/\/$/, '') || '/';
 
-    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/rewards', '/support', '/privacy', '/account-privacy', '/about', '/terms', '/refund-policy', '/return-policy', '/shipping-policy', '/checkout', '/search', '/chat', '/stores'];
-    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/rewards'];
-    const hideCartRoutes = ['/checkout', '/search', '/chat', '/rewards', '/wallet'];
+    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/rewards', '/refer-earn', '/support', '/privacy', '/account-privacy', '/about', '/terms', '/refund-policy', '/return-policy', '/shipping-policy', '/checkout', '/search', '/chat', '/stores'];
+    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/rewards', '/refer-earn'];
+
+    const hideCartRoutes = ['/checkout', '/search', '/chat', '/rewards', '/wallet', '/refer-earn'];
+
 
     // If props are passed, use them. Otherwise, use route-based logic.
     const showHeader = showHeaderProp !== undefined ? showHeaderProp : (!hideHeaderRoutes.includes(path) && !path.startsWith('/category') && !path.startsWith('/orders') && !path.startsWith('/stores'));
@@ -99,7 +101,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     const finalShowFooterMessageMobile = showFooterMessage && !isProductDetailOpen;
 
     return (
-        <div className="min-h-screen min-h-[100dvh] bg-white flex flex-col font-sans selection:bg-[#f59931]/30">
+        <div className="min-h-[100dvh] bg-white flex flex-col font-sans selection:bg-[#f59931]/30">
             {/* Header logic: Always show on desktop if showHeader is true. On mobile, hide if product detail is open. */}
             {showHeader && (
                 <>

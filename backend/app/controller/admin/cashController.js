@@ -6,6 +6,52 @@ import {
   getRiderCashDetailsData,
   settleRiderCashEntry,
 } from "../../services/admin/cashService.js";
+import { notify } from "../../modules/notifications/notification.service.js";
+import { NOTIFICATION_EVENTS } from "../../modules/notifications/notification.constants.js";
+import Wallet from "../../models/wallet.js";
+import { emitToDelivery } from "../../services/orderSocketEmitter.js";
+
+export const notifyRiderCashLimit = async (req, res) => {
+  try {
+    const { riderId } = req.body;
+    if (!riderId) {
+      return handleResponse(res, 400, "riderId is required");
+    }
+
+    const wallet = await Wallet.findOne({
+      ownerId: riderId,
+      ownerType: "DELIVERY_PARTNER",
+    }).lean();
+
+    if (!wallet) {
+      return handleResponse(res, 404, "Rider wallet not found");
+    }
+
+    const cashAmount = wallet.cashInHand || 0;
+
+    const result = await notify(NOTIFICATION_EVENTS.CASH_OVER_LIMIT, {
+      userId: riderId,
+      deliveryId: riderId,
+      data: {
+        cashAmount,
+      },
+    });
+
+    // Emit real-time socket event for the pop-up
+    emitToDelivery(riderId, {
+      event: "delivery:cash:limit",
+      payload: {
+        cashAmount,
+        title: "Cash Limit Exceeded! ⚠️",
+        message: `Your cash in hand (₹${cashAmount}) has exceeded the safety limit. Please visit the hub to deposit cash immediately.`,
+      },
+    });
+
+    return handleResponse(res, 200, "Notification sent successfully", result);
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
 
 export const getDeliveryCashBalances = async (req, res) => {
   try {

@@ -22,7 +22,13 @@ const SectionRenderer = ({
         const heading = section.title;
 
         if (section.displayType === "banners") {
-          return null;
+          const items = section.config?.items || section.config?.banners?.items || [];
+          if (!items.length) return null;
+          return (
+            <div key={section._id} className="px-1 md:px-0 mb-6">
+              <ExperienceBannerCarousel section={section} items={items} fullWidth={true} />
+            </div>
+          );
         }
 
         if (section.displayType === "categories") {
@@ -40,14 +46,14 @@ const SectionRenderer = ({
             <div
               key={section._id}
               id={`section-${section._id}`}
-              className="-mx-4 md:-mx-4 lg:-mx-6 px-4 md:px-4 lg:px-6"
+              className="px-1 md:px-0"
             >
               {heading && (
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-base font-black text-[#1A1A1A]">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-[17px] font-black tracking-tight text-[#111111]">
                     {heading}
-                  </h3>
-                  <span className="text-[11px] font-semibold text-slate-400">
+                  </h2>
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                     {items.length} categories
                   </span>
                 </div>
@@ -88,7 +94,7 @@ const SectionRenderer = ({
                       </motion.div>
                       <motion.div
                         animate={{ color: "#1A1A1A" }}
-                        className="text-[11px] font-bold text-center leading-snug line-clamp-2 transition-colors duration-500">
+                        className="text-[11px] font-semibold text-center leading-snug line-clamp-2 transition-colors duration-500">
                         {cat.name}
                       </motion.div>
                     </button>
@@ -113,14 +119,14 @@ const SectionRenderer = ({
             <div
               key={section._id}
               id={`section-${section._id}`}
-              className="-mx-4 md:-mx-4 lg:-mx-6 px-4 md:px-4 lg:px-6"
+              className="px-1 md:px-0"
             >
               {heading && (
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-base font-black text-[#1A1A1A]">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-[17px] font-black tracking-tight text-[#111111]">
                     {heading}
-                  </h3>
-                  <span className="text-[11px] font-semibold text-slate-400">
+                  </h2>
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                     {items.length} picks
                   </span>
                 </div>
@@ -175,7 +181,7 @@ const SectionRenderer = ({
                         </motion.div>
                         <motion.div
                           animate={{ color: "#1A1A1A" }}
-                          className="text-[11px] font-bold text-center leading-snug line-clamp-2 transition-colors duration-500">
+                          className="text-[11px] font-semibold text-center leading-snug line-clamp-2 transition-colors duration-500">
                           {cat.name}
                         </motion.div>
                       </button>
@@ -227,15 +233,15 @@ const SectionRenderer = ({
               <div
                 key={section._id}
                 id={`section-${section._id}`}
-                className="-mx-4 md:-mx-4 px-4 md:px-4 mt-6 mb-2"
+                className="px-1 md:px-0 mt-6 mb-2"
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-4">
                   {heading && (
-                    <h3 className="text-base font-bold text-[#1A1A1A]">
+                    <h2 className="text-[17px] font-black tracking-tight text-[#111111]">
                       {heading}
-                    </h3>
+                    </h2>
                   )}
-                  <span className="text-[11px] font-semibold text-slate-400">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                     {allProducts.length} items
                   </span>
                 </div>
@@ -245,7 +251,7 @@ const SectionRenderer = ({
                       key={product._id || product.id}
                       className="w-[110px] shrink-0"
                     >
-                      <ProductCard product={product} compact={true} neutralBg={true} />
+                      <ProductCard product={product} compact={true} quickComm={true} />
                     </div>
                   ))}
                 </div>
@@ -260,15 +266,15 @@ const SectionRenderer = ({
             <div
               key={section._id}
               id={`section-${section._id}`}
-              className="-mx-4 md:-mx-4 px-4 md:px-3 mt-8 mb-4"
+              className="px-1 md:px-0 mt-8 mb-4"
             >
-              <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center justify-between mb-4">
                 {heading && (
-                  <h3 className="text-[17px] font-black text-[#1A1A1A] tracking-tight">
+                  <h2 className="text-[17px] font-black tracking-tight text-[#111111]">
                     {heading}
-                  </h3>
+                  </h2>
                 )}
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                   {allProducts.length} items
                 </span>
               </div>
@@ -282,7 +288,47 @@ const SectionRenderer = ({
               >
                 {items.map((product) => (
                   <div key={product._id || product.id} className="flex justify-center">
-                    <ProductCard product={product} compact={true} neutralBg={true} />
+                    <ProductCard product={product} compact={true} quickComm={true} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        if (section.displayType === "brands") {
+          const items = section.config?.brands?.items || section.config?.items || [];
+          if (!items.length) return null;
+
+          return (
+            <div key={section._id} className="py-2 mt-0">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[17px] font-black tracking-tight text-[#111111]">
+                  {heading || "Top Brands"}
+                </h2>
+                <span
+                  onClick={() => navigate("/offers")}
+                  className="text-[12px] font-bold text-[#111111] cursor-pointer hover:underline"
+                >
+                  See All
+                </span>
+              </div>
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 mb-2">
+                {items.map((brand, i) => (
+                  <div
+                    key={i}
+                    onClick={() =>
+                      navigate("/search", {
+                        state: { query: brand.linkValue || brand.name },
+                      })
+                    }
+                    className="flex-shrink-0 w-[85px] h-[85px] sm:w-[110px] sm:h-[110px] rounded-[14px] border border-[#e8e8e8] bg-white flex items-center justify-center p-2.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    <img
+                      src={brand.image}
+                      alt={brand.name}
+                      className="w-full h-full object-contain mix-blend-multiply"
+                    />
                   </div>
                 ))}
               </div>

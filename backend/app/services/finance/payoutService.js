@@ -18,7 +18,7 @@ const roundCurrency = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
 function payoutTypeToOwnerType(payoutType) {
   if (payoutType === PAYOUT_TYPE.SELLER) return OWNER_TYPE.SELLER;
-  if (payoutType === PAYOUT_TYPE.DELIVERY_PARTNER) return OWNER_TYPE.RIDER;
+  if (payoutType === PAYOUT_TYPE.DELIVERY_PARTNER) return OWNER_TYPE.DELIVERY_PARTNER;
   throw new Error(`Unsupported payout type: ${payoutType}`);
 }
 
@@ -159,6 +159,24 @@ export async function processPayout(payoutId, { remarks = "", adminId = null } =
       { session },
     );
 
+    // Record the actual payout settlement in the ledger so it appears in Admin History/Wallet tabs
+    await createLedgerEntry(
+      {
+        payoutId: payout._id,
+        walletId: wallet._id,
+        actorType: ownerType,
+        actorId: payout.beneficiaryId,
+        type: payout.payoutType === PAYOUT_TYPE.SELLER 
+          ? LEDGER_TRANSACTION_TYPE.SELLER_PAYOUT_PROCESSED 
+          : LEDGER_TRANSACTION_TYPE.RIDER_PAYOUT_PROCESSED,
+        direction: LEDGER_DIRECTION.DEBIT,
+        amount: roundCurrency(payout.amount),
+        description: `Settled ${payout.payoutType} payout for request ${payout._id}`,
+        reference: String(payout._id),
+      },
+      { session },
+    );
+
     await session.commitTransaction();
     return payout;
   } catch (error) {
@@ -253,7 +271,7 @@ export async function cancelPendingPayoutForOrder(orderId, payoutType, { remarks
         walletId: beneficiaryWallet._id,
         actorType: ownerType,
         actorId: payout.beneficiaryId,
-        type: LEDGER_TRANSACTION_TYPE.PAYOUT_CANCELLED || "PAYOUT_CANCELLED",
+        type: LEDGER_TRANSACTION_TYPE.PAYOUT_CANCELLED,
         direction: LEDGER_DIRECTION.DEBIT,
         amount,
         description: `Pending ${payout.payoutType} payout reversed due to return.`,

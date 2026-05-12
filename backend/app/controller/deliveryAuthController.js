@@ -1,5 +1,6 @@
 import Delivery from "../models/delivery.js";
 import UserSubscription from "../models/userSubscription.js";
+import Setting from "../models/setting.js";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import handleResponse from "../utils/helper.js";
@@ -114,8 +115,8 @@ export const loginDelivery = async (req, res) => {
 
         const delivery = await Delivery.findOne({ email });
 
-        if (!delivery || !delivery.isVerified) {
-            return handleResponse(res, 404, "Delivery partner not found");
+        if (!delivery) {
+            return handleResponse(res, 404, "Delivery partner not found. Please signup first.");
         }
 
         const otp = generateOTP();
@@ -165,8 +166,7 @@ export const verifyDeliveryOTP = async (req, res) => {
             return handleResponse(res, 400, "Invalid or expired OTP");
         }
 
-        delivery.isVerified = true;
-        delivery.isOnline = true; // Auto-activate delivery boy on login
+        delivery.isEmailVerified = true;
         delivery.otp = undefined;
         delivery.otpExpiry = undefined;
         delivery.lastLogin = new Date();
@@ -189,12 +189,27 @@ export const verifyDeliveryOTP = async (req, res) => {
         });
 
         const token = generateToken(delivery);
+
+        // Verify subscription status dynamically
+        const settings = await Setting.findOne({});
+        const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+
+        const activeSub = await UserSubscription.findOne({
+            userId: delivery._id,
+            role: "delivery",
+            status: "active",
+            endDate: { $gt: new Date() }
+        });
+
+        const deliveryObj = delivery.toObject();
+        deliveryObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
         const deliveryObj = delivery.toObject();
         deliveryObj.subscriptionStatus = activeSub ? "active" : "inactive";
         deliveryObj.plansAvailable = activePlansCount > 0;
 
         return handleResponse(res, 200, "Login successful", {
             token,
+            delivery: deliveryObj,
             delivery: deliveryObj,
         });
     } catch (error) {
@@ -212,6 +227,9 @@ export const getDeliveryProfile = async (req, res) => {
             return handleResponse(res, 404, "Delivery partner not found");
         }
         // Verify subscription status dynamically
+        const settings = await Setting.findOne({});
+        const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+
         const activeSub = await UserSubscription.findOne({
             userId: req.user.id,
             role: "delivery",
@@ -227,6 +245,7 @@ export const getDeliveryProfile = async (req, res) => {
         });
 
         const deliveryObj = delivery.toObject();
+        deliveryObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
         deliveryObj.subscriptionStatus = activeSub ? "active" : "inactive";
         deliveryObj.plansAvailable = activePlansCount > 0;
 
@@ -241,7 +260,12 @@ export const getDeliveryProfile = async (req, res) => {
 ================================ */
 export const updateDeliveryProfile = async (req, res) => {
     try {
-        const { name, vehicleType, vehicleNumber, drivingLicenseNumber, currentArea, isOnline } = req.body;
+        const { 
+            name, vehicleType, vehicleNumber, drivingLicenseNumber, currentArea, 
+            isOnline, dob, bloodGroup, email, address,
+            vehicleModel, vehicleColor, fuelType, drivingLicenseExpiry, rcExpiry,
+            accountHolder, accountNumber, ifsc
+        } = req.body;
 
         const delivery = await Delivery.findById(req.user.id);
         if (!delivery) {
@@ -249,10 +273,22 @@ export const updateDeliveryProfile = async (req, res) => {
         }
 
         if (name) delivery.name = name;
+        if (email) delivery.email = email;
+        if (address) delivery.address = address;
         if (vehicleType) delivery.vehicleType = vehicleType;
         if (vehicleNumber) delivery.vehicleNumber = vehicleNumber;
+        if (vehicleModel) delivery.vehicleModel = vehicleModel;
+        if (vehicleColor) delivery.vehicleColor = vehicleColor;
+        if (fuelType) delivery.fuelType = fuelType;
         if (drivingLicenseNumber) delivery.drivingLicenseNumber = drivingLicenseNumber;
+        if (drivingLicenseExpiry) delivery.drivingLicenseExpiry = drivingLicenseExpiry;
+        if (rcExpiry) delivery.rcExpiry = rcExpiry;
         if (currentArea) delivery.currentArea = currentArea;
+        if (dob) delivery.dob = dob;
+        if (bloodGroup) delivery.bloodGroup = bloodGroup;
+        if (accountHolder) delivery.accountHolder = accountHolder;
+        if (accountNumber) delivery.accountNumber = accountNumber;
+        if (ifsc) delivery.ifsc = ifsc;
         if (typeof isOnline !== 'undefined') delivery.isOnline = isOnline;
 
         await delivery.save();
