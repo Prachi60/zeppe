@@ -340,18 +340,35 @@ const OrderDetailPage = () => {
   useEffect(() => {
     if (!order || !order.createdAt) return;
 
+    const legacyStatus = getLegacyStatusFromOrder(order);
+    if (legacyStatus === "cancelled" || legacyStatus === "delivered") {
+      setCancelTimeLeft(0);
+      return;
+    }
+
     const updateTimer = () => {
-      const createdAt = new Date(order.createdAt).getTime();
+      if (cancellingOrder) {
+        setCancelTimeLeft(0);
+        return;
+      }
+
+      const expiresAt = order.cancelWindowExpiresAt 
+        ? new Date(order.cancelWindowExpiresAt).getTime() 
+        : new Date(order.createdAt).getTime() + (3 * 60 * 1000);
       const now = Date.now();
-      const threeMinutesMs = 3 * 60 * 1000;
-      const remaining = Math.max(0, Math.floor((createdAt + threeMinutesMs - now) / 1000));
+      const remaining = Math.max(0, Math.floor((expiresAt - now) / 1000));
       setCancelTimeLeft(remaining);
+
+      // If timer reached zero, ensure UI updates
+      if (remaining === 0) {
+        setCancelTimeLeft(0);
+      }
     };
 
     updateTimer();
     const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
-  }, [order]);
+  }, [order, cancellingOrder]);
 
   useEffect(() => {
     if (!order) {
@@ -662,24 +679,37 @@ const OrderDetailPage = () => {
   };
 
   const canCancelOrder = () => {
-    if (!order) return false;
-    // Statuses that allow cancellation (typically pending or created)
-    const cancellableStatuses = ["pending", "created", "confirmed"];
-    const ws = (order.workflowStatus || "").toLowerCase();
+    if (!order || cancellingOrder) return false;
     
     // If already cancelled or delivered, definitely can't cancel
     if (status === "cancelled" || status === "delivered") return false;
 
-    // Must be within 3 minutes of creation
-    const createdAt = new Date(order.createdAt).getTime();
+    // Check if within window (3 minutes)
+    const expiresAt = order.cancelWindowExpiresAt 
+      ? new Date(order.cancelWindowExpiresAt).getTime() 
+      : new Date(order.createdAt).getTime() + (3 * 60 * 1000);
     const now = Date.now();
-    if (now - createdAt > 3 * 60 * 1000) return false;
+    if (now > expiresAt) return false;
+
+    // Allowed workflow statuses for cancellation
+    const ALLOWED_WS_FOR_CANCEL = [
+      "created",
+      "seller_pending",
+      "seller_accepted",
+      "delivery_search",
+      "delivery_assigned",
+      "pickup_ready"
+    ];
+    
+    const ws = (order.workflowStatus || "").toLowerCase();
     
     // v2 Workflow specific checks
     if (order.workflowVersion >= 2) {
-      return ws === "seller_pending" || ws === "created";
+      return ALLOWED_WS_FOR_CANCEL.includes(ws);
     }
     
+    // Legacy workflow: backend only allows cancellation while still pending
+    const cancellableStatuses = ["pending"];
     return cancellableStatuses.includes(status);
   };
 
@@ -688,16 +718,28 @@ const OrderDetailPage = () => {
     
     try {
       setCancellingOrder(true);
-      await customerApi.cancelOrder(order.orderId, { reason: "Cancelled by user" });
+      setCancelTimeLeft(0); // Immediately stop the UI timer
+      
+      const cancelRes = await customerApi.cancelOrder(order.orderId, { reason: "Cancelled by user" });
+      const updated = cancelRes?.data?.result;
+      
+      if (updated) {
+        setOrder(updated);
+      }
+      
       toast.success("Order cancelled successfully");
-      // Refresh order details
+      
+      // Refresh order details to ensure consistency
       const response = await customerApi.getOrderDetails(orderId);
       setOrder(response.data.result);
     } catch (error) {
       console.error("Failed to cancel order:", error);
       toast.error(error.response?.data?.message || "Failed to cancel order");
-    } finally {
+      // Restore state if cancellation failed (optional, depends on if timer actually expired during call)
       setCancellingOrder(false);
+    } finally {
+      // Note: we don't set cancellingOrder(false) if successful to prevent UI flickering 
+      // back to the button before the status update propagates.
     }
   };
 
@@ -1038,6 +1080,32 @@ const OrderDetailPage = () => {
               <HelpCircle size={18} /> Help
             </button>
           </div>
+
+          {(status === "cancelled" || cancellingOrder) && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-3xl p-5 border-2 border-slate-100 shadow-sm relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-16 -mt-16" />
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
+                    <XCircle size={16} className="text-slate-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Order</p>
+                    <p className="text-xs font-bold text-slate-700">
+                      {cancellingOrder && status !== "cancelled" ? "Cancelling..." : "Cancelled"}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                  {cancellingOrder && status !== "cancelled" ? "Processing" : "Cancelled"}
+                </span>
+              </div>
+            </motion.div>
+          )}
 
           {canCancelOrder() && cancelTimeLeft > 0 && (
             <motion.div 

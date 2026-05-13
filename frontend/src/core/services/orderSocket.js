@@ -222,3 +222,15 @@ export function onCashLimitAlert(getToken, handler) {
   s.on("delivery:cash:limit", handler);
   return () => s.off("delivery:cash:limit", handler);
 }
+
+/**
+ * Listen for order:cancelled events.
+ * Payload: { orderId, status, cancelledBy, message }
+ * Used by seller dashboard to instantly show "User Cancelled Order" alert.
+ */
+export function onOrderCancelled(getToken, handler) {
+  const s = getOrderSocket(getToken);
+  if (!s || typeof handler !== "function") return () => { };
+  s.on("order:cancelled", handler);
+  return () => s.off("order:cancelled", handler);
+}

@@ -271,6 +271,9 @@ const orderSchema = new mongoose.Schema(
         "out_for_delivery",
         "delivered",
         "cancelled",
+        "USER_CANCELLED",
+        "SELLER_CANCELLED",
+        "SYSTEM_CANCELLED",
       ],
       default: "pending",
     },
@@ -281,6 +284,12 @@ const orderSchema = new mongoose.Schema(
     workflowVersion: {
       type: Number,
       default: 1,
+    },
+    cancelWindowExpiresAt: Date,
+    cancelledAt: Date,
+    isBroadcastStopped: {
+      type: Boolean,
+      default: false,
     },
     sellerPendingExpiresAt: Date,
     deliverySearchExpiresAt: Date,
@@ -317,7 +326,7 @@ const orderSchema = new mongoose.Schema(
     },
     cancelledBy: {
       type: String,
-      enum: ["customer", "seller", "admin", "system"],
+      enum: ["customer", "seller", "admin", "system", "USER", "SELLER", "SYSTEM"],
     },
     cancelReason: String,
     deviceType: {

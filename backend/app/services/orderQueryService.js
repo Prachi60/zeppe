@@ -24,6 +24,12 @@ function normalizeSellerStatusFilter(statusParam) {
   if (statusParam === "cancelled") {
     return { status: "cancelled" };
   }
+  if (statusParam === "USER_CANCELLED") {
+    return { workflowStatus: WORKFLOW_STATUS.USER_CANCELLED };
+  }
+  if (statusParam === "SELLER_CANCELLED") {
+    return { workflowStatus: WORKFLOW_STATUS.SELLER_CANCELLED };
+  }
   if (statusParam === "returned") {
     return { returnStatus: { $ne: "none" } };
   }
@@ -219,6 +225,7 @@ export async function fetchAvailableOrdersForDelivery({
       workflowVersion: { $gte: 2 },
       workflowStatus: WORKFLOW_STATUS.DELIVERY_SEARCH,
       deliveryBoy: null,
+      isBroadcastStopped: { $ne: true }, // Explicitly exclude stopped broadcasts
       seller: { $in: sellerIds },
       skippedBy: { $nin: [userId] },
     })

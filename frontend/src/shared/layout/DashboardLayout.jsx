@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SellerOrdersProvider } from '@/modules/seller/context/SellerOrdersContext';
 import { SellerEarningsProvider, defaultEarnings } from '@/modules/seller/context/SellerEarningsContext';
-import { getOrderSocket, onSellerOrderNew, onReturnDropOtp, onSellerReturnRequested } from '@/core/services/orderSocket';
+import { getOrderSocket, onSellerOrderNew, onReturnDropOtp, onSellerReturnRequested, onOrderCancelled } from '@/core/services/orderSocket';
 import { showSystemNotification } from '@/core/firebase/pushClient';
 import { orderAlertSoundUrl } from "@/assets/sound/orderAlertSound";
 
@@ -41,6 +41,7 @@ const DashboardLayout = ({ children, navItems, title }) => {
     const acceptWindowTotalRef = useRef(60);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [returnDropOtpAlert, setReturnDropOtpAlert] = useState(null); // { orderId, otp, expiresAt }
+    const [cancelledOrderAlert, setCancelledOrderAlert] = useState(null); // { orderId, cancelledBy, message }
     const audioRef = useRef(null);
 
     useEffect(() => {
@@ -210,9 +211,26 @@ const DashboardLayout = ({ children, navItems, title }) => {
             setNewReturnAlert(payload);
         });
 
+        const unsubscribeCancelled = onOrderCancelled(getToken, (payload) => {
+            console.log("[DashboardLayout] Received order:cancelled:", payload);
+            // If the order was just accepted and user cancelled — dismiss the accept modal
+            if (newOrderAlertRef.current?.orderId === payload?.orderId) {
+                setNewOrderAlert(null);
+                newOrderAlertRef.current = null;
+            }
+            // Show cancellation alert
+            setCancelledOrderAlert(payload);
+            // Show toast immediately
+            const who = payload?.cancelledBy === 'USER' ? 'Customer' : 'System';
+            toast.error(`Order #${payload?.orderId} cancelled by ${who}`);
+            // Refresh order list
+            setTimeout(() => { if (fetchOrdersRef.current) fetchOrdersRef.current(); }, 500);
+        });
+
         return () => {
             unsubscribeDrop();
             unsubscribeReturn();
+            unsubscribeCancelled();
         };
     }, [role]);
 
@@ -512,6 +530,45 @@ const DashboardLayout = ({ children, navItems, title }) => {
                                         Review
                                     </button>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Cancelled Order Alert Modal */}
+            <AnimatePresence>
+                {cancelledOrderAlert && (
+                    <div className="fixed inset-0 z-[998] flex items-end sm:items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 40 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 40 }}
+                            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border-2 border-rose-100"
+                        >
+                            <div className="flex flex-col items-center text-center">
+                                <div className="h-20 w-20 bg-rose-50 rounded-full flex items-center justify-center mb-6">
+                                    <X className="h-10 w-10 text-rose-500" />
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-900 mb-2">Order Cancelled</h2>
+                                <p className="text-slate-600 font-medium mb-2">
+                                    Order <span className="text-rose-600 font-bold">#{cancelledOrderAlert.orderId}</span> has been cancelled.
+                                </p>
+                                <div className="w-full bg-rose-50 rounded-2xl p-4 mb-6 border border-rose-100">
+                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Cancelled By</p>
+                                    <p className="text-sm font-bold text-slate-800">
+                                        {cancelledOrderAlert.cancelledBy === 'USER' ? '👤 Customer' : cancelledOrderAlert.cancelledBy === 'SYSTEM' ? '⚙️ System (Timeout)' : '🏪 Seller'}
+                                    </p>
+                                    {cancelledOrderAlert.message && (
+                                        <p className="text-xs text-slate-500 mt-1">{cancelledOrderAlert.message}</p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => setCancelledOrderAlert(null)}
+                                    className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-slate-800 transition-all active:scale-95 uppercase tracking-widest text-xs"
+                                >
+                                    Dismiss
+                                </button>
                             </div>
                         </motion.div>
                     </div>

@@ -421,7 +421,13 @@ const DeliveryLayout = () => {
         acceptInFlightRef.current = false;
         setIsAcceptingOrder(false);
         setActiveOrder(null);
-        toast.info("Another delivery partner accepted this order.");
+        // Show a contextual message: cancellation vs normal assignment
+        const reason = payload?.reason;
+        if (reason === "CANCELLED") {
+          toast.info("Order was cancelled by the customer.");
+        } else {
+          toast.info("Another delivery partner accepted this order.");
+        }
       }
     });
   }, [user?.isOnline]);

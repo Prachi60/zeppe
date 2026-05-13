@@ -310,32 +310,46 @@ export async function sellerRejectAtomic(sellerId, orderId) {
       orderId,
       seller: sellerId,
       workflowVersion: { $gte: 2 },
-      workflowStatus: WORKFLOW_STATUS.SELLER_PENDING,
-      sellerPendingExpiresAt: { $gt: now },
+      workflowStatus: { $ne: WORKFLOW_STATUS.CANCELLED }, // Prevent double cancellation
     },
     {
       $set: {
-        workflowStatus: WORKFLOW_STATUS.CANCELLED,
+        workflowStatus: WORKFLOW_STATUS.SELLER_CANCELLED,
         status: "cancelled",
-        cancelledBy: "seller",
+        cancelledBy: "SELLER",
         cancelReason: "Rejected by seller",
+        cancelledAt: now,
+        isBroadcastStopped: true,
       },
     },
     { new: true },
   );
 
   if (!order) {
-    const err = new Error("Order not available to reject");
+    const err = new Error("Order not available to reject or already cancelled");
     err.statusCode = 409;
     throw err;
   }
 
   await removeSellerTimeoutJob(orderId);
+  await removeDeliveryTimeoutJob(orderId, order.deliverySearchMeta?.attempt || 1);
+  await retractDeliveryBroadcastForOrder(order.orderId, null, "CANCELLED"); // Stop broadcast for everyone
+  
   await compensateOrderCancellation(order, orderId);
 
   emitOrderStatusUpdate(order.orderId, {
-    workflowStatus: WORKFLOW_STATUS.CANCELLED,
+    workflowStatus: WORKFLOW_STATUS.SELLER_CANCELLED,
+    isBroadcastStopped: true,
+    cancelledBy: "SELLER",
+    cancelledAt: order.cancelledAt,
   }, order.customer);
+
+  // Notify seller panel too
+  emitToSeller(sellerId, {
+    event: "order:cancelled",
+    payload: { orderId: order.orderId, status: WORKFLOW_STATUS.SELLER_CANCELLED }
+  });
+
   emitNotificationEvent(NOTIFICATION_EVENTS.ORDER_CANCELLED, {
     orderId: order.orderId,
     customerId: order.customer,
@@ -393,6 +407,7 @@ export async function deliveryAcceptAtomic(deliveryId, orderId, idempotencyKey) 
       workflowVersion: { $gte: 2 },
       workflowStatus: WORKFLOW_STATUS.DELIVERY_SEARCH,
       deliveryBoy: null,
+      isBroadcastStopped: { $ne: true },
       deliverySearchExpiresAt: { $gt: now },
       skippedBy: { $nin: [deliveryOid] },
     },
@@ -501,10 +516,12 @@ export async function processSellerTimeoutJob({ orderId }) {
     },
     {
       $set: {
-        workflowStatus: WORKFLOW_STATUS.CANCELLED,
+        workflowStatus: WORKFLOW_STATUS.SYSTEM_CANCELLED,
         status: "cancelled",
-        cancelledBy: "system",
+        cancelledBy: "SYSTEM",
         cancelReason: "Seller timeout (5m)",
+        cancelledAt: now,
+        isBroadcastStopped: true,
       },
     },
     { new: true },
@@ -514,7 +531,12 @@ export async function processSellerTimeoutJob({ orderId }) {
 
   await compensateOrderCancellation(updated, orderId);
 
-  emitOrderStatusUpdate(orderId, { workflowStatus: WORKFLOW_STATUS.CANCELLED }, updated.customer);
+  emitOrderStatusUpdate(orderId, {
+    workflowStatus: WORKFLOW_STATUS.SYSTEM_CANCELLED,
+    isBroadcastStopped: true,
+    cancelledBy: "SYSTEM",
+    cancelledAt: updated.cancelledAt,
+  }, updated.customer);
   emitNotificationEvent(NOTIFICATION_EVENTS.ORDER_CANCELLED, {
     orderId: updated.orderId,
     customerId: updated.customer,
@@ -537,6 +559,7 @@ async function _legacy_processDeliveryTimeoutJob({ orderId, attempt }) {
 
 export async function customerCancelV2(customerId, orderId, reason) {
   orderId = await requireCanonicalOrderId(orderId);
+  const now = new Date();
   const order = await Order.findOne({ orderId, customer: customerId });
   if (!order) {
     const err = new Error("Order not found");
@@ -544,39 +567,88 @@ export async function customerCancelV2(customerId, orderId, reason) {
     throw err;
   }
 
-  const ws = resolveWorkflowStatus(order);
-  if (ws !== WORKFLOW_STATUS.SELLER_PENDING) {
-    const err = new Error("Order cannot be cancelled after confirmation");
+  // Window validation (3 minutes)
+  if (order.cancelWindowExpiresAt && order.cancelWindowExpiresAt < now) {
+    const err = new Error("Cancellation window has expired (3 minutes limit)");
     err.statusCode = 400;
     throw err;
   }
 
+  const ws = resolveWorkflowStatus(order);
+  const ALLOWED_WS_FOR_CANCEL = [
+    WORKFLOW_STATUS.CREATED,        // freshly placed, seller not yet notified
+    WORKFLOW_STATUS.SELLER_PENDING, // seller hasn't accepted yet
+    WORKFLOW_STATUS.SELLER_ACCEPTED, // seller accepted but still within cancel window
+    WORKFLOW_STATUS.DELIVERY_SEARCH,  // finding a rider
+    WORKFLOW_STATUS.DELIVERY_ASSIGNED, // rider assigned but not picked up
+    WORKFLOW_STATUS.PICKUP_READY, // seller marked ready; still allow within window
+  ];
+
+  if (!ALLOWED_WS_FOR_CANCEL.includes(ws)) {
+    const err = new Error("Order cannot be cancelled at this stage");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Atomic update — also handles null/missing workflowStatus (legacy orders still in pending)
   const updated = await Order.findOneAndUpdate(
     {
       orderId,
       customer: customerId,
-      workflowStatus: WORKFLOW_STATUS.SELLER_PENDING,
+      $or: [
+        { workflowStatus: { $in: ALLOWED_WS_FOR_CANCEL } },
+        // Null workflowStatus means order was placed but workflow not yet initialised
+        { workflowStatus: { $exists: false } },
+        { workflowStatus: null },
+      ],
     },
     {
       $set: {
-        workflowStatus: WORKFLOW_STATUS.CANCELLED,
+        workflowStatus: WORKFLOW_STATUS.USER_CANCELLED,
         status: "cancelled",
-        cancelledBy: "customer",
+        cancelledBy: "USER",
         cancelReason: reason || "Cancelled by customer",
+        cancelledAt: now,
+        isBroadcastStopped: true,
       },
     },
     { new: true },
   );
 
   if (!updated) {
-    const err = new Error("Unable to cancel");
+    const err = new Error("Unable to cancel order. It might have progressed or already been cancelled.");
     err.statusCode = 400;
     throw err;
   }
 
+  // Cleanup & Notifications
   await removeSellerTimeoutJob(orderId);
+  await removeDeliveryTimeoutJob(orderId, updated.deliverySearchMeta?.attempt || 1);
+  await retractDeliveryBroadcastForOrder(updated.orderId, null, "CANCELLED"); // Invalidate all active broadcasts
+
   await compensateOrderCancellation(updated, orderId);
-  emitOrderStatusUpdate(orderId, { workflowStatus: WORKFLOW_STATUS.CANCELLED }, updated.customer);
+
+  // Real-time updates
+  emitOrderStatusUpdate(orderId, {
+    workflowStatus: WORKFLOW_STATUS.USER_CANCELLED,
+    isBroadcastStopped: true,
+    cancelledBy: "USER",
+    cancelledAt: updated.cancelledAt,
+  }, updated.customer);
+
+  // Notify seller panel instantly
+  emitToSeller(updated.seller, {
+    event: "order:cancelled",
+    payload: {
+      orderId: updated.orderId,
+      status: WORKFLOW_STATUS.USER_CANCELLED,
+      message: "User Cancelled Order"
+    }
+  });
+
+  // Note: retractDeliveryBroadcastForOrder (called above) already emits 'delivery:broadcast:withdrawn'
+  // to all relevant delivery partner sockets — no extra step needed here.
+
   emitNotificationEvent(NOTIFICATION_EVENTS.ORDER_CANCELLED, {
     orderId: updated.orderId,
     customerId: updated.customer,
@@ -585,6 +657,7 @@ export async function customerCancelV2(customerId, orderId, reason) {
     customerMessage: "Your order has been cancelled successfully.",
     sellerMessage: `Order #${updated.orderId} was cancelled by customer.`,
   });
+
   return updated;
 }
 

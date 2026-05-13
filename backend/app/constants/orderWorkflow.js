@@ -12,6 +12,9 @@ export const WORKFLOW_STATUS = {
   OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
   DELIVERED: "DELIVERED",
   CANCELLED: "CANCELLED",
+  USER_CANCELLED: "USER_CANCELLED",
+  SELLER_CANCELLED: "SELLER_CANCELLED",
+  SYSTEM_CANCELLED: "SYSTEM_CANCELLED",
 };
 
 /** Milliseconds — override via env in services */
@@ -42,6 +45,9 @@ export function legacyStatusFromWorkflow(workflowStatus) {
     case WORKFLOW_STATUS.DELIVERED:
       return "delivered";
     case WORKFLOW_STATUS.CANCELLED:
+    case WORKFLOW_STATUS.USER_CANCELLED:
+    case WORKFLOW_STATUS.SELLER_CANCELLED:
+    case WORKFLOW_STATUS.SYSTEM_CANCELLED:
       return "cancelled";
     default:
       return "pending";

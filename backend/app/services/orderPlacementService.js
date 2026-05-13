@@ -387,6 +387,7 @@ export async function placeOrderAtomic({
         ? new Date(Date.now() + sellerTimeoutMs)
         : null;
       const orderExpiresAt = orderReservation.expiresAt || sellerPendingUntil || null;
+      const cancelWindowExpiresAt = new Date(Date.now() + (3 * 60 * 1000)); // 3 minutes
 
       await reserveStockForItems({
         items: entry.items,
@@ -429,6 +430,7 @@ export async function placeOrderAtomic({
           ? WORKFLOW_STATUS.SELLER_PENDING
           : WORKFLOW_STATUS.CREATED,
         sellerPendingExpiresAt: sellerPendingUntil,
+        cancelWindowExpiresAt,
         expiresAt: orderExpiresAt,
         stockReservation: orderReservation,
         checkoutGroupId,
