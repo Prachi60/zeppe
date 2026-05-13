@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import StoreCategorySidebar from "../components/store/StoreCategorySidebar";
 import { getCategoryImage } from "@/shared/constants/categoryImageMap";
 
-function mapProduct(product) {
+function mapProduct(product, isShopOpen = true) {
   return {
     id: product._id,
     _id: product._id,
@@ -24,6 +24,7 @@ function mapProduct(product) {
     deliveryTime: "21 min", // Dynamic delivery time placeholder
     ratings: 4.5, // Placeholder for rating
     variants: Array.isArray(product.variants) ? product.variants : [],
+    sellerIsOpen: isShopOpen !== false,
   };
 }
 
@@ -117,7 +118,7 @@ const StoreDetailPage = () => {
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    let mapped = products.map(mapProduct);
+    let mapped = products.map((p) => mapProduct(p, store?.isShopOpen));
     
     if (activeCategoryId !== "all") {
       mapped = mapped.filter(p => {
@@ -183,7 +184,10 @@ const StoreDetailPage = () => {
       {/* 2. HERO SECTION */}
       <div className="max-w-3xl mx-auto">
         {/* Banner */}
-        <div className="relative h-44 w-full overflow-hidden md:rounded-b-3xl">
+        <div className={cn(
+          "relative h-44 w-full overflow-hidden md:rounded-b-3xl",
+          store?.isShopOpen === false && "grayscale"
+        )}>
           <img 
             src={store?.shopBanner || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200"} 
             alt="Store Banner"
@@ -195,7 +199,15 @@ const StoreDetailPage = () => {
         {/* Store Profile Overlap */}
         <div className="relative px-4 -mt-12 flex flex-col items-start gap-3">
           {/* Logo */}
-          <div className="h-24 w-24 rounded-full border-[5px] border-white shadow-xl overflow-hidden bg-white">
+          <div className={cn(
+            "h-24 w-24 rounded-full border-[5px] border-white shadow-xl overflow-hidden bg-white relative",
+            store?.isShopOpen === false && "grayscale"
+          )}>
+            {store?.isShopOpen === false && (
+              <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center">
+                <span className="text-[10px] font-black text-white uppercase bg-black/60 px-2 py-0.5 rounded">Closed</span>
+              </div>
+            )}
             <img 
               src={store?.shopLogo || "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&q=80&w=200"} 
               alt="Logo"
@@ -231,7 +243,11 @@ const StoreDetailPage = () => {
               <div className="flex items-center gap-2 text-slate-500">
                 <Clock size={16} className="shrink-0" />
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold text-emerald-500">Open Now</span>
+                  {store?.isShopOpen !== false ? (
+                    <span className="text-sm font-bold text-emerald-500">Open Now</span>
+                  ) : (
+                    <span className="text-sm font-bold text-red-500">Closed</span>
+                  )}
                   <span className="text-slate-300">•</span>
                   <span className="text-sm font-semibold">MON-FRI 9 TO 5 PM</span>
                 </div>

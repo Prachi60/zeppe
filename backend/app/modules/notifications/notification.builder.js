@@ -299,15 +299,16 @@ function eventData(eventType, payload = {}) {
   const checkoutGroupId = String(payload.checkoutGroupId || "").trim() || undefined;
 
   // SELLER_IN_COMMAND: Informational notifications should not trigger mobile action buttons.
+  // Any event that is not a 'Broadcast' (which is a new offer) is considered informational.
   // We append _INFO to the eventType in the data payload to prevent the mobile app
   // from matching these to its "actionable" event list (Accept/Reject).
   let dataEventType = eventType;
-  if (
-    eventType === NOTIFICATION_EVENTS.DELIVERY_ASSIGNED ||
-    eventType === NOTIFICATION_EVENTS.ORDER_DELIVERED ||
-    eventType === NOTIFICATION_EVENTS.ORDER_READY ||
-    eventType === NOTIFICATION_EVENTS.RETURN_PICKUP_ASSIGNED
-  ) {
+  const actionableEvents = [
+    NOTIFICATION_EVENTS.NEW_DELIVERY_BROADCAST,
+    NOTIFICATION_EVENTS.NEW_RETURN_BROADCAST
+  ];
+
+  if (!actionableEvents.includes(eventType)) {
     dataEventType = `${eventType}_INFO`;
   }
 

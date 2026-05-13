@@ -23,6 +23,8 @@ const Topbar = React.memo(({ onMenuClick }) => {
     const [notifications, setNotifications] = React.useState([]);
     const [unreadCount, setUnreadCount] = React.useState(0);
     const [showNotifications, setShowNotifications] = React.useState(false);
+    const [isShopOpen, setIsShopOpen] = React.useState(true);
+    const [shopToggleLoading, setShopToggleLoading] = React.useState(false);
     const notificationRef = React.useRef(null);
 
     const isSeller = location.pathname.startsWith('/seller');
@@ -53,6 +55,38 @@ const Topbar = React.memo(({ onMenuClick }) => {
     React.useEffect(() => {
         fetchNotifications();
     }, [fetchNotifications]);
+
+    // Load initial shop status from profile
+    React.useEffect(() => {
+        if (role === 'seller') {
+            sellerApi.getProfile()
+                .then((res) => {
+                    const profile = res.data?.result ?? res.data;
+                    if (typeof profile?.isShopOpen === 'boolean') {
+                        setIsShopOpen(profile.isShopOpen);
+                    }
+                })
+                .catch(() => { });
+        }
+    }, [role]);
+
+    const handleToggleShop = React.useCallback(async () => {
+        if (shopToggleLoading) return;
+        setShopToggleLoading(true);
+        const prev = isShopOpen;
+        setIsShopOpen(!prev); // optimistic
+        try {
+            const res = await sellerApi.toggleShopStatus();
+            const updated = res.data?.result?.isShopOpen;
+            if (typeof updated === 'boolean') setIsShopOpen(updated);
+            toast.success(updated ? '🟢 Shop is now Open' : '🔴 Shop is now Closed — customers cannot add your products to cart.');
+        } catch {
+            setIsShopOpen(prev); // revert on error
+            toast.error('Failed to update shop status');
+        } finally {
+            setShopToggleLoading(false);
+        }
+    }, [isShopOpen, shopToggleLoading]);
 
     // Handle Click Outside
     React.useEffect(() => {
@@ -128,7 +162,33 @@ const Topbar = React.memo(({ onMenuClick }) => {
                 </form>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 md:space-x-4">
+                {/* Shop Toggle (Sellers only) */}
+                {role === 'seller' && (
+                    <button
+                        onClick={handleToggleShop}
+                        disabled={shopToggleLoading}
+                        className={cn(
+                            "flex items-center gap-2 px-2.5 py-1.5 rounded-xl border font-bold text-[10px] transition-all duration-300 shadow-sm shrink-0",
+                            isShopOpen
+                                ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                                : "bg-red-50 border-red-200 text-red-700 hover:bg-red-100",
+                            shopToggleLoading && "opacity-60 cursor-not-allowed"
+                        )}
+                    >
+                        <div className={cn(
+                            "relative w-7 h-3.5 rounded-full transition-colors duration-300",
+                            isShopOpen ? "bg-emerald-500" : "bg-red-400"
+                        )}>
+                            <div className={cn(
+                                "absolute top-0.5 h-2.5 w-2.5 rounded-full bg-white shadow transition-transform duration-300",
+                                isShopOpen ? "translate-x-4" : "translate-x-0.5"
+                            )} />
+                        </div>
+                        <span className="hidden sm:inline uppercase tracking-wider">{isShopOpen ? 'Open' : 'Closed'}</span>
+                    </button>
+                )}
+
                 <div className="relative" ref={notificationRef}>
                     <button
                         onClick={() => setShowNotifications(!showNotifications)}

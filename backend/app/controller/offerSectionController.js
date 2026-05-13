@@ -26,11 +26,15 @@ export const getPublicOfferSections = async (req, res) => {
       .sort({ order: 1, createdAt: 1 })
       .populate("categoryIds", "name slug image")
       .populate("categoryId", "name slug image")
-      .populate("sellerIds", "shopName name logo")
-      .populate(
-        "productIds",
-        "name slug price salePrice mainImage stock unit sellerId",
-      )
+      .populate("sellerIds", "shopName name logo isShopOpen")
+      .populate({
+        path: "productIds",
+        select: "name slug price salePrice mainImage stock unit sellerId",
+        populate: {
+          path: "sellerId",
+          select: "isShopOpen",
+        },
+      })
       .lean();
 
     const filteredSections = sections.map((section) => {
@@ -42,10 +46,15 @@ export const getPublicOfferSections = async (req, res) => {
         : [];
 
       const productIds = Array.isArray(section.productIds)
-        ? section.productIds.filter((product) => {
-            const sid = String(product?.sellerId?._id || product?.sellerId || "");
-            return sid && nearbySellerSet.has(sid);
-          })
+        ? section.productIds
+            .filter((product) => {
+              const sid = String(product?.sellerId?._id || product?.sellerId || "");
+              return sid && nearbySellerSet.has(sid);
+            })
+            .map((p) => ({
+              ...p,
+              sellerIsOpen: p.sellerId?.isShopOpen !== false,
+            }))
         : [];
 
       return {

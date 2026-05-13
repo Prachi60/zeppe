@@ -4,6 +4,7 @@ import { MapPin, Search, Star, Store } from "lucide-react";
 import { customerApi } from "../services/customerApi";
 import { useLocation as useAppLocation } from "../context/LocationContext";
 import { formatStoreAddress, resolveStoreLogo } from "../utils/storeVisuals";
+import { cn } from "@/lib/utils";
 
 function resolveStoreRating(store = {}) {
   const candidates = [
@@ -140,17 +141,29 @@ const ShopByStorePage = () => {
               const address = formatStoreAddress(store);
               const rating = resolveStoreRating(store);
               const initial = (storeName || "S")[0].toUpperCase();
+              const isShopClosed = store.isShopOpen === false;
 
               return (
                 <button
                   key={store._id}
                   type="button"
-                  onClick={() => navigate(`/stores/${store._id}`)}
-                  className="group w-full flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 active:scale-[0.99]"
+                  onClick={() => {
+                    if (isShopClosed) return;
+                    navigate(`/stores/${store._id}`);
+                  }}
+                  className={cn(
+                    "group w-full flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-200 hover:shadow-md hover:border-slate-300 active:scale-[0.99]",
+                    isShopClosed && "grayscale opacity-80 cursor-not-allowed"
+                  )}
                 >
                   {/* Store Logo */}
                   <div className="relative flex-shrink-0">
-                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
+                    <div className="h-14 w-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center relative">
+                      {isShopClosed && (
+                        <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center">
+                          <span className="text-[8px] font-black text-white uppercase tracking-tighter bg-black/60 px-1 py-0.5 rounded">Closed</span>
+                        </div>
+                      )}
                       {storeLogo ? (
                         <img
                           src={storeLogo}

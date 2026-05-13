@@ -44,6 +44,7 @@ const KuikloCard = React.memo(({ product }) => {
         (item) => (item.id || item._id) === productId
     );
     const quantity = cartItem ? cartItem.quantity : 0;
+    const isShopClosed = product.sellerIsOpen === false;
 
     const hasDiscount = product.originalPrice && product.originalPrice > product.price;
     const discountPct = hasDiscount
@@ -51,11 +52,17 @@ const KuikloCard = React.memo(({ product }) => {
         : 0;
 
     const handleCardClick = (e) => {
+        if (isShopClosed) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
         if (openProduct) { e.preventDefault(); openProduct(product); }
     };
 
     const handleAdd = async (e) => {
         e.preventDefault(); e.stopPropagation();
+        if (isShopClosed) return;
         const success = await addToCart({ ...product });
         if (success && imageRef.current) {
             animateAddToCart(imageRef.current.getBoundingClientRect(), product.image || product.mainImage);
@@ -79,10 +86,21 @@ const KuikloCard = React.memo(({ product }) => {
 
     return (
         <motion.div
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: isShopClosed ? 1 : 0.98 }}
             onClick={handleCardClick}
-            className="flex flex-col cursor-pointer bg-white overflow-hidden relative pb-4 border-b border-r border-[#f1f3f6]"
+            className={cn(
+                "flex flex-col bg-white overflow-hidden relative pb-4 border-b border-r border-[#f1f3f6]",
+                isShopClosed ? "grayscale cursor-not-allowed" : "cursor-pointer"
+            )}
         >
+            {/* Shop Closed overlay badge */}
+            {isShopClosed && (
+                <div className="absolute inset-x-0 top-1/3 z-30 flex justify-center">
+                    <span className="bg-black/70 text-white text-[8px] font-bold px-2 py-0.5 rounded-full tracking-wide">
+                        Shop Closed
+                    </span>
+                </div>
+            )}
             {/* Image Box Container */}
             <div className="relative w-full pt-[100%] bg-white group">
                 {/* Heart Icon top right */}
@@ -111,7 +129,7 @@ const KuikloCard = React.memo(({ product }) => {
 
                 {/* ADD Button slightly overlapping image bottom right */}
                 <div className="absolute -bottom-3 right-2 shadow-[0_2px_8px_rgba(0,0,0,0.08)] rounded-[6px] bg-white border border-[#e0e0e0] z-20">
-                    {quantity > 0 ? (
+                    {!isShopClosed && quantity > 0 ? (
                         <div className="flex items-center h-[28px]" style={{ minWidth: '64px' }}>
                             <button
                                 onClick={handleDec}
@@ -129,9 +147,13 @@ const KuikloCard = React.memo(({ product }) => {
                         </div>
                     ) : (
                         <motion.button
-                            whileTap={{ scale: 0.92 }}
+                            whileTap={{ scale: isShopClosed ? 1 : 0.92 }}
                             onClick={handleAdd}
-                            className="text-[11px] font-black tracking-wide text-[#1A1A1A] h-[28px] px-4 hover:bg-gray-50 transition-all uppercase rounded-[6px]"
+                            disabled={isShopClosed}
+                            className={cn(
+                                "text-[11px] font-black tracking-wide text-[#1A1A1A] h-[28px] px-4 hover:bg-gray-50 transition-all uppercase rounded-[6px]",
+                                isShopClosed && "opacity-40"
+                            )}
                         >
                             ADD
                         </motion.button>

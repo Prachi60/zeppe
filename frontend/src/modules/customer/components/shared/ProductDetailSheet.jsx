@@ -187,12 +187,21 @@ const ProductDetailSheet = () => {
         );
     };
 
-    const handleAddToCart = () => {
-        addToCart({
+    const isShopClosed = selectedProduct?.sellerIsOpen === false;
+
+    const handleAddToCart = async () => {
+        if (isShopClosed) {
+            showToast("This shop is currently not accepting orders.", 'error');
+            return;
+        }
+        const success = await addToCart({
             ...selectedProduct,
             variantSku: String(selectedVariant?.sku || selectedVariant?.name || "").trim(),
         });
-        showToast(`${selectedProduct.name} added to cart`, 'success');
+        
+        if (success) {
+            showToast(`${selectedProduct.name} added to cart`, 'success');
+        }
     };
 
     const handleIncrement = () =>
@@ -486,13 +495,17 @@ const ProductDetailSheet = () => {
                                                         </div>
                                                     ) : (
                                                     <motion.button
-                                                        whileHover={{ scale: 1.02, y: -2 }}
-                                                        whileTap={{ scale: 0.98 }}
+                                                        whileHover={{ scale: isShopClosed ? 1 : 1.02, y: isShopClosed ? 0 : -2 }}
+                                                        whileTap={{ scale: isShopClosed ? 1 : 0.98 }}
                                                         onClick={handleAddToCart}
-                                                        className="bg-gradient-to-r from-[#e88a31] to-[#f59e3b] text-white h-12 px-8 rounded-xl font-black text-[13px] flex items-center gap-2 shadow-lg shadow-orange-100 hover:shadow-orange-200 transition-all uppercase tracking-widest border border-white/20"
+                                                        disabled={isShopClosed}
+                                                        className={cn(
+                                                            "bg-gradient-to-r from-[#e88a31] to-[#f59e3b] text-white h-12 px-8 rounded-xl font-black text-[13px] flex items-center gap-2 shadow-lg shadow-orange-100 hover:shadow-orange-200 transition-all uppercase tracking-widest border border-white/20",
+                                                            isShopClosed && "grayscale opacity-50 cursor-not-allowed shadow-none"
+                                                        )}
                                                     >
                                                         <ShoppingBag size={16} strokeWidth={3} />
-                                                        Add to Cart
+                                                        {isShopClosed ? "Shop Closed" : "Add to Cart"}
                                                     </motion.button>
                                                     )}
                                                 </div>
@@ -1092,7 +1105,8 @@ const ProductDetailSheet = () => {
                                 <div className="flex items-center bg-white border-2 border-[#f59931] rounded-xl p-1 justify-between shadow-sm min-w-[100px] h-10">
                                     <button
                                         onClick={handleDecrement}
-                                        className="p-1 text-[#f59931] active:scale-90 transition-transform">
+                                        disabled={isShopClosed}
+                                        className={cn("p-1 text-[#f59931] active:scale-90 transition-transform", isShopClosed && "opacity-50")}>
                                         <Minus size={14} strokeWidth={3} />
                                     </button>
                                     <span className="text-sm font-black text-slate-800 min-w-[20px] text-center">
@@ -1100,15 +1114,20 @@ const ProductDetailSheet = () => {
                                     </span>
                                     <button
                                         onClick={handleIncrement}
-                                        className="p-1 text-[#f59931] active:scale-90 transition-transform">
+                                        disabled={isShopClosed}
+                                        className={cn("p-1 text-[#f59931] active:scale-90 transition-transform", isShopClosed && "opacity-50")}>
                                         <Plus size={14} strokeWidth={3} />
                                     </button>
                                 </div>
                             ) : (
                                 <button
                                     onClick={handleAddToCart}
-                                    className="px-6 py-2 bg-white border-2 border-[#f59931] hover:bg-orange-50 text-[#f59931] font-black text-sm rounded-xl transition-colors shadow-sm min-w-[100px] h-10 flex items-center justify-center">
-                                    ADD
+                                    disabled={isShopClosed}
+                                    className={cn(
+                                        "px-6 py-2 bg-white border-2 border-[#f59931] hover:bg-orange-50 text-[#f59931] font-black text-sm rounded-xl transition-colors shadow-sm min-w-[100px] h-10 flex items-center justify-center",
+                                        isShopClosed && "grayscale opacity-50 cursor-not-allowed"
+                                    )}>
+                                    {isShopClosed ? "CLOSED" : "ADD"}
                                 </button>
                             )}
                         </div>

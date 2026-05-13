@@ -4,13 +4,19 @@ const ticketSchema = new mongoose.Schema(
     {
         userId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
+            refPath: "userModel",
             required: true,
         },
         userType: {
             type: String,
             enum: ["Customer", "Seller", "Rider"],
             required: true,
+        },
+        userModel: {
+            type: String,
+            required: true,
+            enum: ["User", "Seller", "Delivery"],
+            default: "User"
         },
         subject: {
             type: String,

@@ -245,7 +245,7 @@ export const getProducts = async (req, res) => {
       .populate("headerId", "name")
       .populate("categoryId", "name")
       .populate("subcategoryId", "name")
-      .populate("sellerId", "shopName")
+      .populate("sellerId", "shopName isShopOpen")
       .sort(sortQuery)
       .skip(skip)
       .limit(limit)
@@ -253,8 +253,13 @@ export const getProducts = async (req, res) => {
 
     const total = await Product.countDocuments(query);
 
+    const mappedProducts = products.map((p) => ({
+      ...p,
+      sellerIsOpen: p.sellerId?.isShopOpen !== false,
+    }));
+
     return handleResponse(res, 200, "Products fetched successfully", {
-      items: products,
+      items: mappedProducts,
       page,
       limit,
       total,
@@ -630,7 +635,7 @@ export const getProductById = async (req, res) => {
           .populate("headerId", "name")
           .populate("categoryId", "name")
           .populate("subcategoryId", "name")
-          .populate("sellerId", "shopName")
+          .populate("sellerId", "shopName isShopOpen")
           .lean(),
       getTTL("product"),
     );
@@ -646,7 +651,12 @@ export const getProductById = async (req, res) => {
       }
     }
 
-    return handleResponse(res, 200, "Product details fetched", product);
+    const mappedProduct = {
+      ...product,
+      sellerIsOpen: product.sellerId?.isShopOpen !== false,
+    };
+
+    return handleResponse(res, 200, "Product details fetched", mappedProduct);
   } catch (error) {
     return handleResponse(res, 500, error.message);
   }

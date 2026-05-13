@@ -240,10 +240,13 @@ const Dashboard = () => {
 
   return (
     <div className="ds-section-spacing relative">
-      <PageHeader
-        title="Dashboard"
-        description="Welcome back! Here's what's happening with your store today."
-      />
+      {/* Page Header + Shop Toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+        <PageHeader
+          title="Dashboard"
+          description="Welcome back! Here's what's happening with your store today."
+        />
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

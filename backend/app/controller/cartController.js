@@ -41,21 +41,32 @@ export const addToCart = async (req, res) => {
       cart = new Cart({ customerId, items: [] });
     }
 
-    // Single-Store Restriction Check
-    if (cart.items.length > 0) {
+    // Single-Store Restriction & Shop Status Check
+    if (cart.items.length > 0 || true) {
       const [firstProduct, newProduct] = await Promise.all([
-        Product.findById(cart.items[0].productId).select("sellerId").lean(),
-        Product.findById(productId).select("sellerId").lean(),
+        cart.items.length > 0 
+          ? Product.findById(cart.items[0].productId).select("sellerId").lean()
+          : Promise.resolve(null),
+        Product.findById(productId).populate("sellerId", "isShopOpen").lean(),
       ]);
 
       if (!newProduct) {
         return handleResponse(res, 404, "Product not found");
       }
 
-      const existingSellerId = firstProduct?.sellerId;
-      const newSellerId = newProduct?.sellerId;
+      // Shop Status Check
+      if (newProduct.sellerId?.isShopOpen === false) {
+        return handleResponse(
+          res,
+          400,
+          "This shop is currently not accepting orders. The seller has temporarily closed their store.",
+        );
+      }
 
-      if (existingSellerId && newSellerId && String(existingSellerId) !== String(newSellerId)) {
+      const existingSellerId = firstProduct?.sellerId;
+      const newSellerId = newProduct?.sellerId?._id || newProduct?.sellerId;
+
+      if (cart.items.length > 0 && existingSellerId && newSellerId && String(existingSellerId) !== String(newSellerId)) {
         return handleResponse(
           res,
           400,
@@ -109,6 +120,17 @@ export const updateQuantity = async (req, res) => {
     );
 
     if (itemIndex > -1) {
+      // Check Shop Status on quantity increase
+      if (quantity > cart.items[itemIndex].quantity) {
+        const product = await Product.findById(productId).populate("sellerId", "isShopOpen").lean();
+        if (product?.sellerId?.isShopOpen === false) {
+          return handleResponse(
+            res,
+            400,
+            "This shop is currently not accepting orders. You cannot increase the quantity of items from a closed shop.",
+          );
+        }
+      }
       cart.items[itemIndex].quantity = quantity;
       if (cart.items[itemIndex].quantity <= 0) {
         cart.items.splice(itemIndex, 1);

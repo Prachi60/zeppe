@@ -56,6 +56,7 @@ const SupportTickets = () => {
                     id: t._id,
                     ticketCode: t._id.slice(-6).toUpperCase(),
                     user: t.userId?.name || "Unknown",
+                    phone: t.userId?.phone || "N/A",
                     date: new Date(t.createdAt).toLocaleString(),
                     messages: (t.messages || []).map((m, i) => ({
                         ...m,
@@ -183,7 +184,7 @@ const SupportTickets = () => {
                                         {t.userType === 'Rider' && <HiOutlineTruck className="h-3 w-3" />}
                                     </div>
                                     <span className={cn("text-[10px] font-bold", selectedTicket?.id === t.id ? "text-white/80" : "text-slate-500")}>
-                                        {t.user} • {t.userType}
+                                        {t.user} ({t.phone}) • {t.userType}
                                     </span>
                                 </div>
                             </button>

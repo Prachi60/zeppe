@@ -1,14 +1,70 @@
 import React from 'react';
 import { X, MessageCircle, Phone, ChevronRight, AlertCircle, PackageX, Truck, PlusCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const HelpModal = ({ isOpen, onClose }) => {
+const HelpModal = ({ isOpen, onClose, order }) => {
+    const navigate = useNavigate();
+
     const issues = [
-        { icon: PackageX, label: 'Items missing or incorrect', sub: 'Get a refund or replacement' },
-        { icon: AlertCircle, label: 'Item quality issue', sub: 'Report damaged or expired items' },
-        { icon: Truck, label: 'Delivery delay', sub: 'Track your order status' },
+        { 
+            icon: PackageX, 
+            label: 'Items missing or incorrect', 
+            sub: 'Get a refund or replacement',
+            onClick: () => navigate('/support', { 
+                state: { 
+                    subject: `Items missing/incorrect: Order #${order?.orderId}`,
+                    description: `Order ID: ${order?.orderId}\nItems: ${order?.items?.map(i => i.name).join(', ')}\n\nPlease describe the issue...`,
+                    autoOpen: true
+                } 
+            })
+        },
+        { 
+            icon: AlertCircle, 
+            label: 'Item quality issue', 
+            sub: 'Report damaged or expired items',
+            onClick: () => navigate('/support', { 
+                state: { 
+                    subject: `Quality Issue: Order #${order?.orderId}`,
+                    description: `Order ID: ${order?.orderId}\nItems: ${order?.items?.map(i => i.name).join(', ')}\n\nPlease describe the quality issue...`,
+                    autoOpen: true
+                } 
+            })
+        },
+        { 
+            icon: Truck, 
+            label: 'Delivery delay', 
+            sub: 'Track your order status',
+            onClick: () => {
+                onClose();
+                // If it's on OrderDetailPage, it will just scroll to top or tracking map
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        },
     ];
+
+    const handleCall = () => {
+        window.location.href = "tel:+916203858268";
+    };
+
+    const handleRaiseTicket = () => {
+        navigate('/support', { 
+            state: { 
+                subject: `Support Request: Order #${order?.orderId}`,
+                description: `Order ID: ${order?.orderId}\n`,
+                autoOpen: true
+            } 
+        });
+    };
+
+    const handleChat = () => {
+        navigate('/chat', { 
+            state: { 
+                orderId: order?.orderId,
+                initialMessage: `Hi, I need help with my order #${order?.orderId}`
+            } 
+        });
+    };
 
     return (
         <AnimatePresence>
@@ -43,7 +99,11 @@ const HelpModal = ({ isOpen, onClose }) => {
 
                                 <div className="space-y-3 mb-8">
                                     {issues.map((item, idx) => (
-                                        <button key={idx} className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/50 transition-all group">
+                                        <button 
+                                            key={idx} 
+                                            onClick={item.onClick}
+                                            className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/50 transition-all group"
+                                        >
                                             <div className="flex items-center gap-4">
                                                 <div className="h-10 w-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 group-hover:bg-white group-hover:text-[#45B0E2] transition-colors">
                                                     <item.icon size={20} />
@@ -59,13 +119,22 @@ const HelpModal = ({ isOpen, onClose }) => {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Link to="/support" className="col-span-2 py-3.5 rounded-xl border-2 border-[#45B0E2] text-[#45B0E2] font-bold flex items-center justify-center gap-2 hover:bg-brand-50 transition-colors shadow-lg shadow-brand-50">
+                                    <button 
+                                        onClick={handleRaiseTicket}
+                                        className="col-span-2 py-3.5 rounded-xl border-2 border-[#45B0E2] text-[#45B0E2] font-bold flex items-center justify-center gap-2 hover:bg-brand-50 transition-colors shadow-lg shadow-brand-50"
+                                    >
                                         <PlusCircle size={18} /> Raise a Ticket
-                                    </Link>
-                                    <Link to="/chat" className="py-3.5 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors">
+                                    </button>
+                                    <button 
+                                        onClick={handleChat}
+                                        className="py-3.5 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
+                                    >
                                         <MessageCircle size={18} /> Chat Us
-                                    </Link>
-                                    <button className="py-3.5 rounded-xl border border-slate-200 text-slate-700 font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
+                                    </button>
+                                    <button 
+                                        onClick={handleCall}
+                                        className="py-3.5 rounded-xl border border-slate-200 text-slate-700 font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+                                    >
                                         <Phone size={18} /> Call Us
                                     </button>
                                 </div>

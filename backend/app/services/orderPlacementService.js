@@ -4,6 +4,7 @@ import CheckoutGroup from "../models/checkoutGroup.js";
 import Order from "../models/order.js";
 import User from "../models/customer.js";
 import Transaction from "../models/transaction.js";
+import Seller from "../models/seller.js";
 import { WORKFLOW_STATUS, DEFAULT_SELLER_TIMEOUT_MS } from "../constants/orderWorkflow.js";
 import { ORDER_PAYMENT_STATUS } from "../constants/finance.js";
 import { freezeFinancialSnapshot } from "./finance/orderFinanceService.js";
@@ -325,6 +326,16 @@ export async function placeOrderAtomic({
       customerId,
       session,
     });
+
+    // 2. Final Shop Status Guard
+    for (const entry of pricingSnapshot.sellerBreakdownEntries) {
+      const seller = await Seller.findById(entry.sellerId).session(session).select("isShopOpen").lean();
+      if (seller?.isShopOpen === false) {
+        const error = new Error("The shop is currently closed and not accepting orders. Please try again later.");
+        error.statusCode = 400;
+        throw error;
+      }
+    }
 
     const checkoutGroupId = await generateUniqueCheckoutGroupId({ session });
     const checkoutReservation = computeStockReservationWindow(paymentMode);

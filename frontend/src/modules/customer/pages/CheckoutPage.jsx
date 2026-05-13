@@ -709,6 +709,16 @@ const CheckoutPage = () => {
   ]);
 
   const handlePlaceOrder = async () => {
+    // Guard: block order if seller's shop is closed
+    const hasClosedShopItem = cart.some((item) => item.sellerIsOpen === false);
+    if (hasClosedShopItem) {
+      showToast(
+        "This shop is currently closed and cannot accept orders. Please try again later.",
+        "error",
+      );
+      return;
+    }
+
     setIsPlacingOrder(true);
     try {
         const orderData = {
@@ -957,6 +967,13 @@ const CheckoutPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-32 font-sans">
+      {/* Shop Closed Warning Banner */}
+      {cart.some((item) => item.sellerIsOpen === false) && (
+        <div className="bg-red-500 text-white text-sm font-semibold text-center py-2 px-4 flex items-center justify-center gap-2">
+          <span>🔴</span>
+          <span>This shop is currently closed. You cannot place this order right now.</span>
+        </div>
+      )}
       {/* Client Reference Header: Clean White */}
       <div className="bg-white border-b border-slate-100 pt-safe pb-2 relative z-10">
         <div className="max-w-7xl mx-auto px-4 md:px-8">

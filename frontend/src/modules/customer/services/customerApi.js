@@ -111,6 +111,7 @@ export const customerApi = {
   submitReview: (data) => axiosInstance.post("/reviews/submit", data),
   createTicket: (data) => axiosInstance.post("/tickets/create", data),
   getMyTickets: () => getWithDedupe("/tickets/my-tickets"),
+  replyToTicket: (id, data) => axiosInstance.post(`/tickets/reply/${id}`, data),
 
   // Experience sections (home / header pages)
   getExperienceSections: (params) => getWithDedupe("/experience", params),

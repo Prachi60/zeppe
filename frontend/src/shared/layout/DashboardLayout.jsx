@@ -299,11 +299,11 @@ const DashboardLayout = ({ children, navItems, title }) => {
     }, [newOrderAlert]);
 
     const handleAcceptOrder = async (orderId) => {
+        setNewOrderAlert(null); // Stop sound immediately
+        newOrderAlertRef.current = null;
         try {
             await sellerApi.updateOrderStatus(orderId, { status: 'confirmed' });
             toast.success(`Order #${orderId} Accepted!`);
-            setNewOrderAlert(null);
-            newOrderAlertRef.current = null;
             // Check for next order in queue
             setTimeout(() => refreshOrders(), 500);
         } catch (error) {
@@ -315,11 +315,11 @@ const DashboardLayout = ({ children, navItems, title }) => {
     };
 
     const handleDeclineOrder = async (orderId) => {
+        setNewOrderAlert(null); // Stop sound immediately
+        newOrderAlertRef.current = null;
         try {
             await sellerApi.updateOrderStatus(orderId, { status: 'cancelled' });
             toast.error(`Order #${orderId} Declined`);
-            setNewOrderAlert(null);
-            newOrderAlertRef.current = null;
             // Check for next order in queue
             setTimeout(() => refreshOrders(), 500);
         } catch (error) {

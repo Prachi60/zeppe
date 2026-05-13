@@ -68,6 +68,7 @@ const ProductCard = React.memo(
     const productId = product.id || product._id;
     const variantKey = String(defaultVariant?.key || "").trim();
     const cartKey = `${productId}::${variantKey || ""}`;
+    const isShopClosed = product.sellerIsOpen === false;
 
     const cartItem = React.useMemo(
       () =>
@@ -83,12 +84,17 @@ const ProductCard = React.memo(
 
     const handleProductClick = React.useCallback(
       (e) => {
+        if (isShopClosed) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         if (openProduct) {
           e.preventDefault();
           openProduct(product);
         }
       },
-      [openProduct, product],
+      [openProduct, product, isShopClosed],
     );
 
     const toggleWishlist = React.useCallback(
@@ -117,6 +123,11 @@ const ProductCard = React.memo(
         e.preventDefault();
         e.stopPropagation();
 
+        if (isShopClosed) {
+          showToast("This shop is currently closed. Please check back later.", "error");
+          return;
+        }
+
         const success = await addToCart({
           ...product,
           variantSku: variantKey,
@@ -130,7 +141,7 @@ const ProductCard = React.memo(
           );
         }
       },
-      [animateAddToCart, product, addToCart, variantKey, defaultVariant?.name],
+      [animateAddToCart, product, addToCart, variantKey, defaultVariant?.name, isShopClosed, showToast],
     );
 
     const handleIncrement = React.useCallback(
@@ -172,10 +183,19 @@ const ProductCard = React.memo(
           whileTap={{ scale: 0.98 }}
           className={cn(
             "group relative flex flex-col w-full max-w-[110px] h-full bg-white rounded-xl overflow-hidden transition-all duration-300 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-gray-100",
+            isShopClosed && "grayscale cursor-not-allowed",
             className
           )}
           onClick={handleProductClick}
         >
+          {/* Shop Closed overlay badge */}
+          {isShopClosed && (
+            <div className="absolute inset-x-0 top-1/3 z-30 flex justify-center">
+              <span className="bg-black/70 text-white text-[8px] font-bold px-2 py-0.5 rounded-full tracking-wide">
+                Shop Closed
+              </span>
+            </div>
+          )}
           {/* Top Section: Image + Badge + Floating ADD */}
           <div className="relative aspect-square w-full p-1 bg-[#f2f2f2] overflow-visible">
             {/* Discount Badge - Orange with White Gradient */}
@@ -206,9 +226,9 @@ const ProductCard = React.memo(
               />
             </div>
 
-            {/* Floating ADD Button - Fixed Clipping & Orange Border */}
+            {/* Floating ADD Button */}
             <div className="absolute bottom-0 right-0 z-20">
-              {quantity > 0 ? (
+              {!isShopClosed && quantity > 0 ? (
                 <div className="flex items-center bg-[#f59931] text-white rounded-xl h-8 min-w-[70px] shadow-lg overflow-hidden">
                   <button onClick={handleDecrement} className="px-2 py-1 text-white hover:bg-orange-600 transition-colors"><Minus size={11} strokeWidth={3} /></button>
                   <span className="flex-1 text-center text-[13px] font-bold text-white">{quantity}</span>
@@ -217,7 +237,11 @@ const ProductCard = React.memo(
               ) : (
                 <button
                   onClick={handleAddToCart}
-                  className="bg-white text-[#f59931] border-2 border-[#f59931] h-8 px-3.5 font-bold text-xs rounded-xl shadow-md hover:bg-[#f59931] hover:text-white transition-all active:scale-95 flex items-center justify-center"
+                  disabled={isShopClosed}
+                  className={cn(
+                    "bg-white text-[#f59931] border-2 border-[#f59931] h-8 px-3.5 font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center",
+                    isShopClosed ? "opacity-40 cursor-not-allowed" : "hover:bg-[#f59931] hover:text-white"
+                  )}
                 >
                   Add
                 </button>
@@ -281,9 +305,18 @@ const ProductCard = React.memo(
         whileTap={{ scale: 0.97 }}
         className={cn(
           "group relative flex h-full w-full max-w-[110px] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-all duration-300 hover:shadow-[0_12px_30_rgba(0,0,0,0.1)] hover:border-orange-100",
+          isShopClosed && "grayscale cursor-not-allowed",
           className,
         )}
         onClick={handleProductClick}>
+        {/* Shop Closed overlay badge */}
+        {isShopClosed && (
+          <div className="absolute inset-x-0 top-1/3 z-30 flex justify-center">
+            <span className="bg-black/70 text-white text-[8px] font-bold px-2 py-0.5 rounded-full tracking-wide">
+              Shop Closed
+            </span>
+          </div>
+        )}
         {/* Top Image Section */}
         <div
           className={cn(
@@ -452,7 +485,7 @@ const ProductCard = React.memo(
 
           {/* ADD Button - Absolute Corner */}
           <div className="absolute bottom-0 right-0 z-20">
-            {quantity > 0 ? (
+            {!isShopClosed && quantity > 0 ? (
               <div
                 className={cn(
                   "flex items-center bg-[#f59931] text-white rounded-tl-xl p-0.5 justify-between shadow-md",
@@ -474,11 +507,13 @@ const ProductCard = React.memo(
               </div>
             ) : (
               <motion.button
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: isShopClosed ? 1 : 0.95 }}
                 onClick={handleAddToCart}
+                disabled={isShopClosed}
                 className={cn(
                   "bg-white text-[#f59931] border-2 border-[#f59931] rounded-tl-xl font-bold shadow-md transition-all flex items-center justify-center",
-                  compact ? "h-7 px-2.5 text-xs" : "h-8 px-3.5 text-xs"
+                  compact ? "h-7 px-2.5 text-xs" : "h-8 px-3.5 text-xs",
+                  isShopClosed && "opacity-40 cursor-not-allowed"
                 )}>
                 Add
               </motion.button>

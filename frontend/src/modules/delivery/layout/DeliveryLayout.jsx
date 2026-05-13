@@ -541,24 +541,26 @@ const DeliveryLayout = () => {
       setActiveOrder(null);
       return;
     }
+
+    const orderId = activeOrder.id; // Capture ID before clearing state
     acceptInFlightRef.current = true;
     setIsAcceptingOrder(true);
+    setActiveOrder(null); // Stop sound and hide modal immediately
+
     try {
-      console.log("Delivery Alert - Accepting order:", activeOrder.id);
+      console.log("Delivery Alert - Accepting order:", orderId);
       const idem =
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
           : `${Date.now()}`;
-      if (activeOrder.isReturnPickup) {
-        await deliveryApi.acceptReturnPickup(activeOrder.id);
+      if (activeOrder?.isReturnPickup) {
+        await deliveryApi.acceptReturnPickup(orderId);
       } else {
-        await deliveryApi.acceptOrder(activeOrder.id, idem);
+        await deliveryApi.acceptOrder(orderId, idem);
       }
       toast.success("Order accepted!");
-      const orderId = activeOrder.id;
       shownOrderIdsRef.current = new Set(shownOrderIdsRef.current).add(orderId);
       markIncomingOrderHandled(orderId);
-      setActiveOrder(null);
       navigate(`/delivery/order-details/${orderId}`);
     } catch (error) {
       console.error("Delivery Alert - Accept failed:", error);
@@ -566,7 +568,7 @@ const DeliveryLayout = () => {
         error.response?.data?.message ||
         (typeof error.response?.data === "string" ? error.response.data : null);
       toast.error(msg || "Failed to accept order");
-      setActiveOrder(null);
+      // Note: We don't restore activeOrder here to avoid annoying loops if it failed
     } finally {
       acceptInFlightRef.current = false;
       setIsAcceptingOrder(false);

@@ -151,6 +151,15 @@ export const CartProvider = ({ children }) => {
     const key = `${id}::${variantSku || ""}`;
     const { price, salePrice, variantName } = resolveVariantPricing(product, variantSku);
 
+    // Shop Closed Guard
+    if (product.sellerIsOpen === false) {
+      toast.error("This shop is currently not accepting orders.", {
+        description: "The seller has temporarily closed their store.",
+        duration: 4000,
+      });
+      return false;
+    }
+
     // Single-Store Restriction Check
     if (cart.length > 0) {
       const getSellerId = (p) => {
@@ -216,6 +225,10 @@ export const CartProvider = ({ children }) => {
         .catch(async (error) => {
           pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
           console.error("Error adding to cart on backend", error);
+          
+          const errorMessage = error.response?.data?.message || "Failed to add item to cart";
+          toast.error(errorMessage);
+
           if (pendingRequestsRef.current === 0) {
             await fetchCart();
           }
@@ -250,6 +263,10 @@ export const CartProvider = ({ children }) => {
       } catch (error) {
         pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
         console.error("Error removing from cart on backend", error);
+
+        const errorMessage = error.response?.data?.message || "Failed to remove item";
+        toast.error(errorMessage);
+
         if (pendingRequestsRef.current === 0) {
           await fetchCart();
         }
@@ -299,6 +316,10 @@ export const CartProvider = ({ children }) => {
       } catch (error) {
         pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
         console.error("Error updating quantity on backend", error);
+
+        const errorMessage = error.response?.data?.message || "Failed to update quantity";
+        toast.error(errorMessage);
+
         if (pendingRequestsRef.current === 0) {
           await fetchCart();
         }

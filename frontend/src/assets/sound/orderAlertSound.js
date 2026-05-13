@@ -1,5 +1,5 @@
 export const orderAlertSoundUrl = new URL(
-  "./WhatsApp Audio 2026-05-12 at 15.31.43.mpeg",
+  "./seller_alert.mp3",
   import.meta.url,
 ).href;
 

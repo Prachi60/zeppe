@@ -286,7 +286,7 @@ export const getPublicSellerById = async (req, res) => {
     const { lat, lng } = req.query;
 
     const seller = await Seller.findById(id)
-      .select("shopName shopLogo shopBanner address locality city state location isActive isVerified serviceRadius")
+      .select("shopName shopLogo shopBanner address locality city state location isActive isVerified serviceRadius isShopOpen")
       .lean();
 
     if (!seller) {
@@ -310,6 +310,30 @@ export const getPublicSellerById = async (req, res) => {
       200,
       "Seller details fetched successfully",
       seller,
+    );
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
+/* ===============================
+   TOGGLE SHOP STATUS (Seller)
+================================ */
+export const toggleShopStatus = async (req, res) => {
+  try {
+    const seller = await Seller.findById(req.user.id);
+    if (!seller) {
+      return handleResponse(res, 404, "Seller not found");
+    }
+
+    seller.isShopOpen = !seller.isShopOpen;
+    await seller.save();
+
+    return handleResponse(
+      res,
+      200,
+      seller.isShopOpen ? "Shop is now open" : "Shop is now closed",
+      { isShopOpen: seller.isShopOpen },
     );
   } catch (error) {
     return handleResponse(res, 500, error.message);

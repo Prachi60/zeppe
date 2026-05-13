@@ -5,7 +5,7 @@ import {
     sendSellerSignupOtp,
     verifySellerSignupOtp,
 } from "../controller/sellerAuthController.js";
-import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers, getPublicSellerById } from "../controller/sellerController.js";
+import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers, getPublicSellerById, toggleShopStatus } from "../controller/sellerController.js";
 import { getSellerStats, getSellerEarnings, getLedger } from "../controller/sellerStatsController.js";
 import { getSellerWalletSummaryController } from "../controller/adminFinanceController.js";
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
@@ -68,5 +68,6 @@ router.get("/earnings", verifyToken, allowRoles("seller"), getSellerEarnings);
 router.get("/ledger", verifyToken, allowRoles("seller"), getLedger);
 router.get("/wallet/summary", verifyToken, allowRoles("seller"), getSellerWalletSummaryController);
 router.post("/request-withdrawal", verifyToken, allowRoles("seller"), requestWithdrawal);
+router.patch("/shop-status", verifyToken, allowRoles("seller"), toggleShopStatus);
 
 export default router;

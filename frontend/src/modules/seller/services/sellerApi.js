@@ -47,4 +47,7 @@ export const sellerApi = {
     rejectReturn: (orderId, data) => axiosInstance.put(`/orders/returns/${orderId}/reject`, data),
     assignReturnDelivery: (orderId, data) => axiosInstance.put(`/orders/returns/${orderId}/assign-delivery`, data),
     fetchData: (url, params) => axiosInstance.get(url, { params }),
+
+    // Shop Status
+    toggleShopStatus: () => axiosInstance.patch('/seller/shop-status'),
 };

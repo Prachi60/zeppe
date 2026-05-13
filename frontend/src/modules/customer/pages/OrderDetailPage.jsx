@@ -1179,7 +1179,11 @@ const OrderDetailPage = () => {
         onClose={() => setShowInvoice(false)}
         order={order}
       />
-      <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
+      <HelpModal 
+        isOpen={showHelp} 
+        onClose={() => setShowHelp(false)} 
+        order={order}
+      />
 
       {/* Return Request Modal */}
       {showReturnModal && (

@@ -4,7 +4,7 @@ import { createAdminController } from "../utils/controllerFactory.js";
 
 const { getAll: listTickets, getById, update: updateT, delete: deleteT } = createAdminController(Ticket, {
     searchFields: ["subject", "description"],
-    populate: [{ path: "userId", select: "name email avatar" }]
+    populateFields: [{ path: "userId", select: "name email phone avatar shopName" }]
 });
 
 // Rename for exported consistency if needed
@@ -16,9 +16,17 @@ export const createTicket = async (req, res) => {
         const { subject, description, priority, userType } = req.body;
         const userId = req.user.id;
 
+        const userModelMap = {
+            "Customer": "User",
+            "Seller": "Seller",
+            "Rider": "Delivery"
+        };
+        const userModel = userModelMap[userType] || "User";
+
         const newTicket = new Ticket({
             userId,
             userType: userType || "Customer",
+            userModel,
             subject,
             description,
             priority,

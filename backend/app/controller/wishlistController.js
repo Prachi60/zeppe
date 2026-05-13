@@ -23,7 +23,14 @@ export const getWishlist = async (req, res) => {
     }
 
     const wishlist = await query
-      .populate("products", "name slug price salePrice mainImage stock status")
+      .populate({
+        path: "products",
+        select: "name slug price salePrice mainImage stock status sellerId",
+        populate: {
+          path: "sellerId",
+          select: "isShopOpen",
+        },
+      })
       .lean();
 
     if (!wishlist) {
@@ -36,7 +43,15 @@ export const getWishlist = async (req, res) => {
       );
     }
 
-    return handleResponse(res, 200, "Wishlist fetched successfully", wishlist);
+    const mappedProducts = (wishlist.products || []).map((p) => ({
+      ...p,
+      sellerIsOpen: p.sellerId?.isShopOpen !== false,
+    }));
+
+    return handleResponse(res, 200, "Wishlist fetched successfully", {
+      ...wishlist,
+      products: mappedProducts,
+    });
   } catch (error) {
     return handleResponse(res, 500, error.message);
   }
@@ -62,14 +77,26 @@ export const addToWishlist = async (req, res) => {
 
     await wishlist.save();
     const updatedWishlist = await Wishlist.findById(wishlist._id)
-      .populate("products", "name slug price salePrice mainImage stock status")
+      .populate({
+        path: "products",
+        select: "name slug price salePrice mainImage stock status sellerId",
+        populate: {
+          path: "sellerId",
+          select: "isShopOpen",
+        },
+      })
       .lean();
+
+    const mappedProducts = (updatedWishlist.products || []).map((p) => ({
+      ...p,
+      sellerIsOpen: p.sellerId?.isShopOpen !== false,
+    }));
 
     return handleResponse(
       res,
       200,
       "Product added to wishlist",
-      updatedWishlist,
+      { ...updatedWishlist, products: mappedProducts },
     );
   } catch (error) {
     return handleResponse(res, 500, error.message);
@@ -96,14 +123,26 @@ export const removeFromWishlist = async (req, res) => {
 
     await wishlist.save();
     const updatedWishlist = await Wishlist.findById(wishlist._id)
-      .populate("products", "name slug price salePrice mainImage stock status")
+      .populate({
+        path: "products",
+        select: "name slug price salePrice mainImage stock status sellerId",
+        populate: {
+          path: "sellerId",
+          select: "isShopOpen",
+        },
+      })
       .lean();
+
+    const mappedProducts = (updatedWishlist.products || []).map((p) => ({
+      ...p,
+      sellerIsOpen: p.sellerId?.isShopOpen !== false,
+    }));
 
     return handleResponse(
       res,
       200,
       "Product removed from wishlist",
-      updatedWishlist,
+      { ...updatedWishlist, products: mappedProducts },
     );
   } catch (error) {
     return handleResponse(res, 500, error.message);
@@ -140,10 +179,25 @@ export const toggleWishlist = async (req, res) => {
 
     await wishlist.save();
     const updatedWishlist = await Wishlist.findById(wishlist._id)
-      .populate("products", "name slug price salePrice mainImage stock status")
+      .populate({
+        path: "products",
+        select: "name slug price salePrice mainImage stock status sellerId",
+        populate: {
+          path: "sellerId",
+          select: "isShopOpen",
+        },
+      })
       .lean();
 
-    return handleResponse(res, 200, message, updatedWishlist);
+    const mappedProducts = (updatedWishlist.products || []).map((p) => ({
+      ...p,
+      sellerIsOpen: p.sellerId?.isShopOpen !== false,
+    }));
+
+    return handleResponse(res, 200, message, {
+      ...updatedWishlist,
+      products: mappedProducts,
+    });
   } catch (error) {
     return handleResponse(res, 500, error.message);
   }
