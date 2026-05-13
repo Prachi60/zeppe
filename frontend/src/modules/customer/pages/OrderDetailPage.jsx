@@ -144,6 +144,7 @@ const OrderDetailPage = () => {
   const [routePolyline, setRoutePolyline] = useState(null);
   const [handoffOtp, setHandoffOtp] = useState(null);
   const [cancellingOrder, setCancellingOrder] = useState(false);
+  const [cancelTimeLeft, setCancelTimeLeft] = useState(0);
   const [clockTick, setClockTick] = useState(Date.now());
   const parsedReturnWindowMinutes = parseInt(
     import.meta.env.VITE_RETURN_WINDOW_MINUTES || "2",
@@ -329,9 +330,28 @@ const OrderDetailPage = () => {
   }, [orderId]);
 
   useEffect(() => {
-    const iv = setInterval(() => setClockTick(Date.now()), 30000);
-    return () => clearInterval(iv);
+    const timer = setInterval(() => {
+      setClockTick(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
+
+  // Timer logic for cancellation window
+  useEffect(() => {
+    if (!order || !order.createdAt) return;
+
+    const updateTimer = () => {
+      const createdAt = new Date(order.createdAt).getTime();
+      const now = Date.now();
+      const threeMinutesMs = 3 * 60 * 1000;
+      const remaining = Math.max(0, Math.floor((createdAt + threeMinutesMs - now) / 1000));
+      setCancelTimeLeft(remaining);
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [order]);
 
   useEffect(() => {
     if (!order) {
@@ -649,6 +669,11 @@ const OrderDetailPage = () => {
     
     // If already cancelled or delivered, definitely can't cancel
     if (status === "cancelled" || status === "delivered") return false;
+
+    // Must be within 3 minutes of creation
+    const createdAt = new Date(order.createdAt).getTime();
+    const now = Date.now();
+    if (now - createdAt > 3 * 60 * 1000) return false;
     
     // v2 Workflow specific checks
     if (order.workflowVersion >= 2) {
@@ -1014,18 +1039,50 @@ const OrderDetailPage = () => {
             </button>
           </div>
 
-          {canCancelOrder() && (
-            <button
-              onClick={handleCancelOrder}
-              disabled={cancellingOrder}
-              className="w-full py-4 rounded-2xl bg-rose-50 border-2 border-rose-100 text-rose-600 font-extrabold hover:bg-rose-100 transition-all flex items-center justify-center gap-2 text-sm shadow-sm active:scale-[0.98]">
-              {cancellingOrder ? (
-                <Loader2 className="animate-spin" size={18} />
-              ) : (
-                <XCircle size={18} />
-              )}
-              Cancel Order
-            </button>
+          {canCancelOrder() && cancelTimeLeft > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-3xl p-5 border-2 border-rose-100 shadow-xl shadow-rose-500/5 relative overflow-hidden"
+            >
+              {/* Animated background pulse */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-full -mr-16 -mt-16 animate-pulse" />
+              
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-rose-100 flex items-center justify-center">
+                      <Clock size={16} className="text-rose-600 animate-pulse" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Cancel Order</p>
+                      <p className="text-xs font-bold text-slate-600">Window expires in</p>
+                    </div>
+                  </div>
+                  <div className="bg-rose-600 px-3 py-1.5 rounded-xl shadow-lg shadow-rose-200">
+                    <span className="text-base font-black text-white tabular-nums">
+                      {Math.floor(cancelTimeLeft / 60)}:{(cancelTimeLeft % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCancelOrder}
+                  disabled={cancellingOrder}
+                  className="w-full py-4 rounded-2xl bg-rose-50 text-rose-600 font-black hover:bg-rose-100 transition-all flex items-center justify-center gap-3 text-sm active:scale-[0.98] border border-rose-100"
+                >
+                  {cancellingOrder ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    <XCircle size={20} />
+                  )}
+                  CANCEL NOW
+                </button>
+                <p className="text-[9px] text-center text-slate-400 mt-3 font-medium">
+                  Once this timer expires, your order will be confirmed and cannot be cancelled.
+                </p>
+              </div>
+            </motion.div>
           )}
         </motion.div>
 
