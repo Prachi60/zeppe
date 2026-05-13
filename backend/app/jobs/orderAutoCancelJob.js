@@ -70,10 +70,10 @@ const autoCancelExpiredOrders = async () => {
           },
           {
             $set: {
-              workflowStatus: WORKFLOW_STATUS.CANCELLED,
+              workflowStatus: WORKFLOW_STATUS.SYSTEM_CANCELLED,
               status: "cancelled",
               orderStatus: "cancelled",
-              cancelledBy: "system",
+              cancelledBy: "SYSTEM",
               cancelReason: "Payment timeout",
             },
           },

@@ -13,6 +13,9 @@ export const WORKFLOW_STATUS = {
   OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
   DELIVERED: "DELIVERED",
   CANCELLED: "CANCELLED",
+  USER_CANCELLED: "USER_CANCELLED",
+  SELLER_CANCELLED: "SELLER_CANCELLED",
+  SYSTEM_CANCELLED: "SYSTEM_CANCELLED",
 };
 
 const LEGACY_ENUM = new Set([
@@ -40,6 +43,9 @@ function legacyFromWorkflow(workflowStatus) {
     case WORKFLOW_STATUS.DELIVERED:
       return "delivered";
     case WORKFLOW_STATUS.CANCELLED:
+    case WORKFLOW_STATUS.USER_CANCELLED:
+    case WORKFLOW_STATUS.SELLER_CANCELLED:
+    case WORKFLOW_STATUS.SYSTEM_CANCELLED:
       return "cancelled";
     default:
       return "pending";
@@ -110,6 +116,12 @@ export function getOrderStatusLabel(order) {
       default: return rs.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
     }
   }
+
+  // Granular labels for the three new cancellation workflow states
+  const ws = String(order?.workflowStatus || "").toUpperCase();
+  if (ws === WORKFLOW_STATUS.USER_CANCELLED) return "Cancelled by You";
+  if (ws === WORKFLOW_STATUS.SELLER_CANCELLED) return "Cancelled by Seller";
+  if (ws === WORKFLOW_STATUS.SYSTEM_CANCELLED) return "Cancelled (Timeout)";
 
   const bucket = getLegacyStatusFromOrder(order);
   return DISPLAY_LABELS[bucket] || bucket.replace(/_/g, " ");

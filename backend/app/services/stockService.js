@@ -125,17 +125,35 @@ export async function releaseReservedStockForOrder(order, { session = null, reas
     const variantId = item.variantSku || item.variantSlot;
     
     if (variantId) {
-      await Product.updateOne(
-        { 
-          _id: item.product,
-          $or: [
-            { "variants.sku": variantId },
-            { "variants.name": variantId }
-          ]
-        },
+      // Try matching by SKU first, then by name — $elemMatch is required for $ positional to work
+      let released = false;
+
+      const bySku = await Product.updateOne(
+        { _id: item.product, "variants": { $elemMatch: { sku: variantId } } },
         { $inc: { "variants.$.stock": item.quantity } },
         session ? { session } : {}
       );
+      if (bySku.modifiedCount > 0) {
+        released = true;
+      }
+
+      if (!released) {
+        const byName = await Product.updateOne(
+          { _id: item.product, "variants": { $elemMatch: { name: variantId } } },
+          { $inc: { "variants.$.stock": item.quantity } },
+          session ? { session } : {}
+        );
+        if (byName.modifiedCount > 0) released = true;
+      }
+
+      // If variant not found (e.g. slot label used at order time), fall back to master stock
+      if (!released) {
+        await Product.updateOne(
+          { _id: item.product },
+          { $inc: { stock: item.quantity } },
+          session ? { session } : {}
+        );
+      }
     } else {
       await Product.updateOne(
         { _id: item.product },

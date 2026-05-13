@@ -149,7 +149,7 @@ export async function emitDeliveryBroadcastForSeller(sellerId, payload) {
  * Retract an order request from every delivery partner except the winner.
  * This clears stale push/in-app notifications and closes any open popup.
  */
-export async function retractDeliveryBroadcastForOrder(orderId, winnerDeliveryId) {
+export async function retractDeliveryBroadcastForOrder(orderId, winnerDeliveryId, reason) {
   const s = getIo();
   const winnerId = normalizeDeliveryId(winnerDeliveryId);
   const winnerObjectId =
@@ -177,6 +177,7 @@ export async function retractDeliveryBroadcastForOrder(orderId, winnerDeliveryId
         s.to("delivery:online").emit("delivery:broadcast:withdrawn", {
           orderId,
           winnerDeliveryId: winnerId,
+          reason: reason || null,
           at: new Date().toISOString(),
         });
       }
@@ -196,6 +197,7 @@ export async function retractDeliveryBroadcastForOrder(orderId, winnerDeliveryId
         s.to(`delivery:${recipientId}`).emit("delivery:broadcast:withdrawn", {
           orderId,
           winnerDeliveryId: winnerId,
+          reason: reason || null,
           at: new Date().toISOString(),
         });
       }
