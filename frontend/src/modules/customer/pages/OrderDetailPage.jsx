@@ -1095,14 +1095,10 @@ const OrderDetailPage = () => {
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Order</p>
-                    <p className="text-xs font-bold text-slate-700">
-                      {cancellingOrder && status !== "cancelled" ? "Cancelling..." : "Cancelled"}
-                    </p>
+                    <p className="text-xs font-bold text-slate-700">Cancelled</p>
                   </div>
                 </div>
-                <span className="text-xs font-black text-slate-500 uppercase tracking-wider">
-                  {cancellingOrder && status !== "cancelled" ? "Processing" : "Cancelled"}
-                </span>
+                <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Cancelled</span>
               </div>
             </motion.div>
           )}
