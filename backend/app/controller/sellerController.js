@@ -21,37 +21,44 @@ export const getNearbySellers = async (req, res) => {
     const customerLng = Number(lng);
 
     // Fetch all active/verified sellers
-    // We could use $geoNear, but to strictly follow the requirement of individual radii,
-    // we'll fetch sellers within a reasonable max distance (e.g. 100km) and then filter.
     const sellers = await Seller.find({
       isActive: true,
       isVerified: true,
-      location: {
-        $near: {
-          $geometry: {
-            type: "Point",
-            coordinates: [customerLng, customerLat],
-          },
-          $maxDistance: 100000, // 100km max search area for performance
-        },
-      },
     }).lean();
 
-    // Filter based on individual service radius
-    const nearbySellers = sellers.filter((seller) => {
-      const sellerLng = seller.location.coordinates[0];
-      const sellerLat = seller.location.coordinates[1];
-      const distance = calculateDistance(
-        customerLat,
-        customerLng,
-        sellerLat,
-        sellerLng,
-      );
+    // Filter and calculate distance
+    const nearbySellers = sellers.map((seller) => {
+      const coords = seller.location?.coordinates;
+      const hasLocation = Array.isArray(coords) && coords.length >= 2 && (coords[0] !== 0 || coords[1] !== 0);
+      
+      let distance = null;
+      if (hasLocation) {
+        const sellerLng = coords[0];
+        const sellerLat = coords[1];
+        distance = calculateDistance(
+          customerLat,
+          customerLng,
+          sellerLat,
+          sellerLng,
+        );
+      }
 
       // Add distance to seller object for frontend
-      seller.distance = distance;
+      return {
+        ...seller,
+        distance,
+        isNearby: hasLocation ? (distance <= (seller.serviceRadius || 5)) : true // Treat as nearby if location not set (fallback)
+      };
+    });
 
-      return distance <= (seller.serviceRadius || 5);
+    // Sort: Nearby first, then by distance, then others
+    nearbySellers.sort((a, b) => {
+      if (a.isNearby && !b.isNearby) return -1;
+      if (!a.isNearby && b.isNearby) return 1;
+      if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
+      if (a.distance !== null) return -1;
+      if (b.distance !== null) return 1;
+      return 0;
     });
 
     return handleResponse(
@@ -150,8 +157,17 @@ export const getSellerProfile = async (req, res) => {
       endDate: { $gt: new Date() }
     });
 
+    // Check if any active plans are configured by admin for sellers
+    const activePlansCount = await mongoose.model("SubscriptionPlan").countDocuments({
+      targetRole: "seller",
+      isActive: true,
+      deletedAt: null
+    });
+
     const sellerObj = seller.toObject();
     sellerObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
+    sellerObj.subscriptionStatus = activeSub ? "active" : "inactive";
+    sellerObj.plansAvailable = activePlansCount > 0;
 
     return handleResponse(
       res,

@@ -8,7 +8,7 @@ import {
     Box,
     Wallet,
     MoreHorizontal,
-    ChevronDown,
+    ChevronRight,
     X
 } from 'lucide-react';
 
@@ -78,13 +78,27 @@ const BottomNav = ({ navItems }) => {
                                                 isActive ? "bg-primary text-white" : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
                                             )}
                                         >
-                                            <div className="flex items-center gap-4">
-                                                <div className={cn("p-2 rounded-xl transition-colors", isActive ? "bg-white/20" : "bg-white/5 group-hover:bg-white/10")}>
-                                                    <item.icon size={20} />
-                                                </div>
-                                                <span className="font-bold tracking-tight">{item.label}</span>
-                                            </div>
-                                            <ChevronRight size={18} className={isActive ? "text-white/50" : "text-gray-600"} />
+                                            {({ isActive }) => (
+                                                <>
+                                                    <div className="flex items-center gap-4">
+                                                        <div
+                                                            className={cn(
+                                                                "p-2 rounded-xl transition-colors",
+                                                                isActive
+                                                                    ? "bg-white/20"
+                                                                    : "bg-white/5 group-hover:bg-white/10",
+                                                            )}
+                                                        >
+                                                            <item.icon size={20} />
+                                                        </div>
+                                                        <span className="font-bold tracking-tight">{item.label}</span>
+                                                    </div>
+                                                    <ChevronRight
+                                                        size={18}
+                                                        className={isActive ? "text-white/50" : "text-gray-600"}
+                                                    />
+                                                </>
+                                            )}
                                         </NavLink>
                                     );
                                 })}
@@ -127,4 +141,3 @@ const BottomNav = ({ navItems }) => {
 };
 
 export default BottomNav;
-

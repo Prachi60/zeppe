@@ -149,38 +149,38 @@ export const getProducts = async (req, res) => {
 
     const requestedSellerIds = parseSellerIdFilters({ sellerId, sellerIds });
     const coords = parseCustomerCoordinates({ lat, lng });
-    const shouldApplyLocationFilter = enforceRadius || coords.valid;
-    if (enforceRadius && !coords.valid) {
-      console.log('❌ Blocking request - enforceRadius is true but coords invalid');
+    const hasSpecificSellerRequest = requestedSellerIds.length > 0;
+
+    // If it's a customer request, we usually enforce location.
+    // However, if they are requesting products for a SPECIFIC store (e.g. via store page),
+    // we should let them through even if location is missing or the store is "far".
+    if (enforceRadius && !coords.valid && !hasSpecificSellerRequest) {
+      console.log('❌ Blocking request - enforceRadius is true but coords invalid and no specific seller requested');
       return handleResponse(
         res,
         400,
         "lat and lng are required for customer product visibility",
       );
     }
-    if (shouldApplyLocationFilter) {
+
+    if (enforceRadius || coords.valid) {
       const nearbySellerIds = await getNearbySellerIdsForCustomer(
         coords.lat,
         coords.lng,
       );
 
-      if (!nearbySellerIds.length) {
-        return handleResponse(res, 200, "No sellers found in your area", {
-          items: [],
-          page: 1,
-          limit: 24,
-          total: 0,
-          totalPages: 1,
-        });
+      let finalSellerIds = [];
+      if (hasSpecificSellerRequest) {
+        // If specific sellers are requested, we prioritize them.
+        // This allows browsing stores from direct links or search.
+        finalSellerIds = requestedSellerIds;
+      } else {
+        // General browsing: only show nearby sellers
+        finalSellerIds = nearbySellerIds;
       }
 
-      const nearbySet = new Set(nearbySellerIds.map(String));
-      const finalSellerIds = requestedSellerIds.length
-        ? requestedSellerIds.filter((id) => nearbySet.has(String(id)))
-        : nearbySellerIds;
-
       if (!finalSellerIds.length) {
-        return handleResponse(res, 200, "No products available in your area", {
+        return handleResponse(res, 200, hasSpecificSellerRequest ? "No products found for this store" : "No products available in your area", {
           items: [],
           page: 1,
           limit: 24,

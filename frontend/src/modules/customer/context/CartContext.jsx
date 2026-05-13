@@ -3,9 +3,22 @@ import { toast } from "sonner";
 import { customerApi } from "../services/customerApi";
 import { useAuth } from "../../../core/context/AuthContext";
 
-const CartContext = createContext();
+const CartContext = createContext(null);
 
-export const useCart = () => useContext(CartContext);
+const noopAsync = async () => {};
+
+const defaultCartContextValue = {
+  cart: [],
+  addToCart: noopAsync,
+  removeFromCart: noopAsync,
+  updateQuantity: noopAsync,
+  clearCart: noopAsync,
+  cartTotal: 0,
+  cartCount: 0,
+  loading: false,
+};
+
+export const useCart = () => useContext(CartContext) ?? defaultCartContextValue;
 
 export const CartProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();

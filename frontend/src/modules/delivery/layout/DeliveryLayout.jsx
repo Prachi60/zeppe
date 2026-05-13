@@ -19,6 +19,7 @@ import {
 } from "../utils/deliveryHandledOrders";
 import { saveDeliveryPartnerLocation } from "../utils/deliveryLastLocation";
 import { showSystemNotification } from "@/core/firebase/pushClient";
+import { orderAlertSoundUrl } from "@/assets/sound/orderAlertSound";
 
 /** Match server `deliverySearchExpiresAt` — progress bar + countdown stay aligned when modal opens late. */
 function secondsLeftUntilDeliveryExpiry(expiresAt) {
@@ -55,7 +56,7 @@ const DeliveryLayout = () => {
 
     if (shouldPlay) {
       if (!audioRef.current) {
-        audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+        audioRef.current = new Audio(orderAlertSoundUrl);
         audioRef.current.loop = true;
       }
       audioRef.current.play().catch(() => { });

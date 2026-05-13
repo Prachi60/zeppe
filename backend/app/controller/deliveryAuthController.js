@@ -1,6 +1,7 @@
 import Delivery from "../models/delivery.js";
 import UserSubscription from "../models/userSubscription.js";
 import Setting from "../models/setting.js";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import handleResponse from "../utils/helper.js";
 import { sendOtpEmail } from "../services/nodemailerService.js";
@@ -30,17 +31,17 @@ export const signupDelivery = async (req, res) => {
             return handleResponse(res, 400, "Name and email are required");
         }
 
-        let delivery = await Delivery.findOne({ email });
+        let deliveryDoc = await Delivery.findOne({ email });
 
-        if (delivery && delivery.isVerified) {
+        if (deliveryDoc && deliveryDoc.isVerified) {
             return handleResponse(res, 400, "Delivery partner already exists with this email");
         }
 
         const otp = generateOTP();
 
-        let aadharUrl = delivery?.documents?.aadhar || "";
-        let panUrl = delivery?.documents?.pan || "";
-        let dlUrl = delivery?.documents?.drivingLicense || "";
+        let aadharUrl = deliveryDoc?.documents?.aadhar || "";
+        let panUrl = deliveryDoc?.documents?.pan || "";
+        let dlUrl = deliveryDoc?.documents?.drivingLicense || "";
 
         const normalizedAadhar = String(body?.aadharUrl || body?.aadhar || "").trim();
         const normalizedPan = String(body?.panUrl || body?.pan || "").trim();
@@ -74,11 +75,11 @@ export const signupDelivery = async (req, res) => {
             otpExpiry: Date.now() + 5 * 60 * 1000,
         };
 
-        if (!delivery) {
-            delivery = await Delivery.create(deliveryData);
+        if (!deliveryDoc) {
+            deliveryDoc = await Delivery.create(deliveryData);
         } else {
-            Object.assign(delivery, deliveryData);
-            await delivery.save();
+            Object.assign(deliveryDoc, deliveryData);
+            await deliveryDoc.save();
         }
 
         if (useRealEmail()) {
@@ -112,17 +113,17 @@ export const loginDelivery = async (req, res) => {
             return handleResponse(res, 400, "Email is required");
         }
 
-        const delivery = await Delivery.findOne({ email });
+        const deliveryDoc = await Delivery.findOne({ email });
 
-        if (!delivery) {
+        if (!deliveryDoc) {
             return handleResponse(res, 404, "Delivery partner not found. Please signup first.");
         }
 
         const otp = generateOTP();
 
-        delivery.otp = hashOtp(otp);
-        delivery.otpExpiry = Date.now() + 5 * 60 * 1000;
-        await delivery.save();
+        deliveryDoc.otp = hashOtp(otp);
+        deliveryDoc.otpExpiry = Date.now() + 5 * 60 * 1000;
+        await deliveryDoc.save();
 
         if (useRealEmail()) {
             await sendOtpEmail({ to: email, otp, purpose: "delivery_login" });
@@ -155,38 +156,46 @@ export const verifyDeliveryOTP = async (req, res) => {
             return handleResponse(res, 400, "Email and OTP are required");
         }
 
-        const delivery = await Delivery.findOne({
+        const deliveryDoc = await Delivery.findOne({
             email,
             otp: hashOtp(otp),
             otpExpiry: { $gt: Date.now() },
         });
 
-        if (!delivery) {
+        if (!deliveryDoc) {
             return handleResponse(res, 400, "Invalid or expired OTP");
         }
 
-        delivery.isEmailVerified = true;
-        delivery.otp = undefined;
-        delivery.otpExpiry = undefined;
-        delivery.lastLogin = new Date();
+        deliveryDoc.isEmailVerified = true;
+        deliveryDoc.otp = undefined;
+        deliveryDoc.otpExpiry = undefined;
+        deliveryDoc.lastLogin = new Date();
 
-        await delivery.save();
+        await deliveryDoc.save();
 
-        const token = generateToken(delivery);
+        // Check if any active plans are configured by admin for delivery boys
+        const activePlansCount = await mongoose.model("SubscriptionPlan").countDocuments({
+            targetRole: "delivery",
+            isActive: true,
+            deletedAt: null
+        });
+
+        const token = generateToken(deliveryDoc);
 
         // Verify subscription status dynamically
         const settings = await Setting.findOne({});
         const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
 
         const activeSub = await UserSubscription.findOne({
-            userId: delivery._id,
+            userId: deliveryDoc._id,
             role: "delivery",
             status: "active",
             endDate: { $gt: new Date() }
         });
 
-        const deliveryObj = delivery.toObject();
+        const deliveryObj = deliveryDoc.toObject();
         deliveryObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
+        deliveryObj.plansAvailable = activePlansCount > 0;
 
         return handleResponse(res, 200, "Login successful", {
             token,
@@ -202,8 +211,8 @@ export const verifyDeliveryOTP = async (req, res) => {
 ================================ */
 export const getDeliveryProfile = async (req, res) => {
     try {
-        const delivery = await Delivery.findById(req.user.id);
-        if (!delivery) {
+        const deliveryDoc = await Delivery.findById(req.user.id);
+        if (!deliveryDoc) {
             return handleResponse(res, 404, "Delivery partner not found");
         }
         // Verify subscription status dynamically
@@ -217,8 +226,16 @@ export const getDeliveryProfile = async (req, res) => {
             endDate: { $gt: new Date() }
         });
 
-        const deliveryObj = delivery.toObject();
+        // Check if any active plans are configured by admin for delivery boys
+        const activePlansCount = await mongoose.model("SubscriptionPlan").countDocuments({
+            targetRole: "delivery",
+            isActive: true,
+            deletedAt: null
+        });
+
+        const deliveryObj = deliveryDoc.toObject();
         deliveryObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
+        deliveryObj.plansAvailable = activePlansCount > 0;
 
         return handleResponse(res, 200, "Profile fetched successfully", deliveryObj);
     } catch (error) {
@@ -238,33 +255,55 @@ export const updateDeliveryProfile = async (req, res) => {
             accountHolder, accountNumber, ifsc
         } = req.body;
 
-        const delivery = await Delivery.findById(req.user.id);
-        if (!delivery) {
+        const deliveryDoc = await Delivery.findById(req.user.id);
+        if (!deliveryDoc) {
             return handleResponse(res, 404, "Delivery partner not found");
         }
 
-        if (name) delivery.name = name;
-        if (email) delivery.email = email;
-        if (address) delivery.address = address;
-        if (vehicleType) delivery.vehicleType = vehicleType;
-        if (vehicleNumber) delivery.vehicleNumber = vehicleNumber;
-        if (vehicleModel) delivery.vehicleModel = vehicleModel;
-        if (vehicleColor) delivery.vehicleColor = vehicleColor;
-        if (fuelType) delivery.fuelType = fuelType;
-        if (drivingLicenseNumber) delivery.drivingLicenseNumber = drivingLicenseNumber;
-        if (drivingLicenseExpiry) delivery.drivingLicenseExpiry = drivingLicenseExpiry;
-        if (rcExpiry) delivery.rcExpiry = rcExpiry;
-        if (currentArea) delivery.currentArea = currentArea;
-        if (dob) delivery.dob = dob;
-        if (bloodGroup) delivery.bloodGroup = bloodGroup;
-        if (accountHolder) delivery.accountHolder = accountHolder;
-        if (accountNumber) delivery.accountNumber = accountNumber;
-        if (ifsc) delivery.ifsc = ifsc;
-        if (typeof isOnline !== 'undefined') delivery.isOnline = isOnline;
+        if (name) deliveryDoc.name = name;
+        if (email) deliveryDoc.email = email;
+        if (address) deliveryDoc.address = address;
+        if (vehicleType) deliveryDoc.vehicleType = vehicleType;
+        if (vehicleNumber) deliveryDoc.vehicleNumber = vehicleNumber;
+        if (vehicleModel) deliveryDoc.vehicleModel = vehicleModel;
+        if (vehicleColor) deliveryDoc.vehicleColor = vehicleColor;
+        if (fuelType) deliveryDoc.fuelType = fuelType;
+        if (drivingLicenseNumber) deliveryDoc.drivingLicenseNumber = drivingLicenseNumber;
+        if (drivingLicenseExpiry) deliveryDoc.drivingLicenseExpiry = drivingLicenseExpiry;
+        if (rcExpiry) deliveryDoc.rcExpiry = rcExpiry;
+        if (currentArea) deliveryDoc.currentArea = currentArea;
+        if (dob) deliveryDoc.dob = dob;
+        if (bloodGroup) deliveryDoc.bloodGroup = bloodGroup;
+        if (accountHolder) deliveryDoc.accountHolder = accountHolder;
+        if (accountNumber) deliveryDoc.accountNumber = accountNumber;
+        if (ifsc) deliveryDoc.ifsc = ifsc;
+        if (typeof isOnline !== 'undefined') deliveryDoc.isOnline = isOnline;
 
-        await delivery.save();
+        await deliveryDoc.save();
 
-        return handleResponse(res, 200, "Profile updated successfully", delivery);
+        // Verify subscription status dynamically
+        const settings = await Setting.findOne({});
+        const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+
+        const activeSub = await UserSubscription.findOne({
+            userId: req.user.id,
+            role: "delivery",
+            status: "active",
+            endDate: { $gt: new Date() }
+        });
+
+        // Check if any active plans are configured by admin for delivery boys
+        const activePlansCount = await mongoose.model("SubscriptionPlan").countDocuments({
+            targetRole: "delivery",
+            isActive: true,
+            deletedAt: null
+        });
+
+        const deliveryObj = deliveryDoc.toObject();
+        deliveryObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
+        deliveryObj.plansAvailable = activePlansCount > 0;
+
+        return handleResponse(res, 200, "Profile updated successfully", deliveryObj);
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }

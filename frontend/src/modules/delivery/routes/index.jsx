@@ -26,6 +26,8 @@ const Subscription = lazy(() => import("../pages/Subscription"));
 
 import { useSettings } from "@core/context/SettingsContext";
 
+import { useAuth } from "@core/context/AuthContext";
+
 const LoadingFallback = () => (
   <div className="flex h-screen w-full items-center justify-center bg-slate-50 text-xs font-bold uppercase tracking-widest text-slate-400">
     Initializing...
@@ -35,6 +37,23 @@ const LoadingFallback = () => (
 const DeliveryRoutes = () => {
   const { settings } = useSettings();
   const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingFallback />;
+  }
+
+  const isDemoActive = localStorage.getItem('demo_subscription_active') === 'true';
+  const plansAvailable = user?.plansAvailable !== false;
+  const isSubscribed = user?.subscriptionStatus === "active" || isDemoActive || !plansAvailable;
+
+  const isAuthPage = window.location.pathname.includes("/delivery/auth") || window.location.pathname.includes("/delivery/splash");
+  const isSubscriptionPage = window.location.pathname.includes("/delivery/subscription");
+
+  if (!isSubscribed && !isSubscriptionPage && !isAuthPage) {
+    return <Navigate to="subscription" replace />;
+  }
+
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
@@ -62,6 +81,15 @@ const DeliveryRoutes = () => {
           <Route path="profile/subscription" element={<SubscriptionStatus />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="/" element={<Navigate to={isGlobalEnabled ? "subscription" : "dashboard"} replace />} />
+          <Route 
+            path="/" 
+            element={
+              isSubscribed 
+                ? <Navigate to="dashboard" replace /> 
+                : <Navigate to="subscription" replace />
+            } 
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </Suspense>

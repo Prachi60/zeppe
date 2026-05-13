@@ -1,6 +1,7 @@
 import Seller from "../models/seller.js";
 import UserSubscription from "../models/userSubscription.js";
 import Setting from "../models/setting.js";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import fs from "fs/promises";
 import path from "path";
@@ -25,7 +26,7 @@ const LOCAL_SELLER_DOCS_DIR = path.resolve(__dirname, "../../uploads/seller-docu
 
 const generateToken = (seller) =>
     jwt.sign({ id: seller._id, role: "seller" }, process.env.JWT_SECRET, {
-        expiresIn: "7d",
+        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
     });
 
 const SELLER_DOCUMENT_FIELDS = {
@@ -338,17 +339,23 @@ export const verifySellerSignupOtp = async (req, res) => {
 ================================ */
 export const loginSeller = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, phone, password } = req.body;
+        const identifier = (email || phone || "").trim();
 
-        if (!email || !password) {
-            return handleResponse(res, 400, "Email and password are required");
+        if (!identifier || !password) {
+            return handleResponse(res, 400, "Login identifier and password are required");
         }
 
-        // Include password for comparison
-        const seller = await Seller.findOne({ email }).select("+password");
+        // Search for seller by email or phone
+        const seller = await Seller.findOne({
+            $or: [
+                { email: identifier.toLowerCase() },
+                { phone: identifier }
+            ]
+        }).select("+password");
 
         if (!seller) {
-            return handleResponse(res, 404, "Seller not found");
+            return handleResponse(res, 404, "Seller account not found");
         }
 
         const isMatch = await seller.comparePassword(password);
@@ -381,6 +388,13 @@ export const loginSeller = async (req, res) => {
         seller.lastLogin = new Date();
         await seller.save();
 
+        // Check if any active plans are configured by admin for sellers
+        const activePlansCount = await mongoose.model("SubscriptionPlan").countDocuments({
+            targetRole: "seller",
+            isActive: true,
+            deletedAt: null
+        });
+
         const token = generateToken(seller);
 
         // Verify subscription status dynamically
@@ -396,6 +410,7 @@ export const loginSeller = async (req, res) => {
 
         const sellerObj = seller.toObject();
         sellerObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
+        sellerObj.plansAvailable = activePlansCount > 0;
 
         return handleResponse(res, 200, "Login successful", {
             token,

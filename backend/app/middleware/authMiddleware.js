@@ -40,6 +40,11 @@ export const verifyToken = async (req, res, next) => {
       return unauthorized(res, "Unauthorized, token missing");
     }
 
+    if (!process.env.JWT_SECRET) {
+      console.error("CRITICAL: JWT_SECRET is not configured in environment variables");
+      return handleResponse(res, 500, "Internal server configuration error");
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const normalizedRole = String(decoded?.role || "").toLowerCase();
     const AuthModel = resolveAuthModel(normalizedRole);
@@ -76,7 +81,10 @@ export const verifyToken = async (req, res, next) => {
     if (error.name === "TokenExpiredError") {
       return unauthorized(res, "Token expired");
     }
-    return unauthorized(res, "Invalid or expired token");
+    if (error.name === "JsonWebTokenError") {
+      return unauthorized(res, "Invalid token signature");
+    }
+    return unauthorized(res, "Authentication failed");
   }
 };
 

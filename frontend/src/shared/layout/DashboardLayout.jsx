@@ -14,6 +14,7 @@ import { SellerOrdersProvider } from '@/modules/seller/context/SellerOrdersConte
 import { SellerEarningsProvider, defaultEarnings } from '@/modules/seller/context/SellerEarningsContext';
 import { getOrderSocket, onSellerOrderNew, onReturnDropOtp, onSellerReturnRequested } from '@/core/services/orderSocket';
 import { showSystemNotification } from '@/core/firebase/pushClient';
+import { orderAlertSoundUrl } from "@/assets/sound/orderAlertSound";
 
 const POLL_INTERVAL_MS = 15000;
 
@@ -47,7 +48,7 @@ const DashboardLayout = ({ children, navItems, title }) => {
 
         if (shouldPlay) {
             if (!audioRef.current) {
-                audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audioRef.current = new Audio(orderAlertSoundUrl);
                 audioRef.current.loop = true;
             }
             audioRef.current.play().catch(() => { });

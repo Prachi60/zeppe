@@ -68,6 +68,7 @@ const navItems = [
 const SellerRoutes = () => {
   const { user, isLoading: authLoading } = useAuth();
   const location = useLocation();
+  const { settings } = useSettings();
   
   // Normalized path check
   const isSubscriptionPage = location.pathname.includes("/subscription");
@@ -79,10 +80,15 @@ const SellerRoutes = () => {
   // Logic: If vendor.subscriptionStatus !== "active" → redirect to "/seller/subscription"
   // We check for seller role and ensure we don't redirect if already on the subscription page
   // If subscriptionStatus is missing or not active, we treat it as inactive
-  const isDemoActive = localStorage.getItem('demo_subscription_active') === 'true';
-  const { settings } = useSettings();
+  const isDemoActive =
+    localStorage.getItem("demo_subscription_active") === "true";
   const isGlobalEnabled = settings?.subscriptionsEnabled !== false;
-  const isSubscribed = user?.subscriptionStatus === "active" || isDemoActive || !isGlobalEnabled;
+  const plansAvailable = user?.plansAvailable !== false; // default true
+  const subscriptionRequired = isGlobalEnabled && plansAvailable;
+  const isSubscribed =
+    !subscriptionRequired ||
+    user?.subscriptionStatus === "active" ||
+    isDemoActive;
   
   if (user?.role === "seller" && !isSubscribed && !isSubscriptionPage) {
     return <Navigate to="/seller/subscription" replace />;

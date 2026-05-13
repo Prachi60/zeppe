@@ -439,7 +439,15 @@ const OrderDetailPage = () => {
     }
 
     if (!Number.isFinite(minutes) || minutes <= 0) {
-      minutes = status === "confirmed" ? 12 : 8;
+      const ws = order?.workflowStatus?.toUpperCase();
+      if (status === "confirmed") {
+        if (ws === "DELIVERY_SEARCH") minutes = 14;
+        else if (ws === "DELIVERY_ASSIGNED") minutes = 10;
+        else if (ws === "PICKUP_READY") minutes = 8;
+        else minutes = 12;
+      } else {
+        minutes = 8;
+      }
     }
 
     const arrivalMs = clockTick + minutes * 60 * 1000;
