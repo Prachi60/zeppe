@@ -95,16 +95,6 @@ export async function emitDeliveryBroadcastForSeller(sellerId, payload) {
       sid,
     );
     if (process.env.NODE_ENV === "production") return;
-    if (s) {
-      console.warn(
-        "[emitDeliveryBroadcastForSeller] DEV fallback: delivery:online",
-      );
-      s.to("delivery:online").emit("delivery:broadcast", {
-        ...payload,
-        at: new Date().toISOString(),
-        _devFallback: true,
-      });
-    }
     return;
   }
 
@@ -256,10 +246,6 @@ export async function emitReturnBroadcastForCustomer(customerLocation, payload) 
   const ids = await getDeliveryPartnerIdsWithinCustomerRadius(customerLocation);
   if (!ids.length) {
     console.warn("[emitReturnBroadcastForCustomer] No riders in customer radius", customerLocation);
-    // If DEV/Test, fallback to all online riders if no one near
-    if (process.env.NODE_ENV !== "production" && s) {
-      s.to("delivery:online").emit("delivery:broadcast", { ...payload, at: new Date().toISOString() });
-    }
     return;
   }
 

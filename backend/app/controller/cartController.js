@@ -1,4 +1,5 @@
 import Cart from "../models/cart.js";
+import Product from "../models/product.js";
 import handleResponse from "../utils/helper.js";
 
 const CART_POPULATE_FIELDS =
@@ -38,6 +39,29 @@ export const addToCart = async (req, res) => {
 
     if (!cart) {
       cart = new Cart({ customerId, items: [] });
+    }
+
+    // Single-Store Restriction Check
+    if (cart.items.length > 0) {
+      const [firstProduct, newProduct] = await Promise.all([
+        Product.findById(cart.items[0].productId).select("sellerId").lean(),
+        Product.findById(productId).select("sellerId").lean(),
+      ]);
+
+      if (!newProduct) {
+        return handleResponse(res, 404, "Product not found");
+      }
+
+      const existingSellerId = firstProduct?.sellerId;
+      const newSellerId = newProduct?.sellerId;
+
+      if (existingSellerId && newSellerId && String(existingSellerId) !== String(newSellerId)) {
+        return handleResponse(
+          res,
+          400,
+          "You can only add products from one store per order. Please complete your current order first.",
+        );
+      }
     }
 
     const itemIndex = cart.items.findIndex(

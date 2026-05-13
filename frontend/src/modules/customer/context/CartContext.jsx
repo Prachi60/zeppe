@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { toast } from "sonner";
 import { customerApi } from "../services/customerApi";
 import { useAuth } from "../../../core/context/AuthContext";
 
@@ -137,6 +138,27 @@ export const CartProvider = ({ children }) => {
     const key = `${id}::${variantSku || ""}`;
     const { price, salePrice, variantName } = resolveVariantPricing(product, variantSku);
 
+    // Single-Store Restriction Check
+    if (cart.length > 0) {
+      const getSellerId = (p) => {
+        if (!p) return null;
+        if (typeof p.sellerId === "string") return p.sellerId;
+        if (typeof p.sellerId === "object") return p.sellerId._id || p.sellerId.id || p.sellerId;
+        return null;
+      };
+
+      const existingSellerId = getSellerId(cart[0]);
+      const newSellerId = getSellerId(product);
+
+      if (existingSellerId && newSellerId && String(existingSellerId) !== String(newSellerId)) {
+        toast.error("You can only add products from one store per order.", {
+          description: "Please complete your current order or clear your cart to shop from another store.",
+          duration: 4000,
+        });
+        return false;
+      }
+    }
+
     // Optimistic UI update for instant feedback
     setCart((prev) => {
       const existingItem = prev.find(
@@ -165,25 +187,29 @@ export const CartProvider = ({ children }) => {
       ];
     });
 
+    // Background Backend Sync (don't await here to avoid blocking animations)
     if (isAuthenticated) {
       pendingRequestsRef.current += 1;
-      try {
-        const response = await customerApi.addToCart({
+      customerApi
+        .addToCart({
           productId: id,
           variantSku,
           quantity: product.quantity || 1,
+        })
+        .then(async (response) => {
+          pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
+          await syncCart(response.data.result.items);
+        })
+        .catch(async (error) => {
+          pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
+          console.error("Error adding to cart on backend", error);
+          if (pendingRequestsRef.current === 0) {
+            await fetchCart();
+          }
         });
-        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
-        await syncCart(response.data.result.items);
-      } catch (error) {
-        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
-        console.error("Error adding to cart on backend", error);
-        // Re-fetch entire cart to ensure consistency on error
-        if (pendingRequestsRef.current === 0) {
-          await fetchCart();
-        }
-      }
     }
+
+    return true;
   };
 
   const removeFromCart = async (productId, variantSku = "") => {

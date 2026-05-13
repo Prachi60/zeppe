@@ -55,16 +55,6 @@ const OrderDetail = () => {
         }
     };
 
-    const handleStatusUpdate = async (newStatus) => {
-        try {
-            await adminApi.updateOrderStatus(orderId, { status: newStatus });
-            showToast(`Order status updated to ${newStatus}`, "success");
-            fetchDetail(); // Refresh data
-        } catch (error) {
-            console.error("Failed to update status:", error);
-            showToast("Failed to update status", "error");
-        }
-    };
 
     useEffect(() => {
         if (orderId) {
@@ -180,23 +170,11 @@ const OrderDetail = () => {
                     <div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Order #{order.orderId}</h1>
-                            <div className="relative inline-block w-44">
-                                <select
-                                    value={order.status}
-                                    onChange={(e) => handleStatusUpdate(e.target.value)}
-                                    className={cn(
-                                        "w-full text-[10px] pl-3 pr-8 py-1.5 rounded-xl font-black uppercase tracking-widest border appearance-none cursor-pointer focus:ring-2 focus:ring-offset-1 transition-all outline-none shadow-sm",
-                                        getStatusStyles(order.status)
-                                    )}
-                                >
-                                    <option value="pending">Pending</option>
-                                    <option value="confirmed">Confirmed</option>
-                                    <option value="packed">Packed</option>
-                                    <option value="out_for_delivery">Out for Delivery</option>
-                                    <option value="delivered">Delivered</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
-                                <Info className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none opacity-60" />
+                            <div className={cn(
+                                "inline-flex items-center gap-2 px-4 py-1.5 rounded-xl font-black uppercase tracking-widest border shadow-sm",
+                                getStatusStyles(order.status)
+                            )}>
+                                <span className="text-[10px]">{order.status.replace(/_/g, ' ')}</span>
                             </div>
                         </div>
                         <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-widest flex items-center gap-2">

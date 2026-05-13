@@ -159,16 +159,6 @@ const OrdersList = () => {
         }
     };
 
-    const handleStatusUpdate = async (orderId, newStatus) => {
-        try {
-            await adminApi.updateOrderStatus(orderId, { status: newStatus });
-            showToast(`Order status updated to ${newStatus}`, "success");
-            fetchOrders(); // Refresh table
-        } catch (error) {
-            console.error("Failed to update status:", error);
-            showToast("Failed to update status", "error");
-        }
-    };
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -410,23 +400,12 @@ const OrdersList = () => {
                                         </div>
                                     </td>
                                     <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
-                                        <div className="relative inline-block w-40">
-                                            <select
-                                                value={order.status}
-                                                onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
-                                                className={cn(
-                                                    "w-full text-[10px] pl-3 pr-8 py-2 rounded-xl font-black uppercase tracking-wider border appearance-none cursor-pointer focus:ring-2 focus:ring-offset-1 transition-all outline-none shadow-sm",
-                                                    getStatusStyles(order.status)
-                                                )}
-                                            >
-                                                <option value="pending">Pending</option>
-                                                <option value="confirmed">Confirmed</option>
-                                                <option value="packed">Packed</option>
-                                                <option value="out_for_delivery">Out for Delivery</option>
-                                                <option value="delivered">Delivered</option>
-                                                <option value="cancelled">Cancelled</option>
-                                            </select>
-                                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none opacity-60" />
+                                        <div className={cn(
+                                            "inline-flex items-center gap-2 px-3 py-1.5 rounded-xl font-black uppercase tracking-wider border shadow-sm",
+                                            getStatusStyles(order.status)
+                                        )}>
+                                            {getStatusIcon(order.status)}
+                                            <span className="text-[10px]">{order.status.replace(/_/g, ' ')}</span>
                                         </div>
                                     </td>
                                     <td className="px-4 py-5 text-right">
@@ -437,30 +416,6 @@ const OrdersList = () => {
                                     </td>
                                     <td className="px-4 py-5 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            {status === 'processed' && order.status === 'confirmed' && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleStatusUpdate(order._id, 'packed');
-                                                    }}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-                                                >
-                                                    <Package className="h-3.5 w-3.5" />
-                                                    MARK PACKED
-                                                </button>
-                                            )}
-                                            {status === 'processed' && order.status === 'packed' && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleStatusUpdate(order._id, 'out_for_delivery');
-                                                    }}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-purple-700 transition-all shadow-lg shadow-purple-100"
-                                                >
-                                                    <Truck className="h-3.5 w-3.5" />
-                                                    DISPATCH
-                                                </button>
-                                            )}
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();

@@ -54,12 +54,12 @@ const KuikloCard = React.memo(({ product }) => {
         if (openProduct) { e.preventDefault(); openProduct(product); }
     };
 
-    const handleAdd = (e) => {
+    const handleAdd = async (e) => {
         e.preventDefault(); e.stopPropagation();
-        if (imageRef.current) {
+        const success = await addToCart({ ...product });
+        if (success && imageRef.current) {
             animateAddToCart(imageRef.current.getBoundingClientRect(), product.image || product.mainImage);
         }
-        addToCart({ ...product });
     };
 
     const handleInc = (e) => {

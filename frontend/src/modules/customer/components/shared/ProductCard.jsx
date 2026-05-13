@@ -113,20 +113,22 @@ const ProductCard = React.memo(
     );
 
     const handleAddToCart = React.useCallback(
-      (e) => {
+      async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (imageRef.current) {
+
+        const success = await addToCart({
+          ...product,
+          variantSku: variantKey,
+          variantName: defaultVariant?.name || "",
+        });
+
+        if (success && imageRef.current) {
           animateAddToCart(
             imageRef.current.getBoundingClientRect(),
             product.image || product.mainImage,
           );
         }
-        addToCart({
-          ...product,
-          variantSku: variantKey,
-          variantName: defaultVariant?.name || "",
-        });
       },
       [animateAddToCart, product, addToCart, variantKey, defaultVariant?.name],
     );

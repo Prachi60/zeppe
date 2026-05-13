@@ -21,6 +21,24 @@ const displayOrderStatus = (order) => {
   return order?.status || "active";
 };
 
+const getRiderEarnings = (order) => {
+  // 1. Check the structured payment breakdown (primary source)
+  if (order.paymentBreakdown?.riderPayoutTotal != null) {
+    return order.paymentBreakdown.riderPayoutTotal;
+  }
+
+  // 2. Check for specific rider earnings field (direct field fallback)
+  if (order.riderEarnings != null) return order.riderEarnings;
+
+  // 3. Fallback for legacy returns
+  if (order.returnStatus && order.returnStatus !== "none") {
+    return order.returnDeliveryCommission || 0;
+  }
+
+  // 4. Default to 0 for unknown states - avoids misleading mock calculations
+  return 0;
+};
+
 const OrderHistory = () => {
   const navigate = useNavigate();
   const [filter, setFilter] = useState("all");
@@ -244,7 +262,7 @@ const OrderHistory = () => {
                       </div>
                       <div className="text-left sm:text-right shrink-0">
                         <span className="block font-bold text-lg text-brand-600 whitespace-nowrap">
-                          ₹{Math.round((order.pricing?.total || 0) * 0.1)}
+                          ₹{Math.round(getRiderEarnings(order))}
                         </span>
                         <span className="ds-caption text-gray-400">Earnings</span>
                       </div>
