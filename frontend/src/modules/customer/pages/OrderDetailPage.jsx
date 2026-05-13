@@ -24,6 +24,7 @@ import {
   Loader2,
   Store,
   Navigation2,
+  XCircle,
 } from "lucide-react";
 import { customerApi } from "../services/customerApi";
 import { toast } from "sonner";
@@ -142,6 +143,7 @@ const OrderDetailPage = () => {
   const [trail, setTrail] = useState([]);
   const [routePolyline, setRoutePolyline] = useState(null);
   const [handoffOtp, setHandoffOtp] = useState(null);
+  const [cancellingOrder, setCancellingOrder] = useState(false);
   const [clockTick, setClockTick] = useState(Date.now());
   const parsedReturnWindowMinutes = parseInt(
     import.meta.env.VITE_RETURN_WINDOW_MINUTES || "2",
@@ -639,6 +641,41 @@ const OrderDetailPage = () => {
     }
   };
 
+  const canCancelOrder = () => {
+    if (!order) return false;
+    // Statuses that allow cancellation (typically pending or created)
+    const cancellableStatuses = ["pending", "created", "confirmed"];
+    const ws = (order.workflowStatus || "").toLowerCase();
+    
+    // If already cancelled or delivered, definitely can't cancel
+    if (status === "cancelled" || status === "delivered") return false;
+    
+    // v2 Workflow specific checks
+    if (order.workflowVersion >= 2) {
+      return ws === "seller_pending" || ws === "created";
+    }
+    
+    return cancellableStatuses.includes(status);
+  };
+
+  const handleCancelOrder = async () => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+    
+    try {
+      setCancellingOrder(true);
+      await customerApi.cancelOrder(order.orderId, { reason: "Cancelled by user" });
+      toast.success("Order cancelled successfully");
+      // Refresh order details
+      const response = await customerApi.getOrderDetails(orderId);
+      setOrder(response.data.result);
+    } catch (error) {
+      console.error("Failed to cancel order:", error);
+      toast.error(error.response?.data?.message || "Failed to cancel order");
+    } finally {
+      setCancellingOrder(false);
+    }
+  };
+
   if (!order) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white">
@@ -962,18 +999,34 @@ const OrderDetailPage = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="grid grid-cols-2 gap-3"
+          className="space-y-3"
         >
-          <button
-            onClick={() => setShowInvoice(true)}
-            className="py-3.5 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-sm shadow-sm hover:shadow-md active:scale-[0.98]">
-            <Download size={18} /> Invoice
-          </button>
-          <button
-            onClick={() => setShowHelp(true)}
-            className="py-3.5 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-sm shadow-sm hover:shadow-md active:scale-[0.98]">
-            <HelpCircle size={18} /> Help
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setShowInvoice(true)}
+              className="py-3.5 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-sm shadow-sm hover:shadow-md active:scale-[0.98]">
+              <Download size={18} /> Invoice
+            </button>
+            <button
+              onClick={() => setShowHelp(true)}
+              className="py-3.5 rounded-2xl bg-white border-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-sm shadow-sm hover:shadow-md active:scale-[0.98]">
+              <HelpCircle size={18} /> Help
+            </button>
+          </div>
+
+          {canCancelOrder() && (
+            <button
+              onClick={handleCancelOrder}
+              disabled={cancellingOrder}
+              className="w-full py-4 rounded-2xl bg-rose-50 border-2 border-rose-100 text-rose-600 font-extrabold hover:bg-rose-100 transition-all flex items-center justify-center gap-2 text-sm shadow-sm active:scale-[0.98]">
+              {cancellingOrder ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                <XCircle size={18} />
+              )}
+              Cancel Order
+            </button>
+          )}
         </motion.div>
 
         {/* Return Section - Only if applicable */}

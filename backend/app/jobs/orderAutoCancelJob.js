@@ -138,7 +138,6 @@ const autoCancelExpiredOrders = async () => {
 
     const n =
       v2Expired.length +
-      v2DeliveryExpired.length +
       paymentExpiredOrders.length +
       legacyExpired.length;
 
@@ -149,7 +148,6 @@ const autoCancelExpiredOrders = async () => {
         jobName: 'orderAutoCancelJob',
         duration,
         v2SellerExpired: v2Expired.length,
-        v2DeliveryExpired: v2DeliveryExpired.length,
         paymentExpired: paymentExpiredOrders.length,
         legacyExpired: legacyExpired.length,
         total: n
