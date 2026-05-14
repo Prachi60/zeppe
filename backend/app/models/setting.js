@@ -134,6 +134,11 @@ const settingSchema = new mongoose.Schema(
             default: 30,
             min: 0,
         },
+        freeDeliveryThreshold: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
         handlingFeeStrategy: {
             type: String,
             enum: ALL_HANDLING_FEE_STRATEGIES,

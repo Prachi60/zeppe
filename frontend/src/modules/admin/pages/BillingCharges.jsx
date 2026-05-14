@@ -87,6 +87,7 @@ const BillingCharges = () => {
                     deliveryPartnerRatePerKm: config.deliveryPartnerRatePerKm,
                     fleetCommissionRatePerKm: config.deliveryPartnerRatePerKm,
                     fixedDeliveryFee: config.fixedCharge,
+                    freeDeliveryThreshold: config.freeDeliveryThreshold,
                     handlingFeeStrategy: config.handlingFeeStrategy,
                     codEnabled: config.codEnabled,
                     onlineEnabled: config.onlineEnabled,
@@ -155,21 +156,15 @@ const BillingCharges = () => {
                             </h3>
                         </div>
                         <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-3">
+                            <div className="space-y-3 bg-slate-50/50 p-4 rounded-2xl border border-dashed border-slate-200">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                    Platform/Handling Fee (₹)
+                                    Handling Fees
                                     <Info className="h-3 w-3 opacity-50" />
                                 </label>
-                                <div className="relative group">
-                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-slate-300 group-focus-within:text-red-500 transition-colors">₹</span>
-                                    <input
-                                        type="number"
-                                        value={config.platformFee}
-                                        onChange={(e) => handleInputChange('platformFee', e.target.value)}
-                                        className="w-full pl-10 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-base font-black text-slate-900 outline-none focus:ring-2 focus:ring-red-500/10 transition-all"
-                                    />
-                                </div>
-                                <p className="text-[10px] font-bold text-slate-400 italic">Fee added to every order.</p>
+                                <p className="text-[11px] font-bold text-slate-600 leading-relaxed">
+                                    Handling fees are configured <span className="text-brand-600 font-black underline">per product category</span>. 
+                                    Go to Categories management to set specific fees for different items.
+                                </p>
                             </div>
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">

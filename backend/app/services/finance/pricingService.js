@@ -450,13 +450,19 @@ export async function generateOrderPaymentBreakdown({
   const delivery = calculateCustomerDeliveryFee(distanceKm, effectiveSettings);
   const rider = calculateRiderPayout(distanceKm, effectiveSettings);
 
+  // Apply free delivery threshold logic
+  const freeDeliveryThreshold = Number(effectiveSettings.freeDeliveryThreshold || 0);
+  const deliveryFeeCharged = (freeDeliveryThreshold > 0 && productSubtotal >= freeDeliveryThreshold)
+    ? 0
+    : delivery.deliveryFeeCharged;
+
   const normalizedDiscount = roundCurrency(discountTotal || 0);
   const normalizedTax = roundCurrency(taxTotal || 0);
   const normalizedTip = roundCurrency(tipTotal || 0);
 
   const grandTotal = roundCurrency(
     productSubtotal +
-      delivery.deliveryFeeCharged +
+      deliveryFeeCharged +
       handling.handlingFeeCharged -
       normalizedDiscount +
       normalizedTax +
@@ -472,7 +478,7 @@ export async function generateOrderPaymentBreakdown({
   );
 
   const platformLogisticsMargin = roundCurrency(
-    delivery.deliveryFeeCharged +
+    deliveryFeeCharged +
       handling.handlingFeeCharged -
       (rider.riderPayoutBase + rider.riderPayoutDistance + rider.riderPayoutBonus),
   );
@@ -505,7 +511,7 @@ export async function generateOrderPaymentBreakdown({
     lineItems,
     currency: "INR",
     productSubtotal,
-    deliveryFeeCharged: delivery.deliveryFeeCharged,
+    deliveryFeeCharged,
     handlingFeeCharged: handling.handlingFeeCharged,
     tipTotal: normalizedTip,
     discountTotal: normalizedDiscount,

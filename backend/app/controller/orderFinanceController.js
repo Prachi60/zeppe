@@ -18,6 +18,8 @@ import { orderMatchQueryFromRouteParam } from "../utils/orderLookup.js";
 import { verifyClientPaymentCallback } from "../services/paymentService.js";
 import { buildCheckoutPricingSnapshot } from "../services/checkoutPricingService.js";
 
+import { getOrCreateFinanceSettings } from "../services/finance/financeSettingsService.js";
+
 function validateWithJoi(schema, payload) {
   const { error, value } = schema.validate(payload, {
     abortEarly: false,
@@ -35,6 +37,16 @@ function validateWithJoi(schema, payload) {
 export const previewCheckoutFinance = async (req, res) => {
   try {
     const payload = validateWithJoi(checkoutPreviewSchema, req.body || {});
+    
+    // Check payment mode availability in preview
+    const settings = await getOrCreateFinanceSettings();
+    if (payload.paymentMode === 'COD' && !settings.codEnabled) {
+      return handleResponse(res, 400, 'COD is currently not available');
+    }
+    if (payload.paymentMode === 'ONLINE' && !settings.onlineEnabled) {
+      return handleResponse(res, 400, 'Online payment is currently not available');
+    }
+
     const pricingSnapshot = await buildCheckoutPricingSnapshot({
       orderItems: payload.items,
       address: payload.address,
@@ -75,6 +87,16 @@ export const createOrderWithFinancialSnapshot = async (req, res) => {
     }
 
     const validated = validateWithJoi(createFinanceOrderSchema, req.body || {});
+    
+    // Validate payment mode availability against settings
+    const settings = await getOrCreateFinanceSettings();
+    if (validated.paymentMode === 'COD' && !settings.codEnabled) {
+      return handleResponse(res, 400, 'COD is currently not available');
+    }
+    if (validated.paymentMode === 'ONLINE' && !settings.onlineEnabled) {
+      return handleResponse(res, 400, 'Online payment is currently not available');
+    }
+
     const payload = {
       items: validated.items,
       address: validated.address,
