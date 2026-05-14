@@ -89,7 +89,7 @@ const DeliveryRoutes = () => {
                 : <Navigate to="subscription" replace />
             } 
           />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
       </Routes>
     </Suspense>

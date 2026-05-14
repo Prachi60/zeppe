@@ -289,44 +289,43 @@ const CategoryProductsPage = () => {
     const { settings } = useSettings();
     const { currentLocation } = useAppLocation();
     const finalCategoryId = location.state?.selectedCategory || categoryId;
-    console.log("URL categoryId:", categoryId);
-    console.log("STATE categoryId:", location.state?.selectedCategory);
-    console.log("FINAL categoryId:", finalCategoryId);
-    const initialSubcategoryId = location.state?.activeSubcategoryId || 'all';
+    const initialSubcategoryId = String(location.state?.activeSubcategoryId || 'all');
     const { isOpen: isProductDetailOpen } = useProductDetail();
     const [selectedSubCategory, setSelectedSubCategory] = useState(initialSubcategoryId);
     const [category, setCategory] = useState(null);
     const [subCategories, setSubCategories] = useState([{ id: 'all', name: 'All' }]);
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    useEffect(() => {
-        setSelectedSubCategory(location.state?.activeSubcategoryId || 'all');
-    }, [location.state?.activeSubcategoryId]);
+    const [isMetaLoading, setIsMetaLoading] = useState(true);
 
     useEffect(() => {
+        const target = String(location.state?.activeSubcategoryId || 'all');
+        setSelectedSubCategory(target);
+    }, [location.state?.activeSubcategoryId]);
+
+    // Fetch ALL products for this category at once. Subcategory filtering is done
+    // client-side so switching tabs never triggers a new API call and the page
+    // always loads with products visible on the "All" tab.
+    useEffect(() => {
         if (!finalCategoryId) return;
+
+        // Don't fetch until we have coordinates, otherwise backend returns empty/400
+        if (!currentLocation?.latitude || !currentLocation?.longitude) {
+            setIsLoading(true);
+            return;
+        }
 
         const fetchProducts = async () => {
             setIsLoading(true);
             try {
                 const res = await customerApi.getProducts({
                     categoryId: finalCategoryId,
-                    limit: 50,
-                    lat: currentLocation?.latitude,
-                    lng: currentLocation?.longitude
+                    limit: 100,
+                    lat: currentLocation.latitude,
+                    lng: currentLocation.longitude
                 });
-
-                console.log("API RESPONSE:", res.data);
-
                 if (res.data.success) {
                     const items = res.data.result?.items || res.data.results || [];
-                    if (Array.isArray(items) && items.length === 0) {
-                        const isMongoObjectId = /^[a-f\d]{24}$/i.test(String(finalCategoryId || ""));
-                        console.warn("API empty result, categoryId ObjectId check:", {
-                            finalCategoryId,
-                            isMongoObjectId,
-                        });
-                    }
                     setProducts(Array.isArray(items) ? items : []);
                 } else {
                     setProducts([]);
@@ -340,29 +339,36 @@ const CategoryProductsPage = () => {
         };
 
         fetchProducts();
-    }, [finalCategoryId]);
+    }, [finalCategoryId, currentLocation?.latitude, currentLocation?.longitude, selectedSubCategory]);
 
     useEffect(() => {
         if (!finalCategoryId) return;
 
         const fetchCategoryMeta = async () => {
+            setIsMetaLoading(true);
             try {
+                // Fetch FULL unfiltered tree to reliably find the current category.
                 const catRes = await customerApi.getCategories({ tree: true });
                 if (!catRes.data.success) return;
 
                 const tree = catRes.data.results || catRes.data.result || [];
                 let currentCat = null;
                 for (const header of tree) {
-                    const found = (header.children || []).find((c) => c._id === finalCategoryId);
+                    const found = (header.children || []).find((c) => String(c._id) === String(finalCategoryId));
                     if (found) {
                         currentCat = found;
                         break;
                     }
                 }
 
-                if (!currentCat) return;
+                if (!currentCat) {
+                    setIsMetaLoading(false);
+                    return;
+                }
 
                 setCategory(currentCat);
+
+                // All subcategories from the tree (sorted), shown initially
                 const subs = (currentCat.children || [])
                     .sort((a, b) => {
                         const idxA = MANUAL_SUBCAT_ORDER.indexOf(a.name);
@@ -373,7 +379,7 @@ const CategoryProductsPage = () => {
                         return new Date(a.createdAt) - new Date(b.createdAt);
                     })
                     .map((s) => ({
-                        id: s._id,
+                        id: String(s._id),
                         name: s.name,
                         image: s.image || s.mainImage || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png",
                     }));
@@ -388,6 +394,8 @@ const CategoryProductsPage = () => {
                 ]);
             } catch (error) {
                 console.error("Error fetching category metadata:", error);
+            } finally {
+                setIsMetaLoading(false);
             }
         };
 
@@ -396,11 +404,21 @@ const CategoryProductsPage = () => {
 
     const safeProducts = Array.isArray(products) ? products : [];
 
+    // Client-side subcategory filter
     const filteredProducts = safeProducts.filter(p =>
         selectedSubCategory === 'all' ||
-        p.subcategoryId?._id === selectedSubCategory ||
-        p.subcategoryId === selectedSubCategory
+        String(p.subcategoryId?._id || p.subcategoryId) === String(selectedSubCategory)
     );
+
+    // Derive which subcategory IDs actually have products, so we can hide empty ones
+    const subcatsWithProducts = new Set(
+        safeProducts.map(p => String(p.subcategoryId?._id || p.subcategoryId)).filter(id => id && id !== 'undefined')
+    );
+
+    // Sidebar: always show 'All', hide subcategories with no products
+    const visibleSubCategories = (isLoading || isMetaLoading)
+        ? subCategories
+        : subCategories.filter(cat => cat.id === 'all' || subcatsWithProducts.has(String(cat.id)));
 
     return (
         <div className="flex flex-col min-h-[100dvh] bg-white w-full mx-auto relative overflow-hidden" style={{ fontFamily: "'Inter', 'Outfit', sans-serif" }}>
@@ -428,9 +446,9 @@ const CategoryProductsPage = () => {
             {/* Split Content Area */}
             <div className="flex flex-1 overflow-hidden relative">
                 {/* Left Sidebar (Subcategories) */}
-                {subCategories.length > 0 && (
+                {visibleSubCategories.length > 0 && (
                     <div className="w-[84px] bg-[#FFFFFF] border-r border-[#EAEAEA] overflow-y-auto hide-scrollbar pb-24 flex flex-col pt-1">
-                        {subCategories.map((cat) => {
+                        {visibleSubCategories.map((cat) => {
                             const isActive = selectedSubCategory === cat.id;
                             return (
                                 <button

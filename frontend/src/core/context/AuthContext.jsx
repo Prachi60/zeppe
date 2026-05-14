@@ -20,6 +20,15 @@ export const AuthProvider = ({ children }) => {
         if (path.startsWith('/seller') || path.startsWith('/vendor')) return 'seller';
         if (path.startsWith('/admin')) return 'admin';
         if (path.startsWith('/delivery')) return 'delivery';
+        
+        // Fallback to persisted role if on a generic path (like / or /login)
+        // ONLY if we have a token for that role to prevent loops
+        const persistedRole = localStorage.getItem('active_role');
+        if (persistedRole && ROLE_STORAGE_KEYS[persistedRole]) {
+            const token = localStorage.getItem(ROLE_STORAGE_KEYS[persistedRole]);
+            if (token) return persistedRole;
+        }
+        
         return 'customer';
     };
 
@@ -110,6 +119,7 @@ export const AuthProvider = ({ children }) => {
         if (storageKey && userData.token) {
             // Save ONLY the token string as requested by the user
             localStorage.setItem(storageKey, userData.token);
+            localStorage.setItem('active_role', role);
 
             setAuthData(prev => ({ ...prev, [role]: userData.token }));
             setUser(userData); // Set full data initially
@@ -131,6 +141,8 @@ export const AuthProvider = ({ children }) => {
         if (storageKey) {
             localStorage.removeItem(storageKey);
         }
+
+        localStorage.removeItem('active_role');
 
         // Remove the legacy shared token only when it belongs to the current role session.
         if (token && localStorage.getItem(LEGACY_TOKEN_KEY) === token) {

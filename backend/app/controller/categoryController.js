@@ -1,8 +1,10 @@
 import Category from "../models/category.js";
+import Product from "../models/product.js";
 import handleResponse from "../utils/helper.js";
 import getPagination from "../utils/pagination.js";
 import { buildKey, getOrSet, getTTL, invalidate } from "../services/cacheService.js";
 import { uploadToCloudinary } from "../services/mediaService.js";
+import { parseCustomerCoordinates, getNearbySellerIdsForCustomer } from "../services/customerVisibilityService.js";
 import mongoose from "mongoose";
 
 function normalizeUrl(value) {
@@ -50,11 +52,11 @@ async function validateParentForType(type, parentId) {
  ================================ */
 export const getCategories = async (req, res) => {
   try {
-    const { flat, tree, type } = req.query;
+    const { flat, tree, type, onlyWithProducts, lat, lng } = req.query;
 
     if (tree === "true") {
       const cacheKey = categoryCacheKey({ tree: true, type: "header" });
-      const categories = await getOrSet(
+      let categories = await getOrSet(
         cacheKey,
         async () => {
           const selectFields = "name slug image iconId headerVisualKey type parentId headerColor promoBannerTitle promoBannerSubtitle promoBannerDescription promoBannerImage";
@@ -73,6 +75,53 @@ export const getCategories = async (req, res) => {
         },
         getTTL("categories"),
       );
+
+      if (onlyWithProducts === "true") {
+        const coords = parseCustomerCoordinates({ lat, lng });
+        const nearbySellerIds = await getNearbySellerIdsForCustomer(coords.lat, coords.lng);
+
+        // Convert string seller IDs to ObjectIds — $in match on ObjectId fields requires this
+        const nearbySellerObjectIds = nearbySellerIds
+          .filter(id => mongoose.Types.ObjectId.isValid(id))
+          .map(id => new mongoose.Types.ObjectId(id));
+        
+        // Find all (category, subcategory) pairs that have active products from nearby sellers
+        const activePairs = await Product.aggregate([
+          { 
+            $match: { 
+              status: "active", 
+              sellerId: { $in: nearbySellerObjectIds } 
+            } 
+          },
+          { 
+            $group: { 
+              _id: { 
+                categoryId: "$categoryId", 
+                subcategoryId: "$subcategoryId" 
+              } 
+            } 
+          }
+        ]);
+        
+        const activePairSet = new Set(
+          activePairs.map(p => `${String(p._id.categoryId)}_${String(p._id.subcategoryId)}`)
+        );
+
+        // Filter the cached tree
+        categories = categories.map(header => {
+          if (header.status === "inactive") return null;
+          const filteredChildren = (header.children || []).map(cat => {
+            if (cat.status === "inactive") return null;
+            // Only filter Level 3 subcategories based on product existence in this specific category
+            const filteredSubcats = (cat.children || []).filter(sub => 
+              sub.status !== "inactive" && activePairSet.has(`${String(cat._id)}_${String(sub._id)}`)
+            );
+            return { ...cat, children: filteredSubcats };
+          });
+          return { ...header, children: filteredChildren };
+        }).filter(header => header !== null); 
+      }
+
       return handleResponse(res, 200, "Category tree fetched", categories);
     }
 

@@ -197,6 +197,15 @@ export const placeOrder = async (req, res) => {
     const { address, payment, timeSlot, items, paymentMode: paymentModeRaw } =
       req.body || {};
 
+    // Normalize address type to match Order model enum ["Home", "Work", "Other"]
+    if (address && typeof address.type === "string") {
+      const type = address.type.trim().toLowerCase();
+      if (type === "home") address.type = "Home";
+      else if (type === "work") address.type = "Work";
+      else if (type === "other") address.type = "Other";
+      else address.type = "Home"; // fallback
+    }
+
     const payload = validateWithJoi(createFinanceOrderSchema, {
       items,
       address,

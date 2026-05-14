@@ -242,9 +242,9 @@ export const getProducts = async (req, res) => {
       .select(
         "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status isFeatured variants createdAt",
       )
-      .populate("headerId", "name")
-      .populate("categoryId", "name")
-      .populate("subcategoryId", "name")
+      .populate("headerId", "name image")
+      .populate("categoryId", "name image")
+      .populate("subcategoryId", "name image")
       .populate("sellerId", "shopName isShopOpen")
       .sort(sortQuery)
       .skip(skip)
@@ -305,9 +305,9 @@ export const getSellerProducts = async (req, res) => {
       .select(
         "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status isFeatured variants createdAt",
       )
-      .populate("headerId", "name")
-      .populate("categoryId", "name")
-      .populate("subcategoryId", "name")
+      .populate("headerId", "name image")
+      .populate("categoryId", "name image")
+      .populate("subcategoryId", "name image")
       .populate("sellerId", "shopName")
       .sort(sortQuery)
       .skip(skip)
@@ -632,9 +632,9 @@ export const getProductById = async (req, res) => {
       cacheKey,
       async () =>
         Product.findById(id)
-          .populate("headerId", "name")
-          .populate("categoryId", "name")
-          .populate("subcategoryId", "name")
+          .populate("headerId", "name image")
+          .populate("categoryId", "name image")
+          .populate("subcategoryId", "name image")
           .populate("sellerId", "shopName isShopOpen")
           .lean(),
       getTTL("product"),

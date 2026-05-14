@@ -647,7 +647,7 @@ const CheckoutPage = () => {
         if (profile?.addresses?.length > 0) {
           const defaultAddr = profile.addresses.find(a => a.isDefault) || profile.addresses[0];
           setCurrentAddress({
-            type: defaultAddr.label || "Home",
+            type: (defaultAddr.label || "home").charAt(0).toUpperCase() + (defaultAddr.label || "home").slice(1),
             name: profile.name,
             address: defaultAddr.fullAddress || defaultAddr.address,
             landmark: defaultAddr.landmark || "",
