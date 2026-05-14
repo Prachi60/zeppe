@@ -144,6 +144,11 @@ const settingSchema = new mongoose.Schema(
             enum: ALL_HANDLING_FEE_STRATEGIES,
             default: "highest_category_fee",
         },
+        platformFee: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
         codEnabled: {
             type: Boolean,
             default: true,

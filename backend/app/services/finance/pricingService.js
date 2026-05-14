@@ -364,7 +364,7 @@ export async function hydrateOrderItems(
       quantity,
       price: inferredUnitPrice,
       image: item.image || product.mainImage,
-      headerCategoryId: String(product.headerId),
+      headerCategoryId: product.headerId ? String(product.headerId) : null,
       sellerId: String(product.sellerId),
       variantSku: rawVariantSku || "",
       variantName: resolvedVariant ? String(resolvedVariant?.name || "").trim() : "",
@@ -447,6 +447,10 @@ export async function generateOrderPaymentBreakdown({
     handlingFeeStrategy: effectiveHandlingStrategy,
     categoryById,
   });
+
+  const globalPlatformFee = Number(effectiveSettings.platformFee || 0);
+  const handlingFeeCharged = roundCurrency(handling.handlingFeeCharged + globalPlatformFee);
+
   const delivery = calculateCustomerDeliveryFee(distanceKm, effectiveSettings);
   const rider = calculateRiderPayout(distanceKm, effectiveSettings);
 
