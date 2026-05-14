@@ -1121,7 +1121,7 @@ const CheckoutPage = () => {
             <div className="flex justify-between items-center text-sm">
               <span className="text-slate-600 flex items-center gap-2">
                 <ShoppingBag size={16} className="text-slate-400" />
-                Handling Charge
+                Platform Fee
               </span>
               <span className="font-bold text-slate-800">
                 ₹{handlingFee}

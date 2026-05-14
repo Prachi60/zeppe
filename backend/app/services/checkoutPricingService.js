@@ -7,6 +7,7 @@ import {
   generateOrderPaymentBreakdown,
   hydrateOrderItems,
 } from "./finance/pricingService.js";
+import { getOrCreateFinanceSettings } from "./finance/financeSettingsService.js";
 import { validateAndComputeCoupon } from "./couponService.js";
 
 function normalizeLocation(location = null) {
@@ -178,13 +179,16 @@ async function computeGlobalHandlingFeeForCheckout(hydratedItems = [], { session
   const categories = await categoryQuery;
   const categoryById = new Map(categories.map((category) => [String(category._id), category]));
 
+  const settings = await getOrCreateFinanceSettings();
   const handling = calculateHandlingFee(hydratedItems, {
     handlingFeeStrategy: HANDLING_FEE_STRATEGY.HIGHEST_CATEGORY_FEE,
     categoryById,
   });
 
+  const globalPlatformFee = Number(settings.platformFee || 0);
+
   return {
-    handlingFeeCharged: Number(handling.handlingFeeCharged || 0),
+    handlingFeeCharged: round2(Number(handling.handlingFeeCharged || 0) + globalPlatformFee),
     handlingCategoryUsed: handling.handlingCategoryUsed || null,
   };
 }
