@@ -161,7 +161,13 @@ export const createSellerController = (Model, options = {}) => {
                 const sort = buildSort(req.query.sort, defaultSort);
                 const { page, limit, skip } = getPaginationOptions(req);
 
-                let dbQuery = Model.find(query).sort(sort).skip(skip).limit(limit).lean();
+                let dbQuery = Model.find(query).sort(sort).skip(skip).limit(limit);
+
+                if (options.projection) {
+                    dbQuery = dbQuery.select(options.projection);
+                }
+
+                dbQuery = dbQuery.lean();
 
                 if (populateFields.length > 0) {
                     populateFields.forEach(field => {
@@ -196,7 +202,13 @@ export const createSellerController = (Model, options = {}) => {
                 if (req.user.role !== 'admin') {
                     query[sellerField] = req.user.id;
                 }
-                let dbQuery = Model.findOne(query).lean();
+                let dbQuery = Model.findOne(query);
+
+                if (options.projection) {
+                    dbQuery = dbQuery.select(options.projection);
+                }
+
+                dbQuery = dbQuery.lean();
                 
                 if (populateFields.length > 0) {
                     populateFields.forEach(field => {

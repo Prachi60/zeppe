@@ -475,8 +475,8 @@ const Orders = () => {
                                 header: "Total",
                                 cell: (o) => (
                                     <div className="flex flex-col">
-                                        <span className="text-sm font-black text-slate-900">₹{(o.pricing?.total || 0).toLocaleString()}</span>
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase">{(o.items || []).length} items</span>
+                                        <span className="text-sm font-black text-slate-900">₹{(o.pricing?.grandTotal || o.pricing?.total || 0).toLocaleString()}</span>
+                                        <span className="text-[9px] font-bold text-emerald-600 uppercase">Payout: ₹{(o.pricing?.sellerPayoutTotal || 0).toLocaleString()}</span>
                                     </div>
                                 )
                             },
@@ -688,21 +688,19 @@ const Orders = () => {
                                     <div className="space-y-3 sm:space-y-4">
                                         <div className="bg-primary/5 p-3 sm:p-4 rounded-3xl border border-primary/10">
                                             <h4 className="text-xs font-black text-primary uppercase tracking-widest mb-3">Order Summary</h4>
-                                            <div className="space-y-2">
                                                 <div className="flex justify-between text-xs">
                                                     <span className="font-bold text-slate-600">Subtotal</span>
-                                                    <span className="font-black text-slate-900">₹{(selectedOrder.pricing?.subtotal || (selectedOrder.pricing?.total || 0) - (selectedOrder.pricing?.deliveryFee || 10)).toFixed(2)}</span>
+                                                    <span className="font-black text-slate-900">₹{Number(selectedOrder.pricing?.productSubtotal || selectedOrder.pricing?.subtotal || 0).toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-xs">
                                                     <span className="font-bold text-slate-600">Delivery Fee</span>
-                                                    <span className="font-black text-brand-600">₹{(selectedOrder.pricing?.deliveryFee || 10).toFixed(2)}</span>
+                                                    <span className="font-black text-brand-600">₹{Number(selectedOrder.pricing?.deliveryFeeCharged || 0).toFixed(2)}</span>
                                                 </div>
                                                 <div className="h-px bg-primary/10 my-2" />
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="font-black text-slate-900">Total</span>
-                                                    <span className="font-black text-primary">₹{(selectedOrder.pricing?.total || 0).toFixed(2)}</span>
+                                                    <span className="font-black text-slate-900">Order Value</span>
+                                                    <span className="font-black text-primary">₹{(selectedOrder.pricing?.grandTotal || selectedOrder.pricing?.total || 0).toFixed(2)}</span>
                                                 </div>
-                                            </div>
                                         </div>
                                         <div className="bg-slate-900 p-3 sm:p-4 rounded-3xl text-white shadow-xl shadow-slate-900/10">
                                             <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest mb-2">Payment Status</h4>

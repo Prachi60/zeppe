@@ -239,12 +239,13 @@ const CheckoutPage = () => {
   useEffect(() => {
     if (useWallet && user?.walletBalance && pricingPreview?.grandTotal) {
       const maxAvailable = Number(user.walletBalance || 0);
-      const totalToPay = Number(pricingPreview.grandTotal || 0);
+      // Include donation and gift packaging in the base for wallet calculation so wallet doesn't over-cover
+      const totalToPay = Number(pricingPreview.grandTotal || 0) + Number(donationAmount || 0) + (isGiftPackaging ? 25 : 0);
       setWalletAmountToUse(Math.min(maxAvailable, totalToPay));
     } else {
       setWalletAmountToUse(0);
     }
-  }, [useWallet, user?.walletBalance, pricingPreview?.grandTotal]);
+  }, [useWallet, user?.walletBalance, pricingPreview?.grandTotal, donationAmount, isGiftPackaging]);
 
   const finalAmountToPay = Math.max(0, (pricingPreview?.grandTotal || 0) + (Number(donationAmount) || 0) + (isGiftPackaging ? 25 : 0) - walletAmountToUse);
 

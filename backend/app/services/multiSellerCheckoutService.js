@@ -299,10 +299,13 @@ export async function processMultiSellerCheckout(params) {
     const sellerGroupsWithPricing = new Map();
     
     for (const [sellerId, items] of sellerGroups) {
+      // WARNING: DO NOT calculate delivery fees here. This is a legacy path.
+      // Core pricing is handled in checkoutPricingService.js -> buildCheckoutPricingSnapshot.
+      // If this path is still used, it should receive pre-calculated seller breakdowns.
       const sellerPricing = await calculateSellerPricing(items, {
-        deliveryFeePerSeller: pricing?.deliveryFee / sellerGroups.size || 0,
-        handlingFeePerSeller: pricing?.platformFee / sellerGroups.size || 0,
-        taxRate: 0, // Tax calculation can be added here
+        deliveryFeePerSeller: 0, // Should be passed from pre-calculated breakdown
+        handlingFeePerSeller: 0,
+        taxRate: 0,
       });
       
       sellerGroupsWithPricing.set(sellerId, {

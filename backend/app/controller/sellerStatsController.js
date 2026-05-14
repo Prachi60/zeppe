@@ -14,10 +14,10 @@ export const getSellerStats = async (req, res) => {
 
         // 1. Basic Stats (Total Sales, Total Orders)
         const orders = await Order.find({ seller: sellerId, status: { $ne: 'cancelled' } })
-            .select("pricing.total")
+            .select("pricing.total pricing.sellerPayoutTotal pricing.productSubtotal")
             .lean();
 
-        const totalSales = orders.reduce((acc, order) => acc + (order.pricing?.total || 0), 0);
+        const totalSales = orders.reduce((acc, order) => acc + (order.pricing?.sellerPayoutTotal || order.pricing?.productSubtotal || order.pricing?.total || 0), 0);
         const totalOrders = orders.length;
         const avgOrderValue = totalOrders > 0 ? (totalSales / totalOrders) : 0;
 
@@ -50,7 +50,7 @@ export const getSellerStats = async (req, res) => {
             {
                 $group: {
                     _id: { $dateToString: { format: aggregationFormat, date: "$createdAt" } },
-                    sales: { $sum: "$pricing.total" },
+                    sales: { $sum: { $ifNull: ["$pricing.sellerPayoutTotal", "$pricing.total"] } },
                     orders: { $sum: 1 }
                 }
             },
@@ -131,8 +131,8 @@ export const getSellerStats = async (req, res) => {
             createdAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo }
         });
 
-        const currentSales = currentWeekOrders.reduce((acc, o) => acc + (o.pricing?.total || 0), 0);
-        const prevSales = prevWeekOrders.reduce((acc, o) => acc + (o.pricing?.total || 0), 0);
+        const currentSales = currentWeekOrders.reduce((acc, o) => acc + (o.pricing?.sellerPayoutTotal || o.pricing?.total || 0), 0);
+        const prevSales = prevWeekOrders.reduce((acc, o) => acc + (o.pricing?.sellerPayoutTotal || o.pricing?.total || 0), 0);
         const salesTrendPerc = prevSales === 0 ? (currentSales > 0 ? 100 : 0) : (((currentSales - prevSales) / prevSales) * 100).toFixed(1);
 
         const currentOrdersCount = currentWeekOrders.length;
