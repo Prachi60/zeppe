@@ -467,7 +467,7 @@ export async function generateOrderPaymentBreakdown({
   const grandTotal = roundCurrency(
     productSubtotal +
       deliveryFeeCharged +
-      handling.handlingFeeCharged -
+      handlingFeeCharged -
       normalizedDiscount +
       normalizedTax +
       normalizedTip,
@@ -483,7 +483,7 @@ export async function generateOrderPaymentBreakdown({
 
   const platformLogisticsMargin = roundCurrency(
     deliveryFeeCharged +
-      handling.handlingFeeCharged -
+      handlingFeeCharged -
       (rider.riderPayoutBase + rider.riderPayoutDistance + rider.riderPayoutBonus),
   );
   const platformTotalEarning = roundCurrency(
@@ -516,7 +516,7 @@ export async function generateOrderPaymentBreakdown({
     currency: "INR",
     productSubtotal,
     deliveryFeeCharged,
-    handlingFeeCharged: handling.handlingFeeCharged,
+    handlingFeeCharged,
     tipTotal: normalizedTip,
     discountTotal: normalizedDiscount,
     taxTotal: normalizedTax,

@@ -7,6 +7,7 @@ import {
   generateOrderPaymentBreakdown,
   hydrateOrderItems,
 } from "./finance/pricingService.js";
+import { getOrCreateFinanceSettings } from "./finance/financeSettingsService.js";
 import { validateAndComputeCoupon } from "./couponService.js";
 
 function normalizeLocation(location = null) {
@@ -187,7 +188,7 @@ async function computeGlobalHandlingFeeForCheckout(hydratedItems = [], { session
   const globalPlatformFee = Number(settings.platformFee || 0);
 
   return {
-    handlingFeeCharged: roundCurrency(Number(handling.handlingFeeCharged || 0) + globalPlatformFee),
+    handlingFeeCharged: round2(Number(handling.handlingFeeCharged || 0) + globalPlatformFee),
     handlingCategoryUsed: handling.handlingCategoryUsed || null,
   };
 }
