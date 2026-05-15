@@ -849,6 +849,12 @@ const OrderDetails = () => {
                     ? order.address?.address || "Address not available"
                     : order.seller?.address || "Address not available"}
                 </p>
+                {(isReturn ? order.address?.phone : order.seller?.phone) && (
+                  <p className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <Phone size={14} className="text-slate-400" />
+                    {isReturn ? order.address?.phone : order.seller?.phone}
+                  </p>
+                )}
                 <Button onClick={handleNavigate} className="w-full" variant="outline">
                   <Navigation size={18} className="mr-2" />{" "}
                   {isReturn ? "Navigate to Customer" : "Navigate to Store"}
@@ -898,9 +904,6 @@ const OrderDetails = () => {
                   </div>
                 </div>
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="icon" className="h-9 w-9">
-                    <MessageSquare size={18} />
-                  </Button>
                   {(isReturn ? order.seller?.phone : order.address?.phone) && (
                     <Button
                       variant="outline"
@@ -924,9 +927,15 @@ const OrderDetails = () => {
                 <p className="text-gray-500 text-sm mb-1">
                   {isReturn ? order.seller?.address : order.address?.address}
                 </p>
-                <p className="text-gray-500 text-sm mb-4">
-                  {isReturn ? order.seller?.address : order.address?.city}
+                <p className="text-gray-500 text-sm mb-2">
+                  {isReturn ? order.seller?.address : (order.address?.city || "") + (order.address?.pincode ? ` - ${order.address.pincode}` : "")}
                 </p>
+                {(isReturn ? order.seller?.phone : order.address?.phone) && (
+                  <p className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <Phone size={14} className="text-slate-400" />
+                    {isReturn ? order.seller?.phone : order.address?.phone}
+                  </p>
+                )}
                 <Button onClick={handleNavigate} className="w-full bg-blue-600 hover:bg-blue-700 text-white border-none">
                   <Navigation size={18} className="mr-2" />{" "}
                   {isReturn ? "Navigate to Seller" : "Navigate to Customer"}

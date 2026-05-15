@@ -7,6 +7,14 @@ const addressSchema = new mongoose.Schema({
         enum: ["home", "work", "other"],
         default: "home",
     },
+    name: {
+        type: String,
+        trim: true,
+    },
+    phone: {
+        type: String,
+        trim: true,
+    },
     fullAddress: {
         type: String,
         required: true,

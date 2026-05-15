@@ -75,7 +75,7 @@ const CheckoutPage = () => {
   const { wishlist, addToWishlist, fetchFullWishlist, isFullDataFetched } =
     useWishlist();
   const { showToast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const { settings } = useSettings();
  
   // Fetch full wishlist data if not already fetched
@@ -108,6 +108,9 @@ const CheckoutPage = () => {
   const [showAllCartItems, setShowAllCartItems] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
+  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+  const [newPhone, setNewPhone] = useState("");
+  const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isResolvingAddressCoords, setIsResolvingAddressCoords] = useState(false);
@@ -282,6 +285,35 @@ const CheckoutPage = () => {
     };
   };
 
+  const persistAddressToProfile = async (finalAddress) => {
+    if (!isAuthenticated || !user) return;
+    
+    // Check if this address is already saved
+    const norm = (s) => String(s || "").toLowerCase().trim();
+    const isAlreadySaved = user.addresses?.some(addr => 
+      norm(addr.fullAddress || addr.address) === norm(finalAddress.address) && 
+      norm(addr.phone) === norm(finalAddress.phone)
+    );
+    
+    if (!isAlreadySaved) {
+      try {
+        const newAddress = {
+          label: ["home", "work", "other"].includes(norm(finalAddress.type)) ? norm(finalAddress.type) : "other",
+          fullAddress: finalAddress.address,
+          name: finalAddress.name,
+          phone: finalAddress.phone,
+          landmark: finalAddress.landmark,
+          location: finalAddress.location
+        };
+        const updatedAddresses = [...(user.addresses || []), newAddress];
+        await customerApi.updateProfile({ addresses: updatedAddresses });
+        await refreshUser();
+      } catch (err) {
+        console.error("[Checkout] Failed to auto-save address:", err);
+      }
+    }
+  };
+
   const handleSaveRecipient = () => {
     if (
       !recipientData.completeAddress ||
@@ -304,6 +336,25 @@ const CheckoutPage = () => {
       // ignore storage errors
     }
     showToast("Recipient details saved!", "success");
+  };
+
+  const handleUpdatePhone = async () => {
+    if (newPhone.length !== 10) {
+      showToast("Please enter a valid 10-digit phone number", "error");
+      return;
+    }
+    setIsUpdatingPhone(true);
+    try {
+      await customerApi.updateProfile({ phone: newPhone });
+      await refreshUser();
+      setCurrentAddress(prev => ({ ...prev, phone: newPhone }));
+      setIsPhoneModalOpen(false);
+      showToast("Phone number updated successfully", "success");
+    } catch (error) {
+      showToast(error.response?.data?.message || "Failed to update phone number", "error");
+    } finally {
+      setIsUpdatingPhone(false);
+    }
   };
 
   const handleMoveToWishlist = (item) => {
@@ -644,6 +695,12 @@ const CheckoutPage = () => {
     if (isAuthenticated) {
       customerApi.getProfile().then(r => {
         const profile = r.data.result;
+        
+        // Show phone modal if missing
+        if (!profile?.phone) {
+          setIsPhoneModalOpen(true);
+        }
+
         if (profile?.addresses?.length > 0) {
           const defaultAddr = profile.addresses.find(a => a.isDefault) || profile.addresses[0];
           setCurrentAddress({
@@ -710,6 +767,13 @@ const CheckoutPage = () => {
   ]);
 
   const handlePlaceOrder = async () => {
+    // Guard: ensure phone number exists
+    if (!user?.phone && !currentAddress.phone && !savedRecipient?.phone) {
+      setIsPhoneModalOpen(true);
+      showToast("Please provide a phone number for delivery coordination", "warning");
+      return;
+    }
+
     // Guard: block order if seller's shop is closed
     const hasClosedShopItem = cart.some((item) => item.sellerIsOpen === false);
     if (hasClosedShopItem) {
@@ -792,6 +856,9 @@ const CheckoutPage = () => {
             return;
           }
         }
+        
+        // Auto-persist address and phone for future use
+        persistAddressToProfile(orderData.address);
 
         // COD Flow
         clearCart();
@@ -2042,6 +2109,57 @@ const CheckoutPage = () => {
                 CHECK
               </button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Phone Number Requirement Modal */}
+      <Dialog open={isPhoneModalOpen} onOpenChange={setIsPhoneModalOpen}>
+        <DialogContent className="fixed !bottom-0 !top-auto !left-0 !right-0 !translate-x-0 !translate-y-0 w-full sm:max-w-[400px] mx-auto rounded-t-[24px] rounded-b-none p-5 border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom">
+          <DialogHeader className="border-b border-slate-50 pb-3">
+            <DialogTitle className="text-slate-800 font-extrabold text-base flex items-center gap-2">
+              <PhoneOff className="text-[#f59931]" size={20} />
+              Missing Phone Number
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium pt-0.5 text-xs">
+              We need your phone number to coordinate delivery and send order updates.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="checkout-phone" className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-0.5">
+                Your 10-digit Phone Number
+              </Label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-400 font-bold border-r border-slate-100 pr-3 mr-3">
+                  <span className="text-sm">+91</span>
+                </div>
+                <Input
+                  id="checkout-phone"
+                  placeholder="00000 00000"
+                  className="h-12 pl-16 rounded-xl border-slate-100 bg-slate-50 focus-visible:ring-[#f59931] font-bold text-base"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  autoFocus
+                />
+              </div>
+            </div>
+            
+            <Button 
+              className="w-full h-12 rounded-xl bg-[#f59931] hover:bg-[#e08820] text-white font-black text-base transition-all active:scale-[0.98]"
+              onClick={handleUpdatePhone}
+              disabled={newPhone.length !== 10 || isUpdatingPhone}
+            >
+              {isUpdatingPhone ? (
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Updating...</span>
+                </div>
+              ) : (
+                "Save and Continue"
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

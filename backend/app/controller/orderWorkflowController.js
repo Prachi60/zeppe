@@ -144,11 +144,10 @@ export const getOrderRoute = async (req, res) => {
         if (hasCustLoc) {
           dest = { lat: c.lat, lng: c.lng };
         } else {
-          const User = (await import("../models/user.js")).default;
-          const customer = await User.findById(order.customer).lean();
+          const customer = await Customer.findById(order.customer).lean();
           const fallbackAddress = customer?.addresses?.find(
             (a) =>
-              a.label?.toLowerCase() === order.address?.type?.toLowerCase() ||
+              (a.label && a.label.toLowerCase() === (order.address?.type || "").toLowerCase()) ||
               a.fullAddress === order.address?.address,
           );
 
@@ -192,11 +191,10 @@ export const getOrderRoute = async (req, res) => {
         if (hasCustLoc) {
           dest = { lat: c.lat, lng: c.lng };
         } else {
-          const User = (await import("../models/user.js")).default;
-          const customer = await User.findById(order.customer).lean();
+          const customer = await Customer.findById(order.customer).lean();
           const fallbackAddress = customer?.addresses?.find(
             (a) =>
-              a.label?.toLowerCase() === order.address?.type?.toLowerCase() ||
+              (a.label && a.label.toLowerCase() === (order.address?.type || "").toLowerCase()) ||
               a.fullAddress === order.address?.address,
           );
 
