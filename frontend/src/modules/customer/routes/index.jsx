@@ -14,7 +14,8 @@ const OrderTransactionsPage = React.lazy(() => import('../pages/OrderTransaction
 const AddressesPage = React.lazy(() => import('../pages/AddressesPage'));
 const SettingsPage = React.lazy(() => import('../pages/SettingsPage'));
 const SupportPage = React.lazy(() => import('../pages/SupportPage'));
-const ChatPage = React.lazy(() => import('../pages/ChatPage'));
+const ChatPage = React.lazy(() => import('@/pages/ChatPage'));
+
 const TermsPage = React.lazy(() => import('../pages/TermsPage'));
 const PrivacyPage = React.lazy(() => import('../pages/PrivacyPage'));
 const AboutPage = React.lazy(() => import('../pages/AboutPage'));

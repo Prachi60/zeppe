@@ -43,12 +43,14 @@ const EarningsPage = () => {
       if (response.data.success && response.data.result) {
         const result = response.data.result;
         setEarningsData({
-          totalEarnings: result.totalEarnings || 0,
+          lifetimeEarnings: result.lifetimeEarnings || 0,
+          spendableBalance: result.spendableBalance || 0,
+          pendingEarnings: result.pendingEarnings || 0,
           incentives: result.incentives || 0,
           bonuses: result.bonuses || 0,
           tipsReceived: result.tipsReceived || 0,
           chartData: result.chartData || [],
-          recentTransactions: result.transactions || result.recentTransactions || [],
+          recentTransactions: result.recentTransactions || result.transactions || [],
         });
       }
     } catch {
@@ -115,33 +117,43 @@ const EarningsPage = () => {
         animate="visible"
       >
         <motion.div variants={itemVariants}>
-          <div className="bg-gradient-to-br from-primary to-blue-600 rounded-2xl p-6 text-white shadow-lg shadow-primary/30 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-10 -mb-10 blur-xl" />
+          <div className="bg-gradient-to-br from-[#0066FF] to-blue-700 rounded-2xl p-6 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden border border-blue-400/20">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-10 -mb-10 blur-2xl" />
 
-            <p className="text-blue-100 font-medium text-sm uppercase tracking-wide mb-1 relative z-10">
-              Total Earnings
-            </p>
+            <div className="flex justify-between items-start mb-1 relative z-10">
+              <p className="text-blue-100 font-bold text-[10px] uppercase tracking-[0.15em] opacity-80">
+                Spendable Balance
+              </p>
+              <div className="bg-white/15 px-2 py-0.5 rounded-md backdrop-blur-sm border border-white/10">
+                 <p className="text-[9px] font-black uppercase tracking-tighter">Lifetime: {RUPEE}{Number(earningsData.lifetimeEarnings || 0).toLocaleString()}</p>
+              </div>
+            </div>
+            
             <div className="flex items-baseline mb-6 relative z-10">
-              <span className="text-3xl font-bold mr-1">{RUPEE}</span>
-              <span className="text-5xl font-extrabold tracking-tight">
-                {Number(earningsData.totalEarnings || 0).toLocaleString()}
+              <span className="text-2xl font-bold mr-1 opacity-70">{RUPEE}</span>
+              <span className="text-5xl font-black tracking-tight leading-none">
+                {Number(earningsData.spendableBalance || 0).toLocaleString()}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20 relative z-10">
+            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-white/10 relative z-10">
               <div>
-                <p className="text-blue-100 text-xs mb-1">Incentives</p>
-                <p className="font-bold text-lg">
-                  +{RUPEE}
-                  {Number(earningsData.incentives || 0).toLocaleString()}
+                <p className="text-blue-100 text-[9px] font-bold uppercase tracking-wider mb-0.5 opacity-60">Pending</p>
+                <p className="font-bold text-sm">
+                  {RUPEE}{Number(earningsData.pendingEarnings || 0).toLocaleString()}
                 </p>
               </div>
               <div>
-                <p className="text-blue-100 text-xs mb-1">Tips</p>
-                <p className="font-bold text-lg">
-                  +{RUPEE}
-                  {Number(earningsData.tipsReceived || 0).toLocaleString()}
+                <p className="text-blue-100 text-[9px] font-bold uppercase tracking-wider mb-0.5 opacity-60">Incentives</p>
+                <p className="font-bold text-sm">
+                  {RUPEE}{Number(earningsData.incentives || 0).toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-blue-100 text-[9px] font-bold uppercase tracking-wider mb-0.5 opacity-60">Tips</p>
+                <p className="font-bold text-sm">
+                  {RUPEE}{Number(earningsData.tipsReceived || 0).toLocaleString()}
                 </p>
               </div>
             </div>

@@ -30,6 +30,8 @@ const DeliveryTracking = React.lazy(() => import("../pages/DeliveryTracking"));
 const Profile = React.lazy(() => import("../pages/Profile"));
 const Withdrawals = React.lazy(() => import("../pages/Withdrawals"));
 const VendorSubscription = React.lazy(() => import("../pages/VendorSubscription"));
+const ChatPage = React.lazy(() => import("@/pages/ChatPage"));
+
 
 import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
@@ -63,7 +65,9 @@ const navItems = [
     icon: HiOutlineCurrencyDollar,
   },
   { label: "Profile", path: "/seller/profile", icon: HiOutlineUser },
+  { label: "Support Chat", path: "/seller/support-chat", icon: HiOutlineChatBubbleLeftRight },
 ];
+
 
 const SellerRoutes = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -121,6 +125,8 @@ const SellerRoutes = () => {
           <Route path="/earnings" element={<Earnings />} />
           <Route path="/withdrawals" element={<Withdrawals />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/support-chat" element={<ChatPage />} />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </React.Suspense>

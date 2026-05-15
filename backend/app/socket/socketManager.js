@@ -2,6 +2,8 @@
  * Socket.IO — order rooms, role rooms, JWT auth.
  */
 import { verifySocketToken } from "./socketAuth.js";
+import { registerChatHandlers } from "./chatHandlers.js";
+
 
 let _io = null;
 
@@ -92,8 +94,12 @@ export const initSocket = (io) => {
     socket.on("error", (err) => {
       console.error(`[SocketManager] Socket error on ${socket.id}:`, err?.message || err);
     });
+
+    // Register Chat Handlers
+    registerChatHandlers(io, socket);
   });
 };
+
 
 export const getIO = () => {
   if (!_io) throw new Error("Socket.IO not initialized");

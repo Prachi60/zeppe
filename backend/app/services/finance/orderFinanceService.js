@@ -275,6 +275,7 @@ export async function createPendingRiderPayout(order, { session, actorId } = {})
       amount,
       createdBy: actorId || null,
       metadata: { flow: "order_delivered" },
+      immediate: true,
     },
     { session },
   );

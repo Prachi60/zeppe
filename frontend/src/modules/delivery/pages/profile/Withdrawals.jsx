@@ -21,6 +21,8 @@ const Withdrawals = () => {
     const navigate = useNavigate();
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
+    const [idempotencyKey, setIdempotencyKey] = useState("");
+
     const [fetching, setFetching] = useState(true);
     const [stats, setStats] = useState({
         availableBalance: 0,
@@ -33,12 +35,12 @@ const Withdrawals = () => {
             setFetching(true);
             const res = await deliveryApi.getEarnings();
             if (res.data.success) {
+                const { spendableBalance, pendingEarnings, pendingWithdrawalsTotal, recentTransactions } = res.data.result;
                 setStats({
-                    availableBalance: res.data.result.totalEarnings || 0,
-                    pendingWithdrawals: res.data.result.pendingWithdrawalsTotal || (res.data.result.recentTransactions || [])
-                        .filter(t => t.type.includes('Withdrawal') && (t.status === 'Pending' || t.status === 'Processing'))
-                        .reduce((acc, t) => acc + Math.abs(t.amount), 0),
-                    history: (res.data.result.recentTransactions || [])
+                    availableBalance: spendableBalance || 0,
+                    pendingEarnings: pendingEarnings || 0,
+                    pendingWithdrawals: pendingWithdrawalsTotal || 0,
+                    history: (recentTransactions || [])
                         .filter(t => t.type.includes('Withdrawal'))
                 });
             }
@@ -60,7 +62,10 @@ const Withdrawals = () => {
 
     useEffect(() => {
         fetchData();
+        // Generate a stable idempotency key for this session/attempt
+        setIdempotencyKey(`WDR-${Math.random().toString(36).substring(2, 15)}-${Date.now()}`);
     }, []);
+
 
     const handleRequest = async () => {
         if (!amount || isNaN(amount) || Number(amount) <= 0) {
@@ -72,20 +77,43 @@ const Withdrawals = () => {
 
         setLoading(true);
         try {
-            const res = await deliveryApi.requestWithdrawal({ amount: Number(amount) });
+            // Re-fetch latest balance before submission (optional safety check)
+            const resBalance = await deliveryApi.getEarnings();
+            const latestBalance = resBalance.data.result?.totalEarnings || 0;
+            
+            if (Number(amount) > latestBalance) {
+                setStats(prev => ({ ...prev, availableBalance: latestBalance }));
+                setLoading(false);
+                return toast.error(`Balance updated: ₹${latestBalance}. Insufficient funds.`);
+            }
+
+            const res = await deliveryApi.requestWithdrawal(
+                { amount: Number(amount) },
+                { headers: { "Idempotency-Key": idempotencyKey } }
+            );
+
             if (res.data.success) {
                 toast.success("Withdrawal request submitted successfully!");
                 setAmount("");
-                fetchData();
+                // Refresh data and generate NEW idempotency key for next possible request
+                await fetchData();
+                setIdempotencyKey(`WDR-${Math.random().toString(36).substring(2, 15)}-${Date.now()}`);
             } else {
                 toast.error(res.data.message || "Failed to submit request");
             }
         } catch (error) {
+            console.error("Withdrawal Error:", error);
             toast.error(error.response?.data?.message || "Failed to submit request");
+            
+            // If it's a conflict or already processed, refresh to show new state
+            if (error.response?.status === 409 || error.response?.status === 400) {
+                fetchData();
+            }
         } finally {
             setLoading(false);
         }
     };
+
 
     return (
         <div className="bg-gray-50/50 min-h-screen pb-24">
@@ -113,12 +141,21 @@ const Withdrawals = () => {
                             {stats.availableBalance.toLocaleString()}
                         </h2>
 
-                        <div className="mt-6 flex items-center justify-between text-white bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/10">
-                            <div className="flex items-center">
-                                <Clock size={16} className="mr-2 opacity-80" />
-                                <span className="text-[11px] font-bold">Pending: ₹{stats.pendingWithdrawals.toLocaleString()}</span>
+                        <div className="mt-6 grid grid-cols-2 gap-3">
+                            <div className="flex items-center text-white bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/10">
+                                <Clock size={14} className="mr-2 opacity-80" />
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] font-bold uppercase opacity-60">Pending Earnings</span>
+                                    <span className="text-[11px] font-bold">₹{stats.pendingEarnings.toLocaleString()}</span>
+                                </div>
                             </div>
-                            <ArrowUpRight size={16} className="opacity-80" />
+                            <div className="flex items-center text-white bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/10">
+                                <ArrowUpRight size={14} className="mr-2 opacity-80" />
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] font-bold uppercase opacity-60">Requested</span>
+                                    <span className="text-[11px] font-bold">₹{stats.pendingWithdrawals.toLocaleString()}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

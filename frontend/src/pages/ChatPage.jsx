@@ -1,31 +1,99 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Send, Phone, Paperclip, Smile } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSettings } from '@core/context/SettingsContext';
+import { useAuth } from '@core/context/AuthContext';
+import chatService from '@core/services/chatService';
+import * as chatSocket from '@core/services/chatSocket';
+
 
 const emojis = ['😀', '😂', '😍', '🥺', '😎', '😭', '😡', '👍', '👎', '🎉', '❤️', '🔥', '✅', '❌', '👋', '🙏', '👀', '💯', '💩', '🤡'];
 
 const ChatPage = () => {
     const navigate = useNavigate();
     const { settings } = useSettings();
+    const { token, user } = useAuth();
     const appName = settings?.appName || 'App';
-    const [messages, setMessages] = useState([
-        { id: 1, text: 'Hi there! 👋 Welcome to Support.', sender: 'support', time: '10:00 AM' },
-        { id: 2, text: 'How can we help you today?', sender: 'support', time: '10:00 AM' },
-    ]);
+
+    const [conversation, setConversation] = useState(null);
+    const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [remoteTyping, setRemoteTyping] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
+    const [loading, setLoading] = useState(true);
+
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
 
+    const getToken = () => token;
+
+    // 1. Initialize Conversation and Socket
     useEffect(() => {
-        setMessages(prev => prev.map((m, i) => i === 0 && m.sender === 'support'
-            ? { ...m, text: `Hi there! 👋 Welcome to ${appName} Support.` }
-            : m));
-    }, [appName]);
+        const initChat = async () => {
+            try {
+                const { data } = await chatService.initiateConversation();
+                setConversation(data);
+
+                // Fetch history
+                const { data: historyData } = await chatService.getMessages(data._id);
+                setMessages(historyData.messages);
+
+                // Join Socket Room
+                chatSocket.joinChatRoom(data._id, getToken);
+                
+                // Mark as read
+                chatService.markAsRead(data._id);
+
+                setLoading(false);
+            } catch (error) {
+                console.error('Failed to initialize chat:', error);
+                setLoading(false);
+            }
+        };
+
+        if (token) initChat();
+
+        return () => {
+            if (conversation) {
+                chatSocket.leaveChatRoom(conversation._id, getToken);
+            }
+        };
+    }, [token]);
+
+    // 2. Setup Socket Listeners
+    useEffect(() => {
+        if (!token || !conversation) return;
+
+        const cleanupMsg = chatSocket.onReceiveMessage(getToken, (newMessage) => {
+            if (newMessage.conversationId === conversation._id) {
+                setMessages(prev => [...prev, newMessage]);
+                chatService.markAsRead(conversation._id);
+            }
+        });
+
+        const cleanupTyping = chatSocket.onUserTyping(getToken, ({ userId, isTyping }) => {
+            if (userId !== user?.id) {
+                setRemoteTyping(isTyping);
+            }
+        });
+
+        const cleanupRead = chatSocket.onMessagesRead(getToken, ({ userId }) => {
+            if (userId !== user?.id) {
+                // Update UI to show messages are read
+                setMessages(prev => prev.map(m => ({ ...m, status: 'read' })));
+            }
+        });
+
+        return () => {
+            cleanupMsg();
+            cleanupTyping();
+            cleanupRead();
+        };
+    }, [token, conversation, user]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,36 +101,35 @@ const ChatPage = () => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages, isTyping, selectedImage]);
+    }, [messages, remoteTyping, selectedImage]);
 
     const handleSend = () => {
         if (!inputText.trim() && !selectedImage) return;
 
-        const newMessage = {
-            id: messages.length + 1,
-            text: inputText,
-            image: selectedImage,
-            sender: 'user',
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-
-        setMessages(prev => [...prev, newMessage]);
+        // Optimistic UI update could be added here
+        // For now, we rely on the socket broadcast (which includes the sender)
+        
+        chatSocket.sendChatMessage(conversation._id, inputText, [], getToken);
+        
         setInputText('');
         setSelectedImage(null);
         setShowEmojiPicker(false);
-        setIsTyping(true);
+        handleTyping(false);
+    };
 
-        // Simulate Support Reply
-        setTimeout(() => {
-            const reply = {
-                id: messages.length + 2,
-                text: "Thanks for reaching out! One of our support agents will be with you shortly. In the meantime, is there anything specific you need help with regarding an order?",
-                sender: 'support',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-            setMessages(prev => [...prev, reply]);
-            setIsTyping(false);
-        }, 2000);
+    const handleTyping = (status) => {
+        setIsTyping(status);
+        chatSocket.sendTypingStatus(conversation._id, status, getToken);
+    };
+
+    const onInputChange = (e) => {
+        setInputText(e.target.value);
+        if (!isTyping) handleTyping(true);
+
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+            handleTyping(false);
+        }, 3000);
     };
 
     const handleKeyPress = (e) => {
@@ -81,6 +148,17 @@ const ChatPage = () => {
             reader.readAsDataURL(file);
         }
     };
+
+    if (loading) {
+        return (
+            <div className="fixed inset-0 bg-white flex items-center justify-center z-[999]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-12 w-12 border-4 border-[#45B0E2] border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-slate-500 font-medium">Connecting to Support...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 bg-white flex flex-col z-[999] overflow-hidden">
@@ -112,34 +190,48 @@ const ChatPage = () => {
                     <button className="p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors">
                         <Phone size={20} />
                     </button>
-
                 </div>
             </div>
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 space-y-6 min-h-0">
-                {messages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] relative group ${msg.sender === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
-                            <div className={`px-4 py-3 rounded-2xl shadow-sm border text-sm leading-relaxed ${msg.sender === 'user'
-                                ? 'bg-[#45B0E2] text-white border-transparent rounded-tr-none'
-                                : 'bg-white text-slate-700 border-slate-100 rounded-tl-none'
-                                }`}>
-                                {msg.image && (
-                                    <img src={msg.image} alt="Sent" className="rounded-lg mb-2 max-w-full h-auto object-cover" />
-                                )}
-                                {msg.text}
-                            </div>
-                            <span className={`text-[10px] text-slate-400 mt-1 px-1 font-medium ${msg.sender === 'user' ? 'text-right' : 'text-left'}`}>
-                                {msg.time}
-                            </span>
-                        </div>
+                {messages.length === 0 && (
+                    <div className="text-center py-10">
+                        <p className="text-slate-400 text-sm italic">No messages yet. Send a message to start chatting with support.</p>
                     </div>
-                ))}
+                )}
+                {messages.map((msg) => {
+                    const isMe = msg.sender.id === user?.id;
+                    return (
+                        <div key={msg._id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] relative group ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
+                                <div className={`px-4 py-3 rounded-2xl shadow-sm border text-sm leading-relaxed ${isMe
+                                    ? 'bg-[#45B0E2] text-white border-transparent rounded-tr-none'
+                                    : 'bg-white text-slate-700 border-slate-100 rounded-tl-none'
+                                    }`}>
+                                    {msg.content.attachments?.map((att, idx) => (
+                                        <img key={idx} src={att.url} alt="Attachment" className="rounded-lg mb-2 max-w-full h-auto object-cover" />
+                                    ))}
+                                    {msg.content.text}
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-1 px-1">
+                                    <span className="text-[10px] text-slate-400 font-medium">
+                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {isMe && (
+                                        <span className={`text-[10px] font-bold uppercase tracking-tighter ${msg.status === 'read' ? 'text-cyan-500' : 'text-slate-300'}`}>
+                                            {msg.status === 'read' ? 'Seen' : 'Sent'}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
 
-                {/* Typing Indicator */}
+                {/* Remote Typing Indicator */}
                 <AnimatePresence>
-                    {isTyping && (
+                    {remoteTyping && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -159,7 +251,6 @@ const ChatPage = () => {
 
             {/* Input Area */}
             <div className="bg-white p-3 border-t border-slate-100 shrink-0 z-30 safe-area-bottom relative mb-4">
-
                 {/* Emoji Picker Popover */}
                 <AnimatePresence>
                     {showEmojiPicker && (
@@ -197,7 +288,7 @@ const ChatPage = () => {
                                     onClick={() => setSelectedImage(null)}
                                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
                                 >
-                                    <div className="h-3 w-3 bg-white rotate-45 transform origin-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ clipPath: 'polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%)', backgroundColor: 'white', width: '8px', height: '8px' }}></div>
+                                    <span className="text-xs">✕</span>
                                 </button>
                             </div>
                         </motion.div>
@@ -229,7 +320,7 @@ const ChatPage = () => {
                     <input
                         type="text"
                         value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
+                        onChange={onInputChange}
                         onKeyDown={handleKeyPress}
                         placeholder="Type a message..."
                         className="bg-transparent text-sm w-full py-2.5 outline-none text-slate-700 placeholder:text-slate-400 font-medium"
@@ -256,4 +347,5 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
 
