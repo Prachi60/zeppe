@@ -1801,6 +1801,7 @@ const CheckoutPage = () => {
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 no-scrollbar">
               {/* CURRENT address displayed at the very top */}
               <div
+                onClick={() => setIsAddressModalOpen(false)}
                 className="w-full p-4 rounded-3xl border-2 cursor-pointer transition-all border-black bg-white"
               >
                 <div className="flex items-start gap-3 mb-2">

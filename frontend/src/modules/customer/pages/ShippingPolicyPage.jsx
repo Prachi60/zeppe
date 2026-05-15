@@ -28,7 +28,7 @@ const ShippingPolicyPage = () => {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-slate-800">Shipping & Delivery</h2>
-                            <p className="text-xs text-slate-500 font-medium">Last updated: April 2026</p>
+                            <p className="text-xs text-slate-500 font-medium">Last updated: May 2026</p>
                         </div>
                     </div>
 

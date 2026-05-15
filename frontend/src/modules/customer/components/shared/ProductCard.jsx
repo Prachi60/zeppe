@@ -252,19 +252,19 @@ const ProductCard = React.memo(
           {/* Info Section */}
           <div className="flex flex-col items-center flex-1 p-1 gap-0.5 text-center">
             {/* Product Name */}
-            <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-900 leading-tight line-clamp-2 min-h-[1.35rem]">
+            <h4 className="text-[10px] sm:text-[11px] font-bold text-gray-900 leading-tight line-clamp-2 h-[2.2rem] flex items-center justify-center">
               {product.name}
             </h4>
             
             {/* Product Weight */}
-            <div className="bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5 select-none my-0.5">
+            <div className="bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5 select-none my-0.5 h-[1.3rem] flex items-center justify-center">
               <span className="text-[9px] font-extrabold text-slate-500 tracking-tight">
                 {product.weight || "1 unit"}
               </span>
             </div>
 
             {/* Price Block */}
-            <div className="flex items-baseline justify-center gap-1.5">
+            <div className="flex items-baseline justify-center gap-1.5 h-[1.2rem]">
               <span className="text-[14px] font-semibold text-gray-900">₹{product.price}</span>
               {product.originalPrice > product.price && (
                 <span className="text-[10px] font-medium text-gray-400 line-through">₹{product.originalPrice}</span>
@@ -272,7 +272,7 @@ const ProductCard = React.memo(
             </div>
 
             {/* Ratings Row */}
-            <div className="flex items-center justify-center gap-0.5">
+            <div className="flex items-center justify-center gap-0.5 h-[1rem]">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star 
                   key={star} 
@@ -413,7 +413,8 @@ const ProductCard = React.memo(
           {/* Product Name */}
           <div
             className={cn(
-              storeWide ? "min-h-[2rem]" : microCompact ? "min-h-[1.8rem]" : compact ? "min-h-[1.9rem]" : "min-h-[2.4rem]",
+              storeWide ? "h-[2rem]" : microCompact ? "h-[1.8rem]" : compact ? "h-[1.9rem]" : "h-[2.4rem]",
+              "flex items-center justify-center"
             )}>
             <h4
               className={cn(
@@ -431,14 +432,14 @@ const ProductCard = React.memo(
           </div>
 
           {/* Product Weight */}
-          <div className="bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5 select-none my-0.5">
+          <div className="bg-slate-50 border border-slate-100 rounded-md px-1.5 py-0.5 select-none my-0.5 h-[1.3rem] flex items-center justify-center">
             <span className="text-[10px] font-extrabold text-slate-500 tracking-tight">
               {product.weight || "1 unit"}
             </span>
           </div>
 
           {/* Price Block */}
-          <div className="flex flex-col items-center gap-0.5">
+          <div className="flex flex-col items-center gap-0.5 h-[2rem] justify-center">
             <span className={cn(
               "font-semibold text-gray-900 leading-none",
               compact ? "text-sm" : "text-base"
