@@ -20,7 +20,7 @@ import { useLocation } from '../context/LocationContext';
 const AddressesPage = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { refreshAddresses } = useLocation();
+    const { refreshAddresses, currentLocation, refreshLocation, isFetchingLocation } = useLocation();
     const [addresses, setAddresses] = useState([]);
     const [rawAddresses, setRawAddresses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -73,6 +73,17 @@ const AddressesPage = () => {
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [saving, setSaving] = useState(false);
 
+    useEffect(() => {
+        if (isAddOpen && !isFetchingLocation && currentLocation) {
+            setAddForm(f => ({
+                ...f,
+                city: currentLocation.city || f.city,
+                state: currentLocation.state || f.state,
+                pincode: currentLocation.pincode || f.pincode
+            }));
+        }
+    }, [currentLocation, isAddOpen, isFetchingLocation]);
+
     const [addForm, setAddForm] = useState({
         type: 'home',
         name: '',
@@ -91,10 +102,11 @@ const AddressesPage = () => {
             phone: profilePhone || '',
             address: '',
             landmark: '',
-            city: '',
-            state: '',
-            pincode: ''
+            city: currentLocation?.city || '',
+            state: currentLocation?.state || '',
+            pincode: currentLocation?.pincode || ''
         });
+        refreshLocation();
         setIsAddOpen(true);
     };
 
@@ -358,14 +370,47 @@ const AddressesPage = () => {
 
             {/* Add Address Modal */}
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Add New Address</DialogTitle>
-                        <DialogDescription>
+                <DialogContent className="sm:max-w-[370px] p-5">
+                    <DialogHeader className="pb-1">
+                        <DialogTitle className="text-base font-bold">Add New Address</DialogTitle>
+                        <DialogDescription className="text-[11px]">
                             Enter your delivery details below.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-2.5 py-1">
+                        {isFetchingLocation ? (
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-center gap-3">
+                                <div className="w-4 h-4 border-2 border-[#45B0E2] border-t-transparent rounded-full animate-spin" />
+                                <span className="text-[11px] font-bold text-slate-500">Detecting your location...</span>
+                            </div>
+                        ) : currentLocation?.name && (
+                            <div className="bg-brand-50/50 p-3 rounded-xl border border-[#45B0E2]/20 flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-[#45B0E2] uppercase tracking-wider flex items-center gap-1">
+                                        <MapPin size={12} /> Current Location Detected
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            type="button"
+                                            onClick={() => refreshLocation()}
+                                            className="text-[10px] font-black text-slate-400 hover:text-slate-600 px-1 py-1"
+                                        >
+                                            RE-DETECT
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setAddForm(f => ({ ...f, address: currentLocation.name }))}
+                                            className="text-[10px] font-black text-[#45B0E2] hover:underline px-2 py-1"
+                                        >
+                                            FILL ADDRESS
+                                        </button>
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-slate-600 font-medium leading-tight">
+                                    {currentLocation.name}
+                                </p>
+                            </div>
+                        )}
                         <div className="grid gap-2">
                             <Label>Address Type</Label>
                             <div className="flex gap-2">
@@ -380,7 +425,7 @@ const AddressesPage = () => {
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="phone">Phone Number</Label>
-                            <Input id="phone" placeholder="+91 98765 43210" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} />
+                            <Input id="phone" placeholder="+91 00000 00000" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="address">Address</Label>

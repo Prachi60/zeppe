@@ -131,6 +131,7 @@ function clearStoredAuth(role, token) {
         localStorage.removeItem(ROLE_STORAGE_KEYS[role]);
         sessionStorage.removeItem(`push:registered:${role}`);
         localStorage.removeItem(`push:fcm-token:${role}`);
+        localStorage.removeItem('active_role');
     }
 
     if (token && localStorage.getItem(LEGACY_TOKEN_KEY) === token) {
@@ -139,7 +140,7 @@ function clearStoredAuth(role, token) {
 }
 
 function redirectToLogin(role) {
-    const targetRole = role || getRoleFromPath(window.location.pathname);
+    const targetRole = role || localStorage.getItem('active_role') || getRoleFromPath(window.location.pathname);
     const authRoute = AUTH_ROUTE_BY_ROLE[targetRole] || '/login';
     const currentPath = window.location.pathname;
 

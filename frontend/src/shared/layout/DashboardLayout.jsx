@@ -18,13 +18,22 @@ import { orderAlertSoundUrl } from "@/assets/sound/orderAlertSound";
 
 const POLL_INTERVAL_MS = 15000;
 
-/** Match server `sellerPendingExpiresAt` — never reset to a full 60s when the modal opens late. */
-function secondsLeftUntilSellerExpiry(order) {
+function secondsLeftUntilSellerExpiry(order, localStartTime) {
     if (!order) return 0;
     const raw = order.sellerPendingExpiresAt ?? order.expiresAt;
-    if (!raw) return 60;
-    const ms = new Date(raw).getTime() - Date.now();
-    return Math.max(0, Math.ceil(ms / 1000));
+    
+    if (raw) {
+        const ms = new Date(raw).getTime() - Date.now();
+        return Math.max(0, Math.ceil(ms / 1000));
+    }
+    
+    // Fallback: 120s from the moment the modal opened
+    if (localStartTime) {
+        const elapsed = Math.floor((Date.now() - localStartTime) / 1000);
+        return Math.max(0, 120 - elapsed);
+    }
+    
+    return 120;
 }
 
 const isEarningsRoute = (path) =>
@@ -74,6 +83,12 @@ const DashboardLayout = ({ children, navItems, title }) => {
             if (audioRef.current && audioRef.current.paused) {
                 audioRef.current.play().catch(() => {
                     console.log("Audio autoplay blocked by browser policy");
+                    if (newOrderAlert) {
+                        toast.info("New order alert! Please tap anywhere to enable sound.", {
+                            id: "autoplay-block-toast",
+                            duration: 5000
+                        });
+                    }
                 });
             }
 
@@ -158,11 +173,30 @@ const DashboardLayout = ({ children, navItems, title }) => {
                 });
 
                 if (isFirstLoadRef.current) {
-                    const existingIds = new Set(pendingOrders.map((o) => o.orderId).filter(Boolean));
-                    shownOrderIdsRef.current = existingIds;
+                    // Silence older orders, but allow brand new ones (created < 2 mins ago) to ring
+                    const now = Date.now();
+                    const twoMinutesAgo = now - 2 * 60 * 1000;
+
+                    const existingOldIds = new Set(
+                        pendingOrders
+                            .filter((o) => {
+                                const createdTime = new Date(o.createdAt || Date.now()).getTime();
+                                return createdTime < twoMinutesAgo;
+                            })
+                            .map((o) => o.orderId)
+                            .filter(Boolean)
+                    );
+
+                    shownOrderIdsRef.current = existingOldIds;
                     isFirstLoadRef.current = false;
-                    setShownOrderIds(existingIds);
-                    return;
+                    setShownOrderIds(existingOldIds);
+
+                    // If there are fresh orders, don't return early; let the sound/modal logic run for them.
+                    const hasFreshOrders = pendingOrders.some((o) => {
+                        const createdTime = new Date(o.createdAt || Date.now()).getTime();
+                        return createdTime >= twoMinutesAgo;
+                    });
+                    if (!hasFreshOrders) return;
                 }
 
                 // 1. SOUND ALERT: Play sound for any order we haven't alerted yet
@@ -293,18 +327,14 @@ const DashboardLayout = ({ children, navItems, title }) => {
     useEffect(() => {
         if (!newOrderAlert) return undefined;
 
-        const left = secondsLeftUntilSellerExpiry(newOrderAlert);
-        if (left <= 0) {
-            setNewOrderAlert(null);
-            toast.error("This order has already expired — you can no longer accept it.");
-            return undefined;
-        }
-
+        const startTime = Date.now();
+        const left = secondsLeftUntilSellerExpiry(newOrderAlert, startTime);
+        
         acceptWindowTotalRef.current = left;
         setTimeLeft(left);
 
         const timer = setInterval(() => {
-            const next = secondsLeftUntilSellerExpiry(newOrderAlertRef.current);
+            const next = secondsLeftUntilSellerExpiry(newOrderAlertRef.current, startTime);
             setTimeLeft(next);
             if (next <= 0) {
                 clearInterval(timer);
@@ -405,14 +435,14 @@ const DashboardLayout = ({ children, navItems, title }) => {
 
                                 {/* Timer Bar — width from real server deadline */}
                                 <div className="w-full bg-slate-100 h-2 rounded-full mb-8 overflow-hidden">
-                                    <div
+                                    <motion.div
+                                        initial={{ width: "100%" }}
+                                        animate={{ width: `${(timeLeft / acceptWindowTotalRef.current) * 100}%` }}
+                                        transition={{ duration: 1, ease: "linear" }}
                                         className={cn(
-                                            "h-full transition-[width] duration-1000 ease-linear",
+                                            "h-full",
                                             timeLeft < 15 ? "bg-rose-500" : "bg-primary",
                                         )}
-                                        style={{
-                                            width: `${acceptWindowTotalRef.current > 0 ? (timeLeft / acceptWindowTotalRef.current) * 100 : 0}%`,
-                                        }}
                                     />
                                 </div>
 

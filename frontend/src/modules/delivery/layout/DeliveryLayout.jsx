@@ -23,9 +23,10 @@ import { orderAlertSoundUrl } from "@/assets/sound/orderAlertSound";
 
 /** Match server `deliverySearchExpiresAt` — progress bar + countdown stay aligned when modal opens late. */
 function secondsLeftUntilDeliveryExpiry(expiresAt) {
-  if (!expiresAt) return 60;
+  if (!expiresAt) return 120;
   const ms = new Date(expiresAt).getTime() - Date.now();
-  return Math.max(0, Math.ceil(ms / 1000));
+  // Add a 10s grace period for clock drift to ensure order shows even if clocks are slightly off
+  return Math.max(0, Math.ceil((ms + 10000) / 1000));
 }
 
 const DeliveryLayout = () => {
@@ -60,6 +61,11 @@ const DeliveryLayout = () => {
         audioRef.current.loop = true;
       }
       audioRef.current.play().catch(() => { });
+      
+      // Add vibration for mobile devices
+      if ("vibrate" in navigator) {
+        navigator.vibrate([500, 200, 500, 200, 500]);
+      }
     } else if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -81,6 +87,12 @@ const DeliveryLayout = () => {
       if (audioRef.current && audioRef.current.paused) {
         audioRef.current.play().catch(() => {
           console.log("Audio autoplay blocked by browser policy");
+          if (activeOrder) {
+            toast.info("New order alert! Please tap anywhere to enable sound.", {
+              id: "autoplay-block-toast",
+              duration: 5000
+            });
+          }
         });
       }
 

@@ -20,46 +20,28 @@ export const getNearbySellers = async (req, res) => {
     const customerLat = Number(lat);
     const customerLng = Number(lng);
 
-    // Fetch all active/verified sellers
-    const sellers = await Seller.find({
-      isActive: true,
-      isVerified: true,
-    }).lean();
-
-    // Filter and calculate distance
-    const nearbySellers = sellers.map((seller) => {
-      const coords = seller.location?.coordinates;
-      const hasLocation = Array.isArray(coords) && coords.length >= 2 && (coords[0] !== 0 || coords[1] !== 0);
-      
-      let distance = null;
-      if (hasLocation) {
-        const sellerLng = coords[0];
-        const sellerLat = coords[1];
-        distance = calculateDistance(
-          customerLat,
-          customerLng,
-          sellerLat,
-          sellerLng,
-        );
+    // Use aggregation to find nearby sellers within their own serviceRadius
+    const nearbySellers = await Seller.aggregate([
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: [customerLng, customerLat] },
+          distanceField: "distance",
+          spherical: true,
+          query: { isActive: true, isVerified: true },
+          distanceMultiplier: 1 / 1000, // Convert meters to km
+        },
+      },
+      {
+        $match: {
+          $expr: {
+            $lte: ["$distance", { $ifNull: ["$serviceRadius", 5] }],
+          },
+        },
+      },
+      {
+        $sort: { distance: 1 }
       }
-
-      // Add distance to seller object for frontend
-      return {
-        ...seller,
-        distance,
-        isNearby: hasLocation ? (distance <= (seller.serviceRadius || 5)) : true // Treat as nearby if location not set (fallback)
-      };
-    });
-
-    // Sort: Nearby first, then by distance, then others
-    nearbySellers.sort((a, b) => {
-      if (a.isNearby && !b.isNearby) return -1;
-      if (!a.isNearby && b.isNearby) return 1;
-      if (a.distance !== null && b.distance !== null) return a.distance - b.distance;
-      if (a.distance !== null) return -1;
-      if (b.distance !== null) return 1;
-      return 0;
-    });
+    ]);
 
     return handleResponse(
       res,
@@ -68,9 +50,11 @@ export const getNearbySellers = async (req, res) => {
       nearbySellers,
     );
   } catch (error) {
+    console.error("getNearbySellers Error:", error);
     return handleResponse(res, 500, error.message);
   }
 };
+
 
 /* ===============================
    REQUEST WITHDRAWAL (Seller)

@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-rou
 import ProtectedRoute from '../guards/ProtectedRoute';
 import RoleGuard from '../guards/RoleGuard';
 import { UserRole } from '../constants/roles';
+import { useAuth } from '../context/AuthContext';
 import RootErrorBoundary from '../../shared/components/RootErrorBoundary';
 
 // Providers for Customer Module
@@ -79,6 +80,15 @@ const CustomerLayoutWrapper = () => (
         </WishlistProvider>
     </LocationProvider>
 );
+
+const HomeGate = () => {
+    const { isAuthenticated, role } = useAuth();
+    if (isAuthenticated && role && role !== 'customer' && window.location.pathname === '/') {
+        return <Navigate to={`/${role}/dashboard`} replace />;
+    }
+    return <Home />;
+};
+
 
 const CatchAllRedirect = () => {
     const path = window.location.pathname;
@@ -160,7 +170,7 @@ const AppRouter = () => {
                 {
                     element: <CustomerLayoutWrapper />,
                     children: [
-                        { index: true, element: <Home /> },
+                        { index: true, element: <HomeGate /> },
                         { path: 'categories', element: <CategoriesPage /> },
                         { path: 'category/:categoryId', element: <CategoryProductsPage /> },
                         { path: 'product/:id', element: <ProductDetailPage /> },

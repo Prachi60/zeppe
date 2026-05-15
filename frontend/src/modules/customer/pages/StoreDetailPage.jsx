@@ -57,7 +57,7 @@ const StoreDetailPage = () => {
         // Use allSettled to ensure one failure (like 404 store) doesn't block categories/products
         const results = await Promise.allSettled([
           customerApi.getPublicSellerById(storeId, params),
-          customerApi.getStoreProducts(storeId, params),
+          customerApi.getStoreProducts(storeId, { ...params, limit: 100 }),
           customerApi.getCategories({ limit: 1000, status: "active" })
         ]);
 
@@ -102,19 +102,54 @@ const StoreDetailPage = () => {
     // 1. Start with 'All'
     const catList = [{ id: "all", name: "All", image: "https://cdn-icons-png.flaticon.com/512/3081/3081840.png" }];
     
-    // 2. Show all Level 2 Categories from the system
+    if (!products.length) return catList;
+
+    // 2. Identify all unique category IDs from products and capture their images
+    const activeCategoryIds = new Set();
+    const productImagesMap = new Map();
+
+    products.forEach(p => {
+      const sub = p.subcategoryId;
+      const cat = p.categoryId;
+      
+      const target = sub || cat;
+      if (target && target._id) {
+        const id = String(target._id);
+        activeCategoryIds.add(id);
+        if (target.image) productImagesMap.set(id, target.image);
+      }
+    });
+
+    // 3. Filter globalCategories to only those present in products
     globalCategories
-      .filter(cat => cat.type === "category")
+      .filter(cat => activeCategoryIds.has(String(cat._id)))
       .forEach(cat => {
+        const id = String(cat._id);
         catList.push({
-          id: cat._id,
+          id,
           name: cat.name,
-          image: cat.image || getCategoryImage(cat.name) || "https://cdn-icons-png.flaticon.com/512/3081/3081840.png"
+          image: productImagesMap.get(id) || cat.image || getCategoryImage(cat.name) || "https://cdn-icons-png.flaticon.com/512/3081/3081840.png"
         });
       });
     
+    // 4. Fallback: If globalCategories is missing some data, but we have populated products
+    if (catList.length === 1 && products.length > 0) {
+      const fallbackMap = new Map();
+      products.forEach(p => {
+        const target = p.subcategoryId || p.categoryId;
+        if (target && target._id && !fallbackMap.has(String(target._id))) {
+          fallbackMap.set(String(target._id), {
+            id: String(target._id),
+            name: target.name,
+            image: target.image || getCategoryImage(target.name) || "https://cdn-icons-png.flaticon.com/512/3081/3081840.png"
+          });
+        }
+      });
+      Array.from(fallbackMap.values()).forEach(c => catList.push(c));
+    }
+    
     return catList;
-  }, [globalCategories]);
+  }, [globalCategories, products]);
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
