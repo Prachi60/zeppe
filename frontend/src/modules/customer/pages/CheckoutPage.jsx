@@ -784,6 +784,14 @@ const CheckoutPage = () => {
       return;
     }
 
+    // Guard: ensure location exists for delivery
+    const finalAddressForCheck = buildAddressForOrder();
+    if (!finalAddressForCheck?.location?.lat || !finalAddressForCheck?.location?.lng) {
+      showToast("Delivery location is missing. Please select your address to continue.", "warning");
+      setIsAddressModalOpen(true);
+      return;
+    }
+
     setIsPlacingOrder(true);
     try {
         const orderData = {

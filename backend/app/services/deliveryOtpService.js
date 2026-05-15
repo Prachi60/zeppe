@@ -384,7 +384,7 @@ export async function generateReturnPickupOtp(orderId, requester = {}) {
       emitToCustomer(customerId, {
         event: 'order:otp',
         payload: {
-          orderId,
+          orderId: order.orderId,
           code: otp,
           expiresAt,
           type: 'return_pickup',
@@ -393,7 +393,7 @@ export async function generateReturnPickupOtp(orderId, requester = {}) {
       emitToCustomer(customerId, {
         event: 'delivery:otp:generated',
         payload: {
-          orderId,
+          orderId: order.orderId,
           otp,
           expiresAt,
           deliveryPersonNearby: true,

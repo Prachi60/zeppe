@@ -1017,7 +1017,9 @@ export const approveReturnRequest = async (req, res) => {
       );
     }
 
-    if (order.returnStatus !== "return_requested") {
+    // Support both legacy "requested" and canonical "return_requested"
+    const validReturnStatuses = ["return_requested", "requested"];
+    if (!validReturnStatuses.includes(order.returnStatus)) {
       return handleResponse(
         res,
         400,
@@ -1037,10 +1039,12 @@ export const approveReturnRequest = async (req, res) => {
     const settings = await Setting.findOne({});
     const returnCommission = settings?.returnDeliveryCommission ?? 0;
 
-    order.returnItems = order.returnItems.map((item) => ({
-      ...(item.toObject?.() ?? item),
-      status: "approved",
-    }));
+    // Update subdocument status
+    if (Array.isArray(order.returnItems)) {
+      order.returnItems.forEach((item) => {
+        item.status = "approved";
+      });
+    }
     order.returnRefundAmount = refundAmount;
     order.returnDeliveryCommission = returnCommission;
 
@@ -1116,6 +1120,7 @@ export const approveReturnRequest = async (req, res) => {
 
     return handleResponse(res, 200, "Return request approved", order);
   } catch (error) {
+    console.error(`[approveReturnRequest] Error for order ${orderId}:`, error);
     return handleResponse(res, 500, error.message);
   }
 };
@@ -1156,7 +1161,9 @@ export const rejectReturnRequest = async (req, res) => {
       );
     }
 
-    if (order.returnStatus !== "return_requested") {
+    // Support both legacy "requested" and canonical "return_requested"
+    const validReturnStatuses = ["return_requested", "requested"];
+    if (!validReturnStatuses.includes(order.returnStatus)) {
       return handleResponse(
         res,
         400,
@@ -1181,6 +1188,7 @@ export const rejectReturnRequest = async (req, res) => {
 
     return handleResponse(res, 200, "Return request rejected", order);
   } catch (error) {
+    console.error(`[rejectReturnRequest] Error for order ${orderId}:`, error);
     return handleResponse(res, 500, error.message);
   }
 };
@@ -1301,7 +1309,8 @@ export const assignReturnDelivery = async (req, res) => {
       );
     }
 
-    if (order.returnStatus !== "return_requested" && order.returnStatus !== "return_approved") {
+    const validReturnStatuses = ["return_requested", "requested", "return_approved"];
+    if (!validReturnStatuses.includes(order.returnStatus)) {
       return handleResponse(
         res,
         400,
