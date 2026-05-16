@@ -64,7 +64,8 @@ const AdminDashboard = () => {
             color: 'text-blue-600',
             bg: 'bg-blue-50',
             trend: overview.userTrend || null,
-            description: 'Active across platform'
+            description: 'Active across platform',
+            path: '/admin/customers'
         },
         {
             label: 'Active Sellers',
@@ -73,7 +74,8 @@ const AdminDashboard = () => {
             color: 'text-purple-600',
             bg: 'bg-purple-50',
             trend: overview.sellerTrend || null,
-            description: 'Verified stores'
+            description: 'Verified stores',
+            path: '/admin/sellers/active'
         },
         {
             label: 'Total Orders',
@@ -82,7 +84,8 @@ const AdminDashboard = () => {
             color: 'text-orange-600',
             bg: 'bg-orange-50',
             trend: overview.orderTrend || null,
-            description: 'Platform total'
+            description: 'Platform total',
+            path: '/admin/orders/all'
         },
         {
             label: 'Revenue',
@@ -91,7 +94,8 @@ const AdminDashboard = () => {
             color: 'text-brand-600',
             bg: 'bg-brand-50',
             trend: overview.revenueTrend || null,
-            description: 'Net earnings'
+            description: 'Net earnings',
+            path: '/admin/wallet'
         },
     ], [overview]);
 
@@ -156,6 +160,7 @@ const AdminDashboard = () => {
                         color={stat.color}
                         bg={stat.bg}
                         className={cn("ring-1 ring-gray-100", stat.bg + "/30")}
+                        onClick={() => navigate(stat.path)}
                     />
                 ))}
             </div>
