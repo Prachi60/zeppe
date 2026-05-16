@@ -30,7 +30,7 @@ const DeliveryTracking = React.lazy(() => import("../pages/DeliveryTracking"));
 const Profile = React.lazy(() => import("../pages/Profile"));
 const Withdrawals = React.lazy(() => import("../pages/Withdrawals"));
 const VendorSubscription = React.lazy(() => import("../pages/VendorSubscription"));
-const ChatPage = React.lazy(() => import("@/pages/ChatPage"));
+const ChatPage = React.lazy(() => import("@modules/customer/pages/ChatPage"));
 
 
 import { useAuth } from "@core/context/AuthContext";
