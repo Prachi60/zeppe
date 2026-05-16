@@ -14,7 +14,7 @@ import { AnimatePresence } from 'framer-motion';
 import NotificationPopup from './NotificationPopup';
 import { toast } from 'sonner';
 
-const Topbar = React.memo(({ onMenuClick }) => {
+const Topbar = React.memo(({ onMenuClick, navItems = [] }) => {
     const { user, logout, role } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -30,16 +30,42 @@ const Topbar = React.memo(({ onMenuClick }) => {
     const isSeller = location.pathname.startsWith('/seller');
     const isAdmin = location.pathname.startsWith('/admin');
 
+    const findNavMatch = React.useCallback((items, query) => {
+        const q = query.toLowerCase();
+        for (const item of items) {
+            // Check label
+            if (item.label.toLowerCase().includes(q) && item.path) {
+                return item.path;
+            }
+            // Check children
+            if (item.children) {
+                const childMatch = findNavMatch(item.children, query);
+                if (childMatch) return childMatch;
+            }
+        }
+        return null;
+    }, []);
+
     const handleSearchSubmit = React.useCallback((e) => {
         e?.preventDefault();
         const q = (searchQuery || '').trim();
         if (!q) return;
+
+        // 1. Try to find a section match in sidebar
+        const sectionMatch = findNavMatch(navItems, q);
+        if (sectionMatch) {
+            navigate(sectionMatch);
+            setSearchQuery('');
+            return;
+        }
+
+        // 2. Fallback to data search
         if (isSeller) {
             navigate(`/seller/products?q=${encodeURIComponent(q)}`);
         } else if (isAdmin) {
             navigate(`/admin/orders/all?search=${encodeURIComponent(q)}`);
         }
-    }, [searchQuery, isSeller, isAdmin, navigate]);
+    }, [searchQuery, isSeller, isAdmin, navigate, navItems, findNavMatch]);
 
     const fetchNotifications = React.useCallback(async () => {
         try {
@@ -156,7 +182,7 @@ const Topbar = React.memo(({ onMenuClick }) => {
                     <HiOutlineSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-primary transition-all duration-300" />
                     <input
                         type="text"
-                        placeholder={isSeller ? "Search products by name or SKU..." : "Search anything..."}
+                        placeholder={isSeller ? "Jump to section or search products..." : "Jump to section or search orders..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
