@@ -117,7 +117,7 @@ export async function getAdminDashboardStats() {
             ? "error"
             : "warning",
       amount: `\u20B9${order.pricing.total}`,
-      time: "Recently",
+      time: new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
     })),
     categoryData: categoryData.map((category, index) => ({
       ...category,
