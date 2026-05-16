@@ -21,8 +21,8 @@ import {
 
 const productSchema = z.object({
     name: z.string().min(3, 'Name is too short'),
-    price: z.preprocess((a) => parseFloat(a), z.number().min(0)),
-    stock: z.preprocess((a) => parseInt(a), z.number().min(0)),
+    price: z.preprocess((a) => parseFloat(a), z.number().min(0, 'Price cannot be less than 0')),
+    stock: z.preprocess((a) => parseInt(a), z.number().min(1, 'Stock should not be less than 1')),
     status: z.enum(['active', 'inactive']),
     categoryId: z.string().min(1, 'Category is required'),
     description: z.string().optional(),
@@ -123,7 +123,14 @@ const ProductManagement = () => {
             cell: (row) => (
                 <div className="flex justify-end gap-1.5">
                     <button 
-                        onClick={() => { setEditingItem(row); setIsModalOpen(true); }}
+                        onClick={() => { 
+                            const normalizedItem = {
+                                ...row,
+                                categoryId: row.categoryId?._id || row.categoryId
+                            };
+                            setEditingItem(normalizedItem); 
+                            setIsModalOpen(true); 
+                        }}
                         className="p-2 hover:bg-slate-100 text-slate-400 hover:text-brand-600 rounded-xl transition-all shadow-sm ring-1 ring-slate-100"
                     >
                         <HiOutlinePencilSquare className="h-4 w-4" />
@@ -223,18 +230,22 @@ const ProductManagement = () => {
                     onSubmit={async (data) => {
                         setIsSubmitting(true);
                         try {
+                            const finalData = { ...data };
+                            // Bug 4: If stock is 0, auto inactive (though Bug 3 enforces min 1, this is for consistency)
+                            if (parseInt(finalData.stock) === 0) {
+                                finalData.status = 'inactive';
+                            }
+
                             const formData = new FormData();
-                            Object.keys(data).forEach(key => {
+                            Object.keys(finalData).forEach(key => {
                                 if (key === 'mainImage') {
-                                    if (data[key] instanceof FileList && data[key].length > 0) {
-                                        formData.append('mainImage', data[key][0]);
-                                    } else if (typeof data[key] === 'string') {
-                                        // If it's a URL (original image), we might not need to send it back 
-                                        // unless the backend expects it. Usually we only send the new file.
-                                        formData.append('mainImage', data[key]);
+                                    if (finalData[key] instanceof FileList && finalData[key].length > 0) {
+                                        formData.append('mainImage', finalData[key][0]);
+                                    } else if (typeof finalData[key] === 'string') {
+                                        formData.append('mainImage', finalData[key]);
                                     }
                                 } else {
-                                    formData.append(key, data[key]);
+                                    formData.append(key, finalData[key]);
                                 }
                             });
 

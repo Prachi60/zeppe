@@ -51,7 +51,7 @@ const ReviewModeration = () => {
                     item: r?.productId?.name || "Deleted Product",
                     itemImage: r?.productId?.mainImage,
                     store: r?.productId?.sellerId?.shopName || "Unknown Store",
-                    date: r?.createdAt ? new Date(r.createdAt).toLocaleString() : "Recently",
+                    date: r?.createdAt ? new Date(r.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : "Just now",
                     tags: Array.isArray(r?.tags) ? r.tags : []
                 }));
 

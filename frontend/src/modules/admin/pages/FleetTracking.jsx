@@ -19,11 +19,17 @@ import { toast } from "sonner";
 
 const formatTimeDistance = (date) => {
   if (!date) return "N/A";
-  const diff = Math.floor((new Date() - new Date(date)) / 1000);
-  if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)} mins ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-  return `${Math.floor(diff / 86400)} days ago`;
+  const d = new Date(date);
+  const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const diff = Math.floor((new Date() - d) / 1000);
+  
+  let relative = "";
+  if (diff < 60) relative = "Just now";
+  else if (diff < 3600) relative = `${Math.floor(diff / 60)} mins ago`;
+  else if (diff < 86400) relative = `${Math.floor(diff / 3600)} hours ago`;
+  else relative = `${Math.floor(diff / 86400)} days ago`;
+
+  return `${relative} (${timeStr})`;
 };
 
 const FleetTrackingTable = () => {

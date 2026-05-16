@@ -6,6 +6,7 @@ import {
   verifyDeliveryOTP,
   getDeliveryProfile,
   updateDeliveryProfile,
+  checkAvailability,
 } from "../controller/deliveryAuthController.js";
 import {
   getDeliveryStats,
@@ -39,6 +40,7 @@ router.post(
 );
 router.post("/send-login-otp", loginDelivery);
 router.post("/verify-otp", verifyDeliveryOTP);
+router.post("/check-availability", checkAvailability);
 
 // Profile routes
 router.get("/profile", verifyToken, getDeliveryProfile);

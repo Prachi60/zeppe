@@ -15,6 +15,33 @@ const generateToken = (delivery) =>
     );
 
 /* ===============================
+   CHECK AVAILABILITY
+================================ */
+export const checkAvailability = async (req, res) => {
+    try {
+        const { email, phone } = req.body;
+        if (!email && !phone) {
+            return handleResponse(res, 400, "Email or phone is required");
+        }
+        
+        const query = [];
+        if (email) query.push({ email });
+        if (phone) query.push({ phone });
+        
+        const existing = await Delivery.findOne({ $or: query, isVerified: true });
+        
+        if (existing) {
+            const field = existing.email === email ? "Email" : "Phone number";
+            return handleResponse(res, 400, `${field} is already registered`);
+        }
+        
+        return handleResponse(res, 200, "Available");
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+/* ===============================
    SIGNUP – Send OTP
 ================================ */
 export const signupDelivery = async (req, res) => {

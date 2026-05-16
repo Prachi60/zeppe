@@ -77,7 +77,7 @@ const ActiveDeliveryBoys = () => {
                 totalEarnings: r.totalEarnings || 0,
                 walletBalance: r.walletBalance || 0,
                 location: r.currentArea || 'Unknown',
-                lastSync: 'Now',
+                lastSync: r.updatedAt ? new Date(r.updatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
                 joinDate: new Date(r.createdAt).toLocaleDateString()
             }));
 
@@ -99,6 +99,16 @@ React.useEffect(() => {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [pageSize, searchTerm, statusFilter]);
+
+React.useEffect(() => {
+    const isAnyModalOpen = viewingRider || isEditModalOpen || isOnboardModalOpen;
+    if (isAnyModalOpen) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+}, [viewingRider, isEditModalOpen, isOnboardModalOpen]);
 
 // Filtering logic
 const filteredRiders = useMemo(() => {
@@ -132,6 +142,19 @@ const handleAction = (type, rider) => {
                     fetchRiders(page);
                 })
                 .catch(() => toast.error('Failed to delete rider'));
+        }
+    } else if (type === 'deactivate') {
+        if (window.confirm(`Are you sure you want to DEACTIVATE ${rider.name}?`)) {
+            adminApi.updateDeliveryPartner(rider.id, { isOnline: false, isActive: false })
+                .then(() => {
+                    toast.success('Rider deactivated successfully');
+                    fetchRiders(page);
+                    setViewingRider(null);
+                })
+                .catch((err) => {
+                    console.error('Deactivate Error:', err);
+                    toast.error('Failed to deactivate rider');
+                });
         }
     }
 };
@@ -412,7 +435,7 @@ return (
                                             <Badge variant={viewingRider.status === 'available' ? 'success' : viewingRider.status === 'busy' ? 'warning' : 'neutral'} className="uppercase font-black text-[9px] px-3">
                                                 {viewingRider.status}
                                             </Badge>
-                                            <span className="text-xs font-bold text-slate-400">Rider ID: RD-00{viewingRider.id.slice(1)}</span>
+                                            <span className="text-xs font-bold text-slate-400">Rider ID: RD-{viewingRider.id.slice(-6).toUpperCase()}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -471,10 +494,22 @@ return (
                             </div>
 
                             <div className="mt-8 flex gap-4">
-                                <button className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">
+                                <button 
+                                    onClick={() => {
+                                        if (viewingRider.phone) {
+                                            window.open(`https://wa.me/${viewingRider.phone.replace(/\D/g, '')}`, '_blank');
+                                        } else {
+                                            toast.error('No contact number available');
+                                        }
+                                    }}
+                                    className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                                >
                                     Send Message
                                 </button>
-                                <button className="px-6 py-4 bg-rose-50 text-rose-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-all active:scale-95">
+                                <button 
+                                    onClick={() => handleAction('deactivate', viewingRider)}
+                                    className="px-6 py-4 bg-rose-50 text-rose-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-all active:scale-95"
+                                >
                                     DEACTIVATE
                                 </button>
                             </div>
@@ -532,7 +567,7 @@ return (
                                         required
                                         type="text"
                                         value={formState.name}
-                                        onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                                        onChange={(e) => setFormState({ ...formState, name: e.target.value.replace(/\b\w/g, l => l.toUpperCase()) })}
                                         className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all"
                                         placeholder="e.g. Rahul Sharma"
                                     />
@@ -544,9 +579,9 @@ return (
                                             required
                                             type="text"
                                             value={formState.phone}
-                                            onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
+                                            onChange={(e) => setFormState({ ...formState, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                                             className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all"
-                                            placeholder="+91..."
+                                            placeholder="Phone Number (10 digits)"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -581,7 +616,7 @@ return (
                                         required
                                         type="text"
                                         value={formState.vehicleNumber}
-                                        onChange={(e) => setFormState({ ...formState, vehicleNumber: e.target.value })}
+                                        onChange={(e) => setFormState({ ...formState, vehicleNumber: e.target.value.toUpperCase().replace(/\s/g, '') })}
                                         className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10 transition-all"
                                         placeholder="e.g. MH-12-AB-0000"
                                     />

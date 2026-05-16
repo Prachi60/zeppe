@@ -55,10 +55,8 @@ const PendingDeliveryBoys = () => {
                 vehicle: r.vehicleType,
                 vehicleNumber: r.vehicleNumber || 'N/A',
                 vehicleModel: r.vehicleModel || 'N/A',
-                dob: r.dob || 'Not Specified',
-                bloodGroup: r.bloodGroup || 'N/A',
                 address: r.address || 'Not Specified',
-                documents: Object.keys(r.documents || {}).filter(key => r.documents[key]),
+                documents: Object.entries(r.documents || {}).filter(([k, v]) => v).map(([k, v]) => ({ name: k, url: v })),
                 status: r.applicationStatus === 'approved' ? 'approved' : 'pending_review',
                 preferredArea: r.currentArea || 'Not Specified'
             }));
@@ -79,6 +77,15 @@ React.useEffect(() => {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [searchTerm, filterStatus]);
+
+React.useEffect(() => {
+    if (viewingRider) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+}, [viewingRider]);
 
 const filteredRiders = useMemo(() => {
     return pendingRiders.filter(r => {
@@ -289,7 +296,7 @@ return (
                                             <div className="flex gap-1">
                                                 {rider.documents.slice(0, 2).map((doc, i) => (
                                                     <div key={i} className="h-5 px-2 bg-slate-100 rounded-md text-[8px] font-bold text-slate-500 flex items-center">
-                                                        {doc}
+                                                        {doc.name}
                                                     </div>
                                                 ))}
                                                 {rider.documents.length > 2 && (
@@ -357,7 +364,16 @@ return (
                                    alt="" 
                                    className="h-24 w-24 rounded-2xl bg-white shadow-xl object-cover ring-4 ring-white" 
                                 />
-                                <h3 className="ds-h2">{viewingRider.name}</h3>
+                                {viewingRider.isEditing ? (
+                                    <input 
+                                        type="text" 
+                                        value={viewingRider.name} 
+                                        onChange={(e) => setViewingRider({...viewingRider, name: e.target.value.replace(/\b\w/g, l => l.toUpperCase())})}
+                                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-center text-sm font-black"
+                                    />
+                                ) : (
+                                    <h3 className="ds-h2">{viewingRider.name}</h3>
+                                )}
                                 <p className="ds-label text-primary mt-1">Applicant Node</p>
                             </div>
 
@@ -366,32 +382,33 @@ return (
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Residential Address</p>
                                     <div className="flex items-start gap-2 text-slate-700">
                                         <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
-                                        <span className="text-xs font-bold leading-relaxed">{viewingRider.address}</span>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Born On</p>
-                                        <div className="flex items-center gap-2 text-slate-700">
-                                            <Calendar className="h-4 w-4 text-slate-400" />
-                                            <span className="text-xs font-bold">{viewingRider.dob}</span>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Blood Group</p>
-                                        <div className="flex items-center gap-2 text-slate-700">
-                                            <div className="h-4 w-4 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-[8px] font-black">
-                                                {viewingRider.bloodGroup ? viewingRider.bloodGroup.charAt(0) : '?'}
-                                            </div>
-                                            <span className="text-xs font-bold uppercase">{viewingRider.bloodGroup}</span>
-                                        </div>
+                                        {viewingRider.isEditing ? (
+                                            <textarea 
+                                                value={viewingRider.address} 
+                                                onChange={(e) => setViewingRider({...viewingRider, address: e.target.value})}
+                                                className="flex-1 bg-white border border-slate-200 rounded-lg p-2 text-xs font-bold outline-none"
+                                                rows="2"
+                                            />
+                                        ) : (
+                                            <span className="text-xs font-bold leading-relaxed">{viewingRider.address}</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vehicle Plate</p>
                                     <div className="flex items-center gap-2 text-slate-700">
                                         <IdCard className="h-4 w-4 text-slate-400" />
-                                        <span className="text-xs font-bold uppercase tracking-widest">{viewingRider.vehicleNumber}</span>
+                                        {viewingRider.isEditing ? (
+                                            <input 
+                                                type="text" 
+                                                value={viewingRider.vehicleNumber} 
+                                                onChange={(e) => setViewingRider({...viewingRider, vehicleNumber: e.target.value.toUpperCase().replace(/\s/g, '')})}
+                                                className="flex-1 bg-white border border-slate-200 rounded-lg p-2 text-xs font-bold uppercase outline-none"
+                                                placeholder="Plate Number"
+                                            />
+                                        ) : (
+                                            <span className="text-xs font-bold uppercase tracking-widest">{viewingRider.vehicleNumber}</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="pt-6 border-t border-slate-200">
@@ -428,8 +445,9 @@ return (
                                                 <input 
                                                     type="text" 
                                                     value={viewingRider.phone} 
-                                                    onChange={(e) => setViewingRider({...viewingRider, phone: e.target.value})}
+                                                    onChange={(e) => setViewingRider({...viewingRider, phone: e.target.value.replace(/\D/g, '').slice(0, 10)})}
                                                     className="flex-1 bg-white border border-slate-200 rounded-lg p-2 text-sm font-bold"
+                                                    placeholder="Phone Number"
                                                 />
                                             ) : (
                                                 <span className="text-sm font-bold text-slate-900">{viewingRider.phone}</span>
@@ -443,7 +461,7 @@ return (
                                                 <input 
                                                     type="text" 
                                                     value={viewingRider.email} 
-                                                    onChange={(e) => setViewingRider({...viewingRider, email: e.target.value})}
+                                                    onChange={(e) => setViewingRider({...viewingRider, email: e.target.value.trim()})}
                                                     className="flex-1 bg-white border border-slate-200 rounded-lg p-2 text-sm font-bold"
                                                 />
                                             ) : (
@@ -485,12 +503,22 @@ return (
                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Submitted Documents ({viewingRider.documents.length})</h4>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {viewingRider.documents.map((doc, idx) => (
-                                        <div key={idx} className="group relative aspect-[4/3] bg-slate-100 rounded-[24px] overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all">
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                                                <FileSearch className="h-8 w-8 text-slate-400 group-hover:text-primary transition-colors" />
-                                                <p className="text-[9px] font-black text-slate-500 uppercase mt-2 text-center">{doc}</p>
+                                        <div 
+                                            key={idx} 
+                                            onClick={() => window.open(doc.url, '_blank')}
+                                            className="group relative aspect-[4/3] bg-slate-100 rounded-[24px] overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all shadow-sm"
+                                        >
+                                            {doc.url ? (
+                                                <img src={doc.url} alt={doc.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                                                    <FileSearch className="h-8 w-8 text-slate-400 group-hover:text-primary transition-colors" />
+                                                    <p className="text-[9px] font-black text-slate-500 uppercase mt-2 text-center">{doc.name}</p>
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                <Badge variant="primary" className="text-[8px] uppercase">View Full</Badge>
                                             </div>
-                                            <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/5 transition-colors" />
                                         </div>
                                     ))}
                                 </div>

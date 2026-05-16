@@ -479,7 +479,7 @@ const DeliveryAuth = () => {
                           </div>
 
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               if (!signupName || !signupPhone || !signupEmail || !signupAddress) {
                                 toast.error("Please fill all personal information fields");
                                 return;
@@ -488,11 +488,20 @@ const DeliveryAuth = () => {
                                 toast.error("Please enter a valid 10-digit phone number");
                                 return;
                               }
-                              setSignupStep(2);
+                              try {
+                                setLoading(true);
+                                await deliveryApi.checkAvailability({ email: signupEmail, phone: signupPhone });
+                                setSignupStep(2);
+                              } catch (err) {
+                                toast.error(err.response?.data?.message || "This email or phone is already registered");
+                              } finally {
+                                setLoading(false);
+                              }
                             }}
-                            className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black tracking-widest uppercase shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                            disabled={loading}
+                            className="w-full py-4 bg-indigo-600 text-white rounded-2xl text-sm font-black tracking-widest uppercase shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                           >
-                            Next Step <ArrowRight className="w-4 h-4" />
+                            {loading ? "Checking..." : "Next Step"} <ArrowRight className="w-4 h-4" />
                           </button>
                         </motion.div>
                       )}

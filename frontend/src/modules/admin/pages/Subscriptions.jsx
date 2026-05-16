@@ -60,7 +60,10 @@ const Subscriptions = () => {
   const stats = useMemo(() => {
     const active = userSubscriptions.filter(s => s.status === 'active');
     const pending = userSubscriptions.filter(s => s.status === 'pending');
-    const totalRev = active.reduce((acc, s) => acc + (s.subscriptionPlanId?.price || 0), 0);
+    const totalRev = active.reduce((acc, s) => {
+      const plan = s.subscriptionPlanId || s.planId || {};
+      return acc + (plan.price || 0);
+    }, 0);
     
     return {
       totalRevenue: totalRev,
@@ -98,8 +101,8 @@ const Subscriptions = () => {
     try {
       await adminApi.updateSettings({ subscriptionsEnabled: newVal });
       invalidateCache("/settings");
-      setIsGlobalEnabled(newVal);
       await refetch();
+      setIsGlobalEnabled(newVal);
       toast.success(`Mandatory subscriptions ${newVal ? 'enabled' : 'disabled'} globally.`);
     } catch (error) {
       toast.error("Failed to update global setting");
@@ -111,10 +114,10 @@ const Subscriptions = () => {
   const handleSavePlan = async (e) => {
     e.preventDefault();
     try {
-      if (parseFloat(formData.price) < 0) {
+      if (!formData.price || parseFloat(formData.price) < 0) {
         return toast.error("Price cannot be less than 0");
       }
-      if (parseInt(formData.duration.value) < 1) {
+      if (!formData.duration.value || parseInt(formData.duration.value) < 1) {
         return toast.error("Duration must be at least 1 day/month");
       }
 

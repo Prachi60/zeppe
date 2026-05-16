@@ -245,7 +245,7 @@ const PendingSellers = () => {
                                     <td className="px-6 py-5 align-middle">
                                         <div className="flex flex-col justify-center">
                                             <span className="text-xs font-bold text-slate-700">{s.applicationDate}</span>
-                                            <span className="text-[9px] font-medium text-slate-400">Received {s.receivedAt || 'Recently'}</span>
+                                            <span className="text-[9px] font-medium text-slate-400">Received {s.receivedAt}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-5 text-right align-middle">
