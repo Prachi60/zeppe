@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   ShieldCheck, 
   Users, 
@@ -29,9 +30,11 @@ import {
 } from "@core/services/subscriptionService";
 import { adminApi } from "../services/adminApi";
 import { useSettings } from "@core/context/SettingsContext";
+import { invalidateCache } from "@core/api/dedupe";
 import { toast } from "sonner";
 
 const Subscriptions = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("sellers");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -40,6 +43,7 @@ const Subscriptions = () => {
   const { settings, refetch } = useSettings();
   const [isGlobalEnabled, setIsGlobalEnabled] = useState(settings?.subscriptionsEnabled !== false);
   const [isUpdatingGlobal, setIsUpdatingGlobal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,6 +56,18 @@ const Subscriptions = () => {
     features: [""],
     isActive: true
   });
+
+  const stats = useMemo(() => {
+    const active = userSubscriptions.filter(s => s.status === 'active');
+    const pending = userSubscriptions.filter(s => s.status === 'pending');
+    const totalRev = active.reduce((acc, s) => acc + (s.subscriptionPlanId?.price || 0), 0);
+    
+    return {
+      totalRevenue: totalRev,
+      activePartners: active.length,
+      pendingApprovals: pending.length
+    };
+  }, [userSubscriptions]);
 
   // Fetch data on mount
   useEffect(() => {
@@ -81,6 +97,7 @@ const Subscriptions = () => {
     const newVal = !isGlobalEnabled;
     try {
       await adminApi.updateSettings({ subscriptionsEnabled: newVal });
+      invalidateCache("/settings");
       setIsGlobalEnabled(newVal);
       await refetch();
       toast.success(`Mandatory subscriptions ${newVal ? 'enabled' : 'disabled'} globally.`);
@@ -94,6 +111,13 @@ const Subscriptions = () => {
   const handleSavePlan = async (e) => {
     e.preventDefault();
     try {
+      if (parseFloat(formData.price) < 0) {
+        return toast.error("Price cannot be less than 0");
+      }
+      if (parseInt(formData.duration.value) < 1) {
+        return toast.error("Duration must be at least 1 day/month");
+      }
+
       if (editingPlan) {
         await updatePlanAdmin(editingPlan._id, formData);
         toast.success("Plan updated successfully");
@@ -197,28 +221,37 @@ const Subscriptions = () => {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-slate-900 text-white border-none shadow-xl relative overflow-hidden">
+        <Card 
+          onClick={() => navigate("/admin/seller-transactions")}
+          className="bg-white border-slate-100 shadow-sm cursor-pointer group hover:border-slate-900 transition-all relative overflow-hidden"
+        >
           <div className="relative z-10">
-            <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-2">Total Revenue</p>
-            <h3 className="text-3xl font-black">₹26,794</h3>
-            <div className="mt-4 flex items-center gap-2 text-emerald-400 text-xs font-bold">
-              <CheckCircle size={14} /> +12% from last week
+            <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2 group-hover:text-slate-900 transition-colors">Total Revenue</p>
+            <h3 className="text-3xl font-black text-slate-900">₹{stats.totalRevenue.toLocaleString()}</h3>
+            <div className="mt-4 flex items-center gap-2 text-emerald-600 text-xs font-bold">
+              <CheckCircle size={14} /> System Realtime
             </div>
           </div>
-          <IndianRupee className="absolute top-1/2 right-4 -translate-y-1/2 text-white/5" size={80} />
+          <IndianRupee className="absolute top-1/2 right-4 -translate-y-1/2 text-slate-50 group-hover:text-slate-100 transition-colors" size={80} />
         </Card>
-        <Card className="bg-white border-slate-100 shadow-sm">
-          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Active Partners</p>
-          <h3 className="text-3xl font-black text-slate-900">42</h3>
+        <Card 
+          onClick={() => navigate("/admin/sellers/active")}
+          className="bg-white border-slate-100 shadow-sm cursor-pointer group hover:border-slate-900 transition-all"
+        >
+          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2 group-hover:text-slate-900 transition-colors">Active Partners</p>
+          <h3 className="text-3xl font-black text-slate-900">{stats.activePartners}</h3>
           <div className="mt-4 flex items-center gap-2 text-blue-600 text-xs font-bold">
-            <Users size={14} /> Managed across India
+            <Users size={14} /> Active Subscriptions
           </div>
         </Card>
-        <Card className="bg-white border-slate-100 shadow-sm">
-          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Pending Approvals</p>
-          <h3 className="text-3xl font-black text-slate-900">18</h3>
+        <Card 
+          onClick={() => navigate("/admin/sellers/pending")}
+          className="bg-white border-slate-100 shadow-sm cursor-pointer group hover:border-slate-900 transition-all"
+        >
+          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2 group-hover:text-slate-900 transition-colors">Pending Approvals</p>
+          <h3 className="text-3xl font-black text-slate-900">{stats.pendingApprovals}</h3>
           <div className="mt-4 flex items-center gap-2 text-amber-500 text-xs font-bold">
-            <Clock size={14} /> Action required
+            <Clock size={14} /> Needs attention
           </div>
         </Card>
       </div>
@@ -468,6 +501,7 @@ const Subscriptions = () => {
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Price (INR)</label>
               <Input 
                 type="number"
+                min="0"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 placeholder="e.g. 999"
@@ -479,9 +513,10 @@ const Subscriptions = () => {
               <div className="flex gap-2">
                 <Input 
                   type="number"
+                  min="1"
                   className="w-20"
                   value={formData.duration.value}
-                  onChange={(e) => setFormData({ ...formData, duration: { ...formData.duration, value: parseInt(e.target.value) } })}
+                  onChange={(e) => setFormData({ ...formData, duration: { ...formData.duration, value: parseInt(e.target.value) || 0 } })}
                   required
                 />
                 <select 
