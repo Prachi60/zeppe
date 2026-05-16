@@ -27,7 +27,7 @@ const PrivacyPage = () => {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-slate-800">Privacy Policy</h2>
-                            <p className="text-xs text-slate-500 font-medium">Last updated: Oct 2025</p>
+                            <p className="text-xs text-slate-500 font-medium">Last updated: May 2026</p>
                         </div>
                     </div>
 

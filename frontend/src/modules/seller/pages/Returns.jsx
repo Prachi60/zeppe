@@ -53,6 +53,7 @@ const Returns = () => {
     const mapReturnStatusLabel = (status) => {
         switch (status) {
             case "return_requested":
+            case "requested":
                 return "Requested";
             case "return_approved":
                 return "Approved";
@@ -77,6 +78,7 @@ const Returns = () => {
     const getStatusVariant = (status) => {
         switch (status) {
             case "return_requested":
+            case "requested":
                 return "warning";
             case "return_approved":
                 return "info";

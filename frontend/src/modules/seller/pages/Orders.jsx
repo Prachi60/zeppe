@@ -411,8 +411,8 @@ const Orders = () => {
                                                     {(o.customer?.name || 'U').charAt(0)}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-xs font-black text-slate-900 truncate">{o.customer?.name || 'Unknown'}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400">{o.customer?.phone || 'No Phone'}</p>
+                                                    <p className="text-xs font-black text-slate-900 truncate">{o.address?.name || o.customer?.name || 'Unknown'}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400">{o.address?.phone || o.customer?.phone || 'No Phone'}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right shrink-0">
@@ -465,8 +465,8 @@ const Orders = () => {
                                             {(o.customer?.name || 'U').charAt(0)}
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm font-bold text-slate-900 truncate">{o.customer?.name || 'Unknown'}</p>
-                                            <p className="text-[10px] font-bold text-slate-400">{o.customer?.phone || 'No Phone'}</p>
+                                            <p className="text-sm font-bold text-slate-900 truncate">{o.address?.name || o.customer?.name || 'Unknown'}</p>
+                                            <p className="text-[10px] font-bold text-slate-400">{o.address?.phone || o.customer?.phone || 'No Phone'}</p>
                                         </div>
                                     </div>
                                 )
@@ -680,8 +680,8 @@ const Orders = () => {
                                                 <HiOutlinePhone className="h-3 w-3 text-brand-500" /> Contact Info
                                             </h4>
                                             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 shadow-sm">
-                                                <p className="text-xs font-bold text-slate-800">{selectedOrder.customer.name}</p>
-                                                <p className="text-xs font-semibold text-slate-600 mt-0.5">{selectedOrder.customer.phone}</p>
+                                                <p className="text-xs font-bold text-slate-800">{selectedOrder.address?.name || selectedOrder.customer?.name}</p>
+                                                <p className="text-xs font-semibold text-slate-600 mt-0.5">{selectedOrder.address?.phone || selectedOrder.customer?.phone || 'No Phone'}</p>
                                             </div>
                                         </div>
                                     </div>

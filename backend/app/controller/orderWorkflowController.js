@@ -144,11 +144,10 @@ export const getOrderRoute = async (req, res) => {
         if (hasCustLoc) {
           dest = { lat: c.lat, lng: c.lng };
         } else {
-          const User = (await import("../models/user.js")).default;
-          const customer = await User.findById(order.customer).lean();
+          const customer = await Customer.findById(order.customer).lean();
           const fallbackAddress = customer?.addresses?.find(
             (a) =>
-              a.label?.toLowerCase() === order.address?.type?.toLowerCase() ||
+              (a.label && a.label.toLowerCase() === (order.address?.type || "").toLowerCase()) ||
               a.fullAddress === order.address?.address,
           );
 
@@ -158,6 +157,26 @@ export const getOrderRoute = async (req, res) => {
               lng: fallbackAddress.location.lng,
             };
             hasCustLoc = true;
+          }
+        }
+
+        if (!hasCustLoc) {
+          try {
+            const { geocodeAddress } = await import("../services/mapsGeocodeService.js");
+            const query = [order.address?.address, order.address?.landmark, order.address?.city]
+              .filter(Boolean)
+              .join(", ");
+            const geocoded = await geocodeAddress(query);
+            if (geocoded && typeof geocoded.lat === "number" && typeof geocoded.lng === "number") {
+              dest = { lat: geocoded.lat, lng: geocoded.lng };
+              hasCustLoc = true;
+              Order.updateOne(
+                { _id: order._id },
+                { $set: { "address.location": { lat: geocoded.lat, lng: geocoded.lng } } }
+              ).exec();
+            }
+          } catch (e) {
+            console.warn("[getOrderRoute] Geocode fallback failed:", e.message);
           }
         }
 
@@ -192,11 +211,10 @@ export const getOrderRoute = async (req, res) => {
         if (hasCustLoc) {
           dest = { lat: c.lat, lng: c.lng };
         } else {
-          const User = (await import("../models/user.js")).default;
-          const customer = await User.findById(order.customer).lean();
+          const customer = await Customer.findById(order.customer).lean();
           const fallbackAddress = customer?.addresses?.find(
             (a) =>
-              a.label?.toLowerCase() === order.address?.type?.toLowerCase() ||
+              (a.label && a.label.toLowerCase() === (order.address?.type || "").toLowerCase()) ||
               a.fullAddress === order.address?.address,
           );
 
@@ -206,6 +224,26 @@ export const getOrderRoute = async (req, res) => {
               lng: fallbackAddress.location.lng,
             };
             hasCustLoc = true;
+          }
+        }
+
+        if (!hasCustLoc) {
+          try {
+            const { geocodeAddress } = await import("../services/mapsGeocodeService.js");
+            const query = [order.address?.address, order.address?.landmark, order.address?.city]
+              .filter(Boolean)
+              .join(", ");
+            const geocoded = await geocodeAddress(query);
+            if (geocoded && typeof geocoded.lat === "number" && typeof geocoded.lng === "number") {
+              dest = { lat: geocoded.lat, lng: geocoded.lng };
+              hasCustLoc = true;
+              Order.updateOne(
+                { _id: order._id },
+                { $set: { "address.location": { lat: geocoded.lat, lng: geocoded.lng } } }
+              ).exec();
+            }
+          } catch (e) {
+            console.warn("[getOrderRoute] Geocode fallback failed:", e.message);
           }
         }
 
@@ -250,7 +288,7 @@ export const requestReturnPickupOtp = async (req, res) => {
         emitToCustomer(customerId, {
           event: "return:pickup:otp",
           payload: {
-            orderId,
+            orderId: order.orderId,
             otp: result.otp,
             expiresAt: result.expiresAt,
             message: `Your return pickup OTP is ${result.otp}. Show this to the delivery partner.`,

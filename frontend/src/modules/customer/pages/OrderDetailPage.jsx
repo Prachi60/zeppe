@@ -253,14 +253,20 @@ const OrderDetailPage = () => {
     });
     const offOtp = onCustomerOtp(getToken, (payload) => {
       if (matchesOrderIdentifier(payload?.orderId, identifiersRef.current) && (payload?.code || payload?.otp)) {
+        console.log("[OrderDetailPage] Delivery OTP received:", payload);
         setHandoffOtp(payload.code || payload.otp);
         toast.info("Delivery OTP received — share with rider if asked.");
+      } else {
+        console.log("[OrderDetailPage] Ignored order:otp (ID mismatch):", payload?.orderId, "vs", identifiersRef.current);
       }
     });
     const offReturnOtp = onReturnPickupOtp(getToken, (payload) => {
       if (matchesOrderIdentifier(payload?.orderId, identifiersRef.current) && payload?.otp) {
+        console.log("[OrderDetailPage] Return pickup OTP received:", payload);
         setHandoffOtp(payload.otp);
         toast.info("Return pickup OTP received — share with rider.");
+      } else {
+        console.log("[OrderDetailPage] Ignored return:pickup:otp (ID mismatch):", payload?.orderId, "vs", identifiersRef.current);
       }
     });
 
@@ -273,7 +279,7 @@ const OrderDetailPage = () => {
   }, [orderId]);
 
   useEffect(() => {
-    identifiersRef.current = [orderId, order?.orderId, order?.checkoutGroupId]
+    identifiersRef.current = [orderId, order?.orderId, order?.checkoutGroupId, order?._id]
       .map((value) => String(value || "").trim())
       .filter(Boolean);
   }, [orderId, order?.orderId, order?.checkoutGroupId]);

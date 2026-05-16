@@ -233,13 +233,13 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
   const isComplete = otp.every((digit) => digit !== "");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="text-center">
-        <h3 className="text-lg font-bold text-gray-900 mb-1">
+        <h3 className="text-base font-bold text-gray-900 mb-0.5">
           {isReturnDrop ? "Enter Seller OTP" : isReturn ? "Enter Return OTP" : "Enter Delivery OTP"}
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-xs text-gray-600">
           {isReturnDrop
             ? "Ask the seller for the 4-digit return confirmation code"
             : "Ask the customer for the 4-digit code"}
@@ -261,12 +261,12 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={index === 0 ? handlePaste : undefined}
             disabled={isLoading}
-            className={`w-14 h-16 text-center text-2xl font-bold font-mono border-2 rounded-xl transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-offset-0 ${error
+            className={`w-11 h-13 text-center text-lg font-bold font-mono border-2 rounded-xl transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-offset-0 ${error
                 ? "border-red-300 bg-red-50 text-red-900 focus:border-red-500 focus:ring-red-500"
                 : digit
-                  ? "border-primary bg-primary/10 text-slate-900 focus:border-primary focus:ring-primary"
-                  : "border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
-              } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                   ? "border-primary bg-primary/10 text-slate-900 focus:border-primary focus:ring-primary"
+                   : "border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+               } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             aria-label={`Digit ${index + 1}`}
           />
         ))}
@@ -312,20 +312,20 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
       <button
         onClick={handleSubmit}
         disabled={!isComplete || isLoading || isGenerating}
-        className={`w-full h-12 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 outline-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-0 ${!isComplete || isLoading || isGenerating
+        className={`w-full h-11 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 outline-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-0 ${!isComplete || isLoading || isGenerating
             ? "bg-gray-200 text-gray-600 cursor-not-allowed"
             : "bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 shadow-md hover:shadow-lg"
           }`}
       >
         {isLoading ? (
           <>
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" />
             <span>Validating...</span>
           </>
         ) : (
           <>
-            <CheckCircle className="w-5 h-5" />
-            <span>{isReturnDrop ? "Confirm Return Delivery" : isReturn ? "Confirm Pickup" : "Confirm Delivery"}</span>
+            <CheckCircle className="w-4 h-4" />
+            <span>{isReturnDrop ? "Confirm Drop" : isReturn ? "Confirm Pickup" : "Confirm Delivery"}</span>
           </>
         )}
       </button>
@@ -334,7 +334,7 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
       <button
         onClick={clearInputs}
         disabled={isLoading || otp.every((d) => !d)}
-        className="w-full h-10 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full h-9 rounded-xl text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Clear
       </button>
@@ -344,7 +344,7 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
         <button
           onClick={onCancel}
           disabled={isLoading}
-          className="w-full h-10 rounded-xl font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-8 rounded-xl text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Cancel
         </button>
