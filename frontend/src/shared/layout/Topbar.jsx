@@ -28,6 +28,7 @@ const Topbar = React.memo(({ onMenuClick }) => {
     const notificationRef = React.useRef(null);
 
     const isSeller = location.pathname.startsWith('/seller');
+    const isAdmin = location.pathname.startsWith('/admin');
 
     const handleSearchSubmit = React.useCallback((e) => {
         e?.preventDefault();
@@ -35,8 +36,10 @@ const Topbar = React.memo(({ onMenuClick }) => {
         if (!q) return;
         if (isSeller) {
             navigate(`/seller/products?q=${encodeURIComponent(q)}`);
+        } else if (isAdmin) {
+            navigate(`/admin/orders/all?search=${encodeURIComponent(q)}`);
         }
-    }, [searchQuery, isSeller, navigate]);
+    }, [searchQuery, isSeller, isAdmin, navigate]);
 
     const fetchNotifications = React.useCallback(async () => {
         try {
