@@ -229,16 +229,6 @@ const Auth = () => {
     }
   };
 
-  const handlePanelWheel = (e) => {
-    const panel = e.currentTarget;
-    if (panel.scrollHeight <= panel.clientHeight) {
-      return;
-    }
-
-    e.preventDefault();
-    panel.scrollTop += e.deltaY;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -456,7 +446,6 @@ const Auth = () => {
         {/* Form Content Side */}
         <div
           className="w-full md:w-[55%] min-h-0 p-8 pt-12 md:p-12 md:pt-16 flex flex-col justify-center bg-white overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar relative"
-          onWheelCapture={handlePanelWheel}
           style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="hidden md:flex absolute top-8 right-8 z-20">
             <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
@@ -543,22 +532,63 @@ const Auth = () => {
                       </div>
                     )}
 
-                    <div className="relative group">
-                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
-                        <Mail size={18} />
+                    {isLogin ? (
+                      <div className="relative group">
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                          <Mail size={18} />
+                        </div>
+                        <input
+                          type="text"
+                          name="email"
+                          required
+                          inputMode="text"
+                          autoComplete="username"
+                          placeholder="Email or Phone Number"
+                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                          value={formData.email}
+                          onChange={handleChange}
+                        />
                       </div>
-                      <input
-                        type={isLogin ? "text" : "email"}
-                        name="email"
-                        required
-                        inputMode={isLogin ? "text" : "email"}
-                        autoComplete={isLogin ? "username" : "email"}
-                        placeholder={isLogin ? "Email or Phone Number" : "Business Email"}
-                        className="w-full pl-12 pr-28 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
-                        value={formData.email}
-                        onChange={handleChange}
-                      />
-                      {!isLogin && (
+                    ) : (
+                      <div className="flex flex-col sm:block gap-3">
+                        <div className="relative group">
+                          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                            <Mail size={18} />
+                          </div>
+                          <input
+                            type="email"
+                            name="email"
+                            required
+                            inputMode="email"
+                            autoComplete="email"
+                            placeholder="Business Email"
+                            className="w-full pl-12 pr-6 sm:pr-28 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                            value={formData.email}
+                            onChange={handleChange}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSendVerificationOtp("email")}
+                            disabled={
+                              verifications.email.isSending ||
+                              verifications.email.status === "verified" ||
+                              !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email || "")
+                            }
+                            className={`hidden sm:inline-flex absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${verifications.email.status === "verified"
+                              ? "bg-brand-100 text-brand-700 cursor-default"
+                              : "bg-slate-900 text-white hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
+                              }`}>
+                            {verifications.email.isSending ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : verifications.email.status === "verified" ? (
+                              "Verified"
+                            ) : verifications.email.isOtpVisible ? (
+                              "Resend"
+                            ) : (
+                              "Verify"
+                            )}
+                          </button>
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleSendVerificationOtp("email")}
@@ -567,22 +597,23 @@ const Auth = () => {
                             verifications.email.status === "verified" ||
                             !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email || "")
                           }
-                          className={`absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${verifications.email.status === "verified"
+                          className={`sm:hidden w-full py-3.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all text-center flex items-center justify-center ${verifications.email.status === "verified"
                             ? "bg-brand-100 text-brand-700 cursor-default"
                             : "bg-slate-900 text-white hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
                             }`}>
                           {verifications.email.isSending ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : verifications.email.status === "verified" ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : null}
+                          {verifications.email.status === "verified" ? (
                             "Verified"
                           ) : verifications.email.isOtpVisible ? (
-                            "Resend"
+                            "Resend OTP"
                           ) : (
-                            "Verify"
+                            "Verify Email"
                           )}
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     {!isLogin && verifications.email.isOtpVisible && verifications.email.status !== "verified" && (
                       <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                         <input
@@ -646,6 +677,11 @@ const Auth = () => {
                         className="w-full pl-12 pr-14 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
                         value={formData.password}
                         onChange={handleChange}
+                        onFocus={(e) => {
+                          setTimeout(() => {
+                            e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+                          }, 250);
+                        }}
                       />
                       <button
                         type="button"
@@ -881,10 +917,6 @@ const Auth = () => {
         </div>
       </motion.div>
 
-      {/* Bottom Tagline */}
-      <div className="absolute bottom-6 flex items-center gap-4 text-slate-300 text-[10px] font-black uppercase tracking-[6px]">
-        Empowering Business Digitalization
-      </div>
 
       {isMapOpen && (
         <MapPicker
