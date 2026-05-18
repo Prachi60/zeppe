@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation as useRouteLocation } from 'react-router-dom';
 import { Plus, Home, Briefcase, MapPin, Trash2, Edit2, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,12 +15,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { customerApi } from '../services/customerApi';
-import { useLocation } from '../context/LocationContext';
+import { useLocation as useAppLocation } from '../context/LocationContext';
 
 const AddressesPage = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { refreshAddresses, currentLocation, refreshLocation, isFetchingLocation } = useLocation();
+    const routeLocation = useRouteLocation();
+    const { refreshAddresses, currentLocation, refreshLocation, isFetchingLocation } = useAppLocation();
     const [addresses, setAddresses] = useState([]);
     const [rawAddresses, setRawAddresses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -38,12 +39,12 @@ const AddressesPage = () => {
             setAddresses(raw.map((addr, idx) => ({
                 id: addr._id ?? idx,
                 type: (addr.label || 'home').charAt(0).toUpperCase() + (addr.label || 'home').slice(1),
-                name: profile?.name ?? '',
+                name: addr.name || profile?.name || '',
                 address: addr.fullAddress || [addr.landmark, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ') || '',
                 city: addr.city,
                 state: addr.state,
                 pincode: addr.pincode,
-                phone: profile?.phone ?? '',
+                phone: addr.phone || profile?.phone || '',
                 isDefault: idx === 0
             })));
         } catch {
@@ -117,13 +118,45 @@ const AddressesPage = () => {
         const landmark = addForm.landmark?.trim();
         const state = addForm.state?.trim();
         const pincode = addForm.pincode?.trim();
+
+        if (!name) {
+            toast.error('Please enter full name');
+            return;
+        }
+        const phone = addForm.phone?.trim();
+        if (!phone) {
+            toast.error('Please enter phone number');
+            return;
+        }
+        if (!/^\d{10}$/.test(phone)) {
+            toast.error('Please enter a valid 10-digit phone number');
+            return;
+        }
         if (!address) {
             toast.error('Please enter the address');
+            return;
+        }
+        if (!city) {
+            toast.error('Please enter city');
+            return;
+        }
+        if (!state) {
+            toast.error('Please enter state');
+            return;
+        }
+        if (!pincode) {
+            toast.error('Please enter pincode');
+            return;
+        }
+        if (!/^\d{6}$/.test(pincode)) {
+            toast.error('Please enter a valid 6-digit pincode');
             return;
         }
         const newAddr = {
             label: addForm.type.toLowerCase(),
             fullAddress: address,
+            name: name,
+            phone: addForm.phone.trim(),
             ...(landmark && { landmark }),
             ...(city && { city }),
             ...(state && { state }),
@@ -149,16 +182,22 @@ const AddressesPage = () => {
                 );
             }
 
-            await customerApi.updateProfile({
-                ...(name && { name }),
-                ...(addForm.phone && { phone: addForm.phone.trim() }),
+            const { data: updatedData } = await customerApi.updateProfile({
                 addresses: [...rawAddresses, newAddr]
             });
+            const updatedProfile = updatedData?.result ?? updatedData?.data ?? updatedData;
+            const newSavedAddr = updatedProfile?.addresses?.[updatedProfile.addresses.length - 1];
+            const newId = newSavedAddr?._id;
+
             toast.success('Address saved successfully');
             setIsAddOpen(false);
             setLoading(true);
             await fetchAddresses();
             await refreshAddresses?.();
+
+            if (routeLocation.state?.from === 'checkout') {
+                navigate('/checkout', { state: { selectedAddressId: newId } });
+            }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to save address');
         } finally {
@@ -195,24 +234,62 @@ const AddressesPage = () => {
 
     const handleUpdateAddress = async () => {
         if (!selectedAddress) return;
+        const name = editForm.name?.trim();
+        const phone = editForm.phone?.trim();
         const address = editForm.address?.trim();
+        const city = editForm.city?.trim();
+        const state = editForm.state?.trim();
+        const pincode = editForm.pincode?.trim();
+        const landmark = editForm.landmark?.trim();
+
+        if (!name) {
+            toast.error('Please enter full name');
+            return;
+        }
+        if (!phone) {
+            toast.error('Please enter phone number');
+            return;
+        }
+        if (!/^\d{10}$/.test(phone)) {
+            toast.error('Please enter a valid 10-digit phone number');
+            return;
+        }
         if (!address) {
             toast.error('Please enter the address');
             return;
         }
+        if (!city) {
+            toast.error('Please enter city');
+            return;
+        }
+        if (!state) {
+            toast.error('Please enter state');
+            return;
+        }
+        if (!pincode) {
+            toast.error('Please enter pincode');
+            return;
+        }
+        if (!/^\d{6}$/.test(pincode)) {
+            toast.error('Please enter a valid 6-digit pincode');
+            return;
+        }
+
         const idx = addresses.findIndex(a => (a.id === selectedAddress.id) || (a.address === selectedAddress.address && a.type === selectedAddress.type));
         if (idx < 0) {
             setIsEditOpen(false);
             return;
         }
-        const updatedRaw = {
+        const updatedRawItem = {
             ...(rawAddresses[idx] && typeof rawAddresses[idx] === 'object' ? rawAddresses[idx] : {}),
             label: editForm.type.toLowerCase(),
             fullAddress: address,
-            ...(editForm.landmark?.trim() && { landmark: editForm.landmark.trim() }),
-            ...(editForm.city?.trim() && { city: editForm.city.trim() }),
-            ...(editForm.state?.trim() && { state: editForm.state.trim() }),
-            ...(editForm.pincode?.trim() && { pincode: editForm.pincode.trim() })
+            name: name,
+            phone: phone,
+            ...(landmark && { landmark }),
+            ...(city && { city }),
+            ...(state && { state }),
+            ...(pincode && { pincode })
         };
 
         // Best-effort: refresh coordinates + placeId whenever address fields change.
@@ -227,9 +304,9 @@ const AddressesPage = () => {
             const geo = await customerApi.geocodeAddress(query);
             const loc = geo.data?.result?.location;
             if (loc && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
-                updatedRaw.location = { lat: loc.lat, lng: loc.lng };
-                if (geo.data?.result?.placeId) updatedRaw.placeId = geo.data.result.placeId;
-                if (geo.data?.result?.formattedAddress) updatedRaw.formattedAddress = geo.data.result.formattedAddress;
+                updatedRawItem.location = { lat: loc.lat, lng: loc.lng };
+                if (geo.data?.result?.placeId) updatedRawItem.placeId = geo.data.result.placeId;
+                if (geo.data?.result?.formattedAddress) updatedRawItem.formattedAddress = geo.data.result.formattedAddress;
             }
         } catch (e) {
             toast.error(
@@ -238,12 +315,10 @@ const AddressesPage = () => {
             );
         }
 
-        const updatedAddresses = rawAddresses.map((raw, i) => (i === idx ? updatedRaw : raw));
+        const updatedAddresses = rawAddresses.map((raw, i) => (i === idx ? updatedRawItem : raw));
         setUpdating(true);
         try {
             await customerApi.updateProfile({
-                ...(editForm.name?.trim() && { name: editForm.name.trim() }),
-                ...(editForm.phone?.trim() && { phone: editForm.phone.trim() }),
                 addresses: updatedAddresses
             });
             toast.success('Address updated successfully');
@@ -252,6 +327,10 @@ const AddressesPage = () => {
             setLoading(true);
             await fetchAddresses();
             await refreshAddresses?.();
+
+            if (routeLocation.state?.from === 'checkout') {
+                navigate('/checkout');
+            }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to update address');
         } finally {
@@ -273,15 +352,21 @@ const AddressesPage = () => {
             setIsDeleteOpen(false);
             return;
         }
-        const updatedAddresses = rawAddresses.filter((_, i) => i !== idx);
+        const updatedRaw = rawAddresses.filter((_, i) => i !== idx);
+        const updatedDisplay = addresses.filter((_, i) => i !== idx);
         setDeleting(true);
         try {
-            await customerApi.updateProfile({ addresses: updatedAddresses });
+            await customerApi.updateProfile({ addresses: updatedRaw });
+            
+            // Instantly update the UI states
+            setRawAddresses(updatedRaw);
+            setAddresses(updatedDisplay);
+            
             toast.success('Address deleted successfully');
             setIsDeleteOpen(false);
             setSelectedAddress(null);
-            setLoading(true);
-            await fetchAddresses();
+            
+            // Sync with global location context
             await refreshAddresses?.();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to delete address');
@@ -370,7 +455,7 @@ const AddressesPage = () => {
 
             {/* Add Address Modal */}
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                <DialogContent className="sm:max-w-[370px] p-5">
+                <DialogContent className="sm:max-w-[370px] p-5 max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="pb-1">
                         <DialogTitle className="text-base font-bold">Add New Address</DialogTitle>
                         <DialogDescription className="text-[11px]">
@@ -380,13 +465,13 @@ const AddressesPage = () => {
                     <div className="grid gap-2.5 py-1">
                         {isFetchingLocation ? (
                             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-center gap-3">
-                                <div className="w-4 h-4 border-2 border-[#45B0E2] border-t-transparent rounded-full animate-spin" />
+                                <div className="w-4 h-4 border-2 border-[#FF9F33] border-t-transparent rounded-full animate-spin" />
                                 <span className="text-[11px] font-bold text-slate-500">Detecting your location...</span>
                             </div>
                         ) : currentLocation?.name && (
                             <div className="bg-brand-50/50 p-3 rounded-xl border border-[#45B0E2]/20 flex flex-col gap-2">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-[#45B0E2] uppercase tracking-wider flex items-center gap-1">
+                                    <span className="text-[10px] font-bold text-[#FF9F33] uppercase tracking-wider flex items-center gap-1">
                                         <MapPin size={12} /> Current Location Detected
                                     </span>
                                     <div className="flex gap-2">
@@ -400,7 +485,7 @@ const AddressesPage = () => {
                                         <button 
                                             type="button"
                                             onClick={() => setAddForm(f => ({ ...f, address: currentLocation.name }))}
-                                            className="text-[10px] font-black text-[#45B0E2] hover:underline px-2 py-1"
+                                            className="text-[10px] font-black text-black hover:underline px-2 py-1"
                                         >
                                             FILL ADDRESS
                                         </button>
@@ -414,18 +499,35 @@ const AddressesPage = () => {
                         <div className="grid gap-2">
                             <Label>Address Type</Label>
                             <div className="flex gap-2">
-                                <Button type="button" variant="outline" className={`flex-1 ${addForm.type === 'home' ? 'border-[#45B0E2] text-[#45B0E2] bg-brand-50' : ''}`} onClick={() => setAddForm(f => ({ ...f, type: 'home' }))}>Home</Button>
-                                <Button type="button" variant="outline" className={`flex-1 ${addForm.type === 'work' ? 'border-[#45B0E2] text-[#45B0E2] bg-brand-50' : ''}`} onClick={() => setAddForm(f => ({ ...f, type: 'work' }))}>Work</Button>
-                                <Button type="button" variant="outline" className={`flex-1 ${addForm.type === 'other' ? 'border-[#45B0E2] text-[#45B0E2] bg-brand-50' : ''}`} onClick={() => setAddForm(f => ({ ...f, type: 'other' }))}>Other</Button>
+                                <Button type="button" variant="outline" className={`flex-1 font-bold ${addForm.type === 'home' ? 'border-[#FF9F33] text-black bg-[#FF9F33]/10' : ''}`} onClick={() => setAddForm(f => ({ ...f, type: 'home' }))}>Home</Button>
+                                <Button type="button" variant="outline" className={`flex-1 font-bold ${addForm.type === 'work' ? 'border-[#FF9F33] text-black bg-[#FF9F33]/10' : ''}`} onClick={() => setAddForm(f => ({ ...f, type: 'work' }))}>Work</Button>
+                                <Button type="button" variant="outline" className={`flex-1 font-bold ${addForm.type === 'other' ? 'border-[#FF9F33] text-black bg-[#FF9F33]/10' : ''}`} onClick={() => setAddForm(f => ({ ...f, type: 'other' }))}>Other</Button>
                             </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="name">Full Name</Label>
-                            <Input id="name" placeholder="John Doe" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} />
+                            <Input 
+                                id="name" 
+                                placeholder="John Doe" 
+                                value={addForm.name} 
+                                onChange={e => {
+                                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                                    setAddForm(f => ({ ...f, name: val }));
+                                }} 
+                            />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="phone">Phone Number</Label>
-                            <Input id="phone" placeholder="+91 00000 00000" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} />
+                            <Input 
+                                id="phone" 
+                                placeholder="10-digit number" 
+                                value={addForm.phone} 
+                                maxLength={10}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                    setAddForm(f => ({ ...f, phone: val }));
+                                }} 
+                            />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="address">Address</Label>
@@ -443,28 +545,53 @@ const AddressesPage = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="city">City</Label>
-                                <Input id="city" placeholder="New Delhi" value={addForm.city} onChange={e => setAddForm(f => ({ ...f, city: e.target.value }))} />
+                                <Input 
+                                    id="city" 
+                                    placeholder="New Delhi" 
+                                    value={addForm.city} 
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                                        setAddForm(f => ({ ...f, city: val }));
+                                    }} 
+                                />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="state">State</Label>
-                                <Input id="state" placeholder="Delhi" value={addForm.state} onChange={e => setAddForm(f => ({ ...f, state: e.target.value }))} />
+                                <Input 
+                                    id="state" 
+                                    placeholder="Delhi" 
+                                    value={addForm.state} 
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                                        setAddForm(f => ({ ...f, state: val }));
+                                    }} 
+                                />
                             </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="pincode">Pincode</Label>
-                            <Input id="pincode" placeholder="110075" value={addForm.pincode} onChange={e => setAddForm(f => ({ ...f, pincode: e.target.value }))} />
+                            <Input 
+                                id="pincode" 
+                                placeholder="110075" 
+                                value={addForm.pincode} 
+                                maxLength={6}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                    setAddForm(f => ({ ...f, pincode: val }));
+                                }} 
+                            />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={saving}>Cancel</Button>
-                        <Button className="bg-[#45B0E2] hover:bg-[#0b721b]" onClick={handleSaveNewAddress} disabled={saving}>{saving ? 'Saving...' : 'Save Address'}</Button>
+                        <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={saving} className="rounded-xl">Cancel</Button>
+                        <Button className="bg-[#FF9F33] hover:bg-[#E68A1F] text-black font-extrabold rounded-xl shadow-md transition-all active:scale-[0.98]" onClick={handleSaveNewAddress} disabled={saving}>{saving ? 'Saving...' : 'Save Address'}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Edit Address Modal */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto p-5">
                     <DialogHeader>
                         <DialogTitle>Edit Address</DialogTitle>
                         <DialogDescription>
@@ -482,11 +609,26 @@ const AddressesPage = () => {
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-name">Full Name</Label>
-                            <Input id="edit-name" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
+                            <Input 
+                                id="edit-name" 
+                                value={editForm.name} 
+                                onChange={e => {
+                                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                                    setEditForm(f => ({ ...f, name: val }));
+                                }} 
+                            />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-phone">Phone Number</Label>
-                            <Input id="edit-phone" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+                            <Input 
+                                id="edit-phone" 
+                                value={editForm.phone} 
+                                maxLength={10}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                    setEditForm(f => ({ ...f, phone: val }));
+                                }} 
+                            />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-address">Address</Label>
@@ -504,21 +646,46 @@ const AddressesPage = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="edit-city">City</Label>
-                                <Input id="edit-city" placeholder="New Delhi" value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} />
+                                <Input 
+                                    id="edit-city" 
+                                    placeholder="New Delhi" 
+                                    value={editForm.city} 
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                                        setEditForm(f => ({ ...f, city: val }));
+                                    }} 
+                                />
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="edit-state">State</Label>
-                                <Input id="edit-state" placeholder="Delhi" value={editForm.state} onChange={e => setEditForm(f => ({ ...f, state: e.target.value }))} />
+                                <Input 
+                                    id="edit-state" 
+                                    placeholder="Delhi" 
+                                    value={editForm.state} 
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                                        setEditForm(f => ({ ...f, state: val }));
+                                    }} 
+                                />
                             </div>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="edit-pincode">Pincode</Label>
-                            <Input id="edit-pincode" placeholder="110075" value={editForm.pincode} onChange={e => setEditForm(f => ({ ...f, pincode: e.target.value }))} />
+                            <Input 
+                                id="edit-pincode" 
+                                placeholder="110075" 
+                                value={editForm.pincode} 
+                                maxLength={6}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                    setEditForm(f => ({ ...f, pincode: val }));
+                                }} 
+                            />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={updating}>Cancel</Button>
-                        <Button className="bg-[#45B0E2] hover:bg-[#0b721b]" onClick={handleUpdateAddress} disabled={updating}>{updating ? 'Updating...' : 'Update Address'}</Button>
+                        <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={updating} className="rounded-xl">Cancel</Button>
+                        <Button className="bg-[#FF9F33] hover:bg-[#E68A1F] text-black font-extrabold rounded-xl shadow-md transition-all active:scale-[0.98]" onClick={handleUpdateAddress} disabled={updating}>{updating ? 'Updating...' : 'Update Address'}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

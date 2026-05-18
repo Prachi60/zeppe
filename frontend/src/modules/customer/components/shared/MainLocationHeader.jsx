@@ -292,6 +292,15 @@ const MainLocationHeader = ({
     setIsGuestPromptOpen(false);
   }, [routeLocation.pathname, isDesktopViewport]);
 
+  // 2. Auto-open location drawer on mount if no location is set
+  useEffect(() => {
+    if (currentLocation?.name === "Select Location") {
+      setIsLocationOpen(true);
+    }
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Search Logic
   const handleSearchClick = () => {
     navigate("/search");
@@ -448,7 +457,7 @@ const MainLocationHeader = ({
     return "15 min";
   })();
   const addressString = currentLocation?.address || currentLocation?.name;
-  const showDetailedAddress = !!addressString && isAuthenticated;
+  const showDetailedAddress = !!addressString && addressString !== "Select Location";
   const promptText = isFetchingLocation ? "Detecting location..." : "Tap to set location";
 
   useEffect(() => {

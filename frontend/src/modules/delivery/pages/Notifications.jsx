@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Clock,
   Trash2,
+  Package,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,6 +24,55 @@ const Notifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case "ORDER_DELIVERED":
+      case "RETURN_QC_PASSED":
+        return <CheckCircle size={20} className="text-emerald-600" />;
+      case "DELIVERY_ASSIGNED":
+      case "ORDER_READY":
+      case "RETURN_PICKUP_ASSIGNED":
+      case "NEW_DELIVERY_BROADCAST":
+      case "NEW_RETURN_BROADCAST":
+        return <Package size={20} className="text-orange-600" />;
+      case "CASH_OVER_LIMIT":
+      case "RETURN_QC_FAILED":
+        return <Megaphone size={20} className="text-rose-600" />;
+      default:
+        return <Bell size={20} className="text-blue-600" />;
+    }
+  };
+
+  const getIconContainerColor = (type, isRead) => {
+    if (isRead) return "bg-gray-100 text-gray-400 opacity-70";
+    switch (type) {
+      case "ORDER_DELIVERED":
+      case "RETURN_QC_PASSED":
+        return "bg-emerald-50 text-emerald-600";
+      case "DELIVERY_ASSIGNED":
+      case "ORDER_READY":
+      case "RETURN_PICKUP_ASSIGNED":
+      case "NEW_DELIVERY_BROADCAST":
+      case "NEW_RETURN_BROADCAST":
+        return "bg-orange-50 text-orange-600";
+      case "CASH_OVER_LIMIT":
+      case "RETURN_QC_FAILED":
+        return "bg-rose-50 text-rose-600";
+      default:
+        return "bg-blue-50 text-blue-600";
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    const id = notif._id || notif.id;
+    if (!notif.isRead) {
+      await handleMarkAsRead(id);
+    }
+    if (notif.data?.orderId) {
+      navigate(`/delivery/order-details/${notif.data.orderId}`);
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -58,7 +108,7 @@ const Notifications = () => {
   const handleMarkAsRead = async (id) => {
     try {
       await deliveryApi.markNotificationRead(id);
-      setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));
+      setNotifications(notifications.map(n => (n._id === id || n.id === id) ? { ...n, isRead: true } : n));
     } catch (error) {
       toast.error("Failed to update status");
     }
@@ -128,14 +178,14 @@ const Notifications = () => {
             <AnimatePresence mode="popLayout">
               {notifications.map((notification) => (
                 <motion.div
-                  key={notification._id}
+                  key={notification._id || notification.id}
                   variants={itemVariants}
                   layout
-                  onClick={() => !notification.isRead && handleMarkAsRead(notification._id)}>
+                  onClick={() => handleNotificationClick(notification)}>
                   <Card
-                    className={`p-4 border-none shadow-sm relative overflow-hidden transition-all duration-300 cursor-pointer ${!notification.isRead
-                      ? "bg-blue-50/50 border-l-4 border-l-blue-500 shadow-blue-500/5 scale-[1.02]"
-                      : "bg-white opacity-90"
+                    className={`p-4 border-none shadow-sm relative overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-md hover:scale-[1.01] ${!notification.isRead
+                      ? "bg-blue-50/50 border-l-4 border-l-blue-500 shadow-blue-500/5"
+                      : "bg-white opacity-95 border border-slate-100"
                       }`}>
                     {!notification.isRead && (
                       <div className="absolute top-4 right-4 w-2 h-2 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
@@ -143,22 +193,59 @@ const Notifications = () => {
 
                     <div className="flex items-start">
                       <div
-                        className={`p-3 rounded-full mr-4 flex-shrink-0 ${notification.type === "order"
-                          ? "bg-orange-100 text-orange-600"
-                          : notification.isRead ? "bg-gray-100 text-gray-400" : "bg-blue-100 text-blue-600"
-                          }`}>
-                        {notification.type === "order" ? <Megaphone size={20} /> : <Bell size={20} />}
+                        className={`p-3 rounded-full mr-4 flex-shrink-0 transition-transform ${getIconContainerColor(notification.type, notification.isRead)}`}>
+                        {getNotificationIcon(notification.type)}
                       </div>
 
-                      <div className="flex-1">
-                        <h3
-                          className={`font-extrabold text-gray-900 mb-0.5 text-sm ${!notification.isRead ? "text-blue-900" : "text-gray-700 font-bold"}`}>
-                          {notification.title}
-                        </h3>
-                        <p className={`text-xs mb-2 leading-snug ${!notification.isRead ? "text-gray-900 font-medium" : "text-gray-500"}`}>
-                          {notification.message}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          <h3
+                            className={`font-black text-gray-900 text-sm ${!notification.isRead ? "text-blue-900" : "text-gray-700 font-bold"}`}>
+                            {notification.title}
+                          </h3>
+                        </div>
+
+                        <p className={`text-xs mb-2 leading-relaxed ${!notification.isRead ? "text-slate-800 font-medium" : "text-slate-500"}`}>
+                          {notification.message || notification.body}
                         </p>
-                        <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+
+                        {/* Order ID Badge & Click to View Alert */}
+                        {notification.data?.orderId && (
+                          <div className="flex flex-wrap gap-2 mb-2.5">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-100 uppercase tracking-wider">
+                              Order: #{notification.data.orderId.slice(-8).toUpperCase()}
+                            </span>
+                            <span className="inline-flex items-center text-[10px] font-extrabold text-blue-500 hover:text-blue-600">
+                              Tap to view details →
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Rich Order Preview Data (pickup, drop, total) */}
+                        {notification.data?.preview && (
+                          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-2.5 space-y-1.5 text-[11px] text-slate-600 shadow-inner">
+                            {notification.data.preview.pickup && (
+                              <div className="flex items-start gap-1">
+                                <span className="font-extrabold text-slate-800 w-14 flex-shrink-0">PICKUP:</span>
+                                <span className="font-medium text-slate-600 truncate">{notification.data.preview.pickup}</span>
+                              </div>
+                            )}
+                            {notification.data.preview.drop && (
+                              <div className="flex items-start gap-1">
+                                <span className="font-extrabold text-slate-800 w-14 flex-shrink-0">DROP:</span>
+                                <span className="font-medium text-slate-600 line-clamp-1">{notification.data.preview.drop}</span>
+                              </div>
+                            )}
+                            {notification.data.preview.total && (
+                              <div className="flex items-center gap-1 text-slate-800">
+                                <span className="font-extrabold w-14">TOTAL:</span>
+                                <span className="font-black text-amber-600">₹ {notification.data.preview.total}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex items-center text-[9px] text-gray-400 font-bold uppercase tracking-wider">
                           <Clock size={10} className="mr-1" />
                           {new Date(notification.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, {new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>

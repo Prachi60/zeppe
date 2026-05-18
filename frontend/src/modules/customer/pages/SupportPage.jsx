@@ -172,7 +172,7 @@ const SupportPage = () => {
                                 <button
                                     key={ticket._id}
                                     onClick={() => setSelectedTicket(ticket)}
-                                    className="w-full bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between hover:border-[#45B0E2] transition-all group"
+                                    className="w-full bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between hover:border-[#f59931] transition-all group"
                                 >
                                     <div className="text-left flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
@@ -188,7 +188,7 @@ const SupportPage = () => {
                                         <h3 className="text-sm font-bold text-slate-800 truncate">{ticket.subject}</h3>
                                         <p className="text-xs text-slate-500 truncate">{ticket.messages[ticket.messages.length - 1]?.text}</p>
                                     </div>
-                                    <ChevronDown className="text-slate-300 -rotate-90 group-hover:text-[#45B0E2] transition-colors" size={20} />
+                                    <ChevronDown className="text-slate-300 -rotate-90 group-hover:text-[#f59931] transition-colors" size={20} />
                                 </button>
                             ))}
                         </div>
@@ -241,34 +241,34 @@ const SupportPage = () => {
             {/* Ticket Creation Modal */}
             <AnimatePresence>
                 {isTicketModalOpen && (
-                    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsTicketModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="relative bg-white w-full max-w-lg rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl overflow-hidden z-10">
-                            <div className="p-8">
-                                <div className="flex items-center justify-between mb-8">
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 350 }} className="relative bg-white w-full max-w-[420px] rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-100">
+                            <div className="p-6">
+                                <div className="flex items-center justify-between mb-5">
                                     <div>
-                                        <h2 className="text-2xl font-black text-slate-800">Raise a Ticket</h2>
-                                        <p className="text-sm text-slate-500 font-medium">Describe your issue in detail</p>
+                                        <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Raise a Ticket</h2>
+                                        <p className="text-xs text-slate-500 font-medium">Describe your issue in detail</p>
                                     </div>
-                                    <button onClick={() => setIsTicketModalOpen(false)} className="w-10 h-10 flex items-center justify-center bg-slate-50 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
-                                        <X size={20} />
+                                    <button onClick={() => setIsTicketModalOpen(false)} className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-black hover:text-[#f59931] rounded-full text-slate-500 transition-colors">
+                                        <X size={16} />
                                     </button>
                                 </div>
-                                <form onSubmit={handleTicketSubmit} className="space-y-6">
-                                    <div className="space-y-2">
+                                <form onSubmit={handleTicketSubmit} className="space-y-4">
+                                    <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Subject</label>
-                                        <input type="text" required value={ticketData.subject} onChange={(e) => setTicketData({ ...ticketData, subject: e.target.value })} placeholder="What's the issue about?" className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold outline-none ring-1 ring-transparent focus:ring-[#45B0E2]/20 transition-all" />
+                                        <input type="text" required value={ticketData.subject} onChange={(e) => setTicketData({ ...ticketData, subject: e.target.value })} placeholder="What's the issue about?" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:bg-white focus:border-[#f59931] focus:ring-2 focus:ring-[#f59931]/15 transition-all" />
                                     </div>
-                                    <div className="grid grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-3 gap-2.5">
                                         {['low', 'medium', 'high'].map((p) => (
-                                            <button key={p} type="button" onClick={() => setTicketData({ ...ticketData, priority: p })} className={cn("py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border", ticketData.priority === p ? "bg-[#45B0E2] text-white border-[#45B0E2] shadow-lg shadow-brand-100" : "bg-white text-slate-400 border-slate-100 hover:bg-slate-50")}>{p}</button>
+                                            <button key={p} type="button" onClick={() => setTicketData({ ...ticketData, priority: p })} className={cn("py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border", ticketData.priority === p ? "bg-black text-[#f59931] border-black shadow-md shadow-black/10" : "bg-white text-slate-400 border-slate-200 hover:bg-slate-50")}>{p}</button>
                                         ))}
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Description</label>
-                                        <textarea required value={ticketData.description} onChange={(e) => setTicketData({ ...ticketData, description: e.target.value })} placeholder="Please explain the issue clearly..." className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-sm font-bold min-h-[150px] outline-none ring-1 ring-transparent focus:ring-[#45B0E2]/20 transition-all" />
+                                        <textarea required value={ticketData.description} onChange={(e) => setTicketData({ ...ticketData, description: e.target.value })} placeholder="Please explain the issue clearly..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold min-h-[110px] outline-none focus:bg-white focus:border-[#f59931] focus:ring-2 focus:ring-[#f59931]/15 transition-all" />
                                     </div>
-                                    <Button type="submit" disabled={ticketLoading} className="w-full h-14 bg-[#45B0E2] hover:bg-[#0b721b] text-white text-lg font-black rounded-2xl shadow-xl shadow-brand-100 transition-all active:scale-95">
+                                    <Button type="submit" disabled={ticketLoading} className="w-full h-12 bg-[#f59931] hover:bg-black text-black hover:text-white text-sm font-extrabold rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-black/10 transition-all duration-300 active:scale-95 uppercase tracking-wider">
                                         {ticketLoading ? "SUBMITTING..." : "SUBMIT TICKET"}
                                     </Button>
                                 </form>
@@ -281,25 +281,25 @@ const SupportPage = () => {
             {/* Conversation Modal */}
             <AnimatePresence>
                 {selectedTicket && (
-                    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedTicket(null)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                        <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="relative bg-white w-full max-w-lg h-[90vh] sm:h-[600px] rounded-t-[2.5rem] sm:rounded-3xl shadow-2xl overflow-hidden z-10 flex flex-col">
-                            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 350 }} className="relative bg-white w-full max-w-[420px] h-[80vh] sm:h-[550px] rounded-3xl shadow-2xl overflow-hidden z-10 flex flex-col border border-slate-100">
+                            <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
                                 <div className="flex-1 min-w-0 mr-4">
-                                    <h2 className="text-lg font-black text-slate-800 truncate">{selectedTicket.subject}</h2>
+                                    <h2 className="text-base font-extrabold text-slate-800 truncate">{selectedTicket.subject}</h2>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">#{selectedTicket._id.slice(-8)} • {selectedTicket.status}</p>
                                 </div>
-                                <button onClick={() => setSelectedTicket(null)} className="w-10 h-10 flex items-center justify-center bg-slate-50 rounded-full text-slate-400">
-                                    <X size={20} />
+                                <button onClick={() => setSelectedTicket(null)} className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-black hover:text-[#f59931] rounded-full text-slate-500 transition-colors">
+                                    <X size={16} />
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+                            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/50">
                                 {selectedTicket.messages.map((msg, i) => (
                                     <div key={i} className={cn("flex flex-col", msg.isAdmin ? "items-start" : "items-end")}>
                                         <div className={cn(
-                                            "max-w-[85%] p-4 rounded-2xl text-sm font-medium shadow-sm",
-                                            msg.isAdmin ? "bg-white text-slate-800 rounded-tl-none border border-slate-100" : "bg-[#45B0E2] text-white rounded-tr-none"
+                                            "max-w-[85%] p-3.5 rounded-2xl text-xs font-semibold shadow-sm leading-relaxed",
+                                            msg.isAdmin ? "bg-white text-slate-800 rounded-tl-none border border-slate-100" : "bg-[#f59931] text-black rounded-tr-none"
                                         )}>
                                             {msg.text}
                                         </div>
@@ -317,14 +317,14 @@ const SupportPage = () => {
                                         value={replyText}
                                         onChange={(e) => setReplyText(e.target.value)}
                                         placeholder="Type your message..."
-                                        className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold outline-none ring-1 ring-transparent focus:ring-[#45B0E2]/20 transition-all"
+                                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:bg-white focus:border-[#f59931] focus:ring-2 focus:ring-[#f59931]/15 transition-all"
                                     />
                                     <button
                                         type="submit"
                                         disabled={isReplying || !replyText.trim()}
-                                        className="w-12 h-12 flex items-center justify-center bg-[#45B0E2] text-white rounded-xl shadow-lg shadow-brand-100 disabled:opacity-50 transition-all active:scale-95"
+                                        className="w-11 h-11 flex items-center justify-center bg-[#f59931] hover:bg-black text-black hover:text-white rounded-xl shadow-lg shadow-orange-500/20 disabled:opacity-50 transition-all active:scale-95"
                                     >
-                                        {isReplying ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={20} />}
+                                        {isReplying ? <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Send size={16} />}
                                     </button>
                                 </form>
                             </div>
@@ -363,10 +363,6 @@ const ContactCard = ({ icon: Icon, label, sub, to, onClick, externalHref }) => {
                         const email = externalHref.replace('mailto:', '');
                         navigator.clipboard.writeText(email);
                         showToast("Email copied to clipboard", "success");
-                    } else if (externalHref.startsWith('tel:')) {
-                        const phone = externalHref.replace('tel:', '');
-                        navigator.clipboard.writeText(phone);
-                        showToast("Phone number copied to clipboard", "success");
                     }
                 }}
             >

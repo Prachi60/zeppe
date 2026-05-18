@@ -134,7 +134,7 @@ const Profile = () => {
             variant="ghost"
             size="icon"
             className="text-white hover:bg-white/20"
-            onClick={() => toast.info("No new notifications")}>
+            onClick={() => navigate("/delivery/notifications")}>
             <Bell size={24} />
           </Button>
         </div>

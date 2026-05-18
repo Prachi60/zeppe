@@ -24,7 +24,13 @@ function mapProduct(product, isShopOpen = true) {
     deliveryTime: "21 min", // Dynamic delivery time placeholder
     ratings: 4.5, // Placeholder for rating
     variants: Array.isArray(product.variants) ? product.variants : [],
+    description: product.description,
+    brand: product.brand,
+    headerId: product.headerId,
+    categoryId: product.categoryId,
+    subcategoryId: product.subcategoryId,
     sellerIsOpen: isShopOpen !== false,
+    sellerId: product.sellerId?._id || product.sellerId || null,
   };
 }
 
@@ -39,6 +45,14 @@ const StoreDetailPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Sort and Filter State
+  const [sortBy, setSortBy] = useState("default"); // default, price-low-high, price-high-low, name-asc
+  const [showSortOptions, setShowSortOptions] = useState(false);
+  const [filters, setFilters] = useState({
+    onlyDiscounted: false,
+  });
+  const [showFilterOptions, setShowFilterOptions] = useState(false);
 
   useEffect(() => {
     const loadStoreData = async () => {
@@ -153,14 +167,14 @@ const StoreDetailPage = () => {
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    let mapped = products.map((p) => mapProduct(p, store?.isShopOpen));
+    let mapped = products.map((p) => mapProduct({ ...p, sellerId: p.sellerId || storeId }, store?.isShopOpen));
     
+    // 1. Category Filter
     if (activeCategoryId !== "all") {
       mapped = mapped.filter(p => {
         const raw = products.find(r => r._id === p._id);
         if (!raw) return false;
         
-        // Helper to check ID match against possible populated or string fields
         const matches = (field, targetId) => {
           if (!field) return false;
           if (typeof field === "string") return field === targetId;
@@ -168,19 +182,43 @@ const StoreDetailPage = () => {
           return false;
         };
 
-        // Match against any of the category levels
         return matches(raw.categoryId, activeCategoryId) || 
                matches(raw.headerId, activeCategoryId) || 
                matches(raw.subcategoryId, activeCategoryId) ||
-               raw.category === activeCategoryId; // Support legacy string category if present
+               raw.category === activeCategoryId;
       });
     }
 
-    if (!query) return mapped;
-    return mapped.filter((product) =>
-      String(product.name || "").toLowerCase().includes(query)
-    );
-  }, [products, searchQuery, activeCategoryId]);
+    // 2. Search Query Filter
+    if (query) {
+      mapped = mapped.filter((product) =>
+        String(product.name || "").toLowerCase().includes(query)
+      );
+    }
+
+    // 3. Custom Filters
+    if (filters.onlyDiscounted) {
+      mapped = mapped.filter(p => p.originalPrice > p.price);
+    }
+
+    // 4. Sorting
+    switch (sortBy) {
+      case "price-low-high":
+        mapped.sort((a, b) => a.price - b.price);
+        break;
+      case "price-high-low":
+        mapped.sort((a, b) => b.price - a.price);
+        break;
+      case "name-asc":
+        mapped.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      default:
+        // Keep original order
+        break;
+    }
+
+    return mapped;
+  }, [products, searchQuery, activeCategoryId, sortBy, filters, store?.isShopOpen]);
 
   if (isLoading) {
     return (
@@ -220,22 +258,24 @@ const StoreDetailPage = () => {
       <div className="max-w-3xl mx-auto">
         {/* Banner */}
         <div className={cn(
-          "relative h-44 w-full overflow-hidden md:rounded-b-3xl",
+          "relative h-44 w-full overflow-hidden md:rounded-b-3xl bg-gradient-to-br from-slate-100 to-slate-200",
           store?.isShopOpen === false && "grayscale"
         )}>
-          <img 
-            src={store?.shopBanner || "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200"} 
-            alt="Store Banner"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/10" />
+          {store?.shopBanner && (
+            <img 
+              src={store.shopBanner} 
+              alt="Store Banner"
+              className="w-full h-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-black/5" />
         </div>
 
         {/* Store Profile Overlap */}
         <div className="relative px-4 -mt-12 flex flex-col items-start gap-3">
           {/* Logo */}
           <div className={cn(
-            "h-24 w-24 rounded-full border-[5px] border-white shadow-xl overflow-hidden bg-white relative",
+            "h-24 w-24 rounded-full border-[5px] border-white shadow-xl overflow-hidden bg-slate-50 relative flex items-center justify-center",
             store?.isShopOpen === false && "grayscale"
           )}>
             {store?.isShopOpen === false && (
@@ -243,19 +283,29 @@ const StoreDetailPage = () => {
                 <span className="text-[10px] font-black text-white uppercase bg-black/60 px-2 py-0.5 rounded">Closed</span>
               </div>
             )}
-            <img 
-              src={store?.shopLogo || "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&q=80&w=200"} 
-              alt="Logo"
-              className="w-full h-full object-cover"
-            />
+            {store?.shopLogo ? (
+              <img 
+                src={store.shopLogo} 
+                alt="Logo"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-3xl font-black text-slate-300 select-none">
+                {store?.shopName?.charAt(0).toUpperCase() || 'S'}
+              </span>
+            )}
           </div>
 
           {/* Action Row */}
           <div className="w-full flex items-center justify-end -mt-6">
-             <div className="bg-white px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5 border border-slate-50">
-               <Star className="text-yellow-400 fill-current" size={16} />
-               <span className="text-sm font-bold text-slate-800">5.00/5 (1)</span>
-             </div>
+             {store?.totalReviews > 0 && (
+               <div className="bg-white px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5 border border-slate-50">
+                 <Star className="text-yellow-400 fill-current" size={16} />
+                 <span className="text-sm font-bold text-slate-800">
+                   {(store?.rating || 0).toFixed(2)}/5 ({store?.totalReviews})
+                 </span>
+               </div>
+             )}
           </div>
 
           {/* Name & Details */}
@@ -264,15 +314,17 @@ const StoreDetailPage = () => {
               {store?.shopName || "Store Name"}
             </h1>
             
-            <div className="mt-3 flex flex-col gap-2.5">
-              <div className="flex items-center gap-2 text-slate-500">
-                <MapPin size={16} className="shrink-0" />
-                <span className="text-sm font-semibold truncate">
-                  {store?.locality ? `${store.locality}, ${store.city}` : "Nearby location available"}
+            <div className="mt-3 flex flex-col gap-3 mb-6">
+              <div className="flex items-start gap-2 text-slate-500">
+                <MapPin size={16} className="shrink-0 mt-1" />
+                <span className="text-sm font-semibold leading-relaxed">
+                  {store ? [store.address, store.locality, store.city, store.state, store.pincode].filter(Boolean).join(', ') : "Nearby location available"}
                 </span>
-                <span className="ml-auto bg-[#E8F3FF] text-[#0066FF] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                  {store?.distance ? `${store.distance.toFixed(1)} km` : "0.0 km"}
-                </span>
+                {store?.distance !== undefined && (
+                  <span className="ml-auto shrink-0 bg-[#E8F3FF] text-[#0066FF] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    {store.distance.toFixed(1)} km
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-2 text-slate-500">
@@ -283,8 +335,6 @@ const StoreDetailPage = () => {
                   ) : (
                     <span className="text-sm font-bold text-red-500">Closed</span>
                   )}
-                  <span className="text-slate-300">•</span>
-                  <span className="text-sm font-semibold">MON-FRI 9 TO 5 PM</span>
                 </div>
               </div>
             </div>
@@ -308,20 +358,38 @@ const StoreDetailPage = () => {
           {/* Filters & Sort (Moved Inside Content) */}
           <div className="px-4 py-3 border-b border-slate-50 sticky top-0 z-40 bg-white/95 backdrop-blur-md">
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <button className="flex items-center gap-1.5 shrink-0 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 active:scale-95 transition-all">
+              <button 
+                onClick={() => setShowFilterOptions(true)}
+                className={cn(
+                  "flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95",
+                  filters.onlyDiscounted 
+                    ? "bg-[#f59931] text-white border border-[#f59931]" 
+                    : "bg-slate-50 border border-slate-100 text-slate-600"
+                )}
+              >
                 <SlidersHorizontal size={14} />
-                Filter
+                {filters.onlyDiscounted ? "Discounted" : "Filter"}
               </button>
               
-              <button className="flex items-center gap-1.5 shrink-0 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 active:scale-95 transition-all">
+              <button 
+                onClick={() => setShowSortOptions(true)}
+                className={cn(
+                  "flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95",
+                  sortBy !== 'default'
+                    ? "bg-[#f59931] text-white border border-[#f59931]"
+                    : "bg-slate-50 border border-slate-100 text-slate-600"
+                )}
+              >
                 <ArrowUpDown size={14} />
-                Sort
+                {sortBy === 'price-low-high' ? 'Price: Low-High' : 
+                 sortBy === 'price-high-low' ? 'Price: High-Low' :
+                 sortBy === 'name-asc' ? 'Name: A-Z' : 'Sort'}
               </button>
 
               <div className="h-6 w-px bg-slate-100 mx-1" />
               
               <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 shrink-0">
-                {activeCategoryId === 'all' ? 'All Items' : activeCategoryId}
+                {activeCategoryId === 'all' ? 'All Items' : (categories.find(c => c.id === activeCategoryId)?.name || activeCategoryId)}
               </span>
             </div>
           </div>
@@ -415,12 +483,126 @@ const StoreDetailPage = () => {
         </div>
       </div>
 
-      {/* 5. DYNAMIC FOOTER MESSAGE */}
-      <div className="max-w-3xl mx-auto px-4 mt-12 mb-8 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-          - End of Catalog -
-        </p>
-      </div>
+      {/* 6. SORT & FILTER MODALS */}
+      <AnimatePresence>
+        {showSortOptions && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSortOptions(false)}
+              className="fixed inset-0 bg-black/40 z-[600] backdrop-blur-[2px]"
+            />
+            <motion.div 
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed inset-x-4 bottom-24 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[400px] bg-white rounded-[32px] z-[700] px-6 pt-2 pb-6 shadow-2xl overflow-hidden"
+            >
+              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-2 mb-6" />
+              <h3 className="text-lg font-black text-slate-900 mb-6">Sort By</h3>
+              
+              <div className="flex flex-col gap-2">
+                {[
+                  { id: 'default', label: 'Default (Relevance)', icon: <Star size={18} /> },
+                  { id: 'price-low-high', label: 'Price: Low to High', icon: <ArrowUpDown size={18} /> },
+                  { id: 'price-high-low', label: 'Price: High to Low', icon: <ArrowUpDown size={18} className="rotate-180" /> },
+                  { id: 'name-asc', label: 'Name: A to Z', icon: <Search size={18} /> },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => {
+                      setSortBy(option.id);
+                      setShowSortOptions(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-4 p-3.5 rounded-2xl transition-all active:scale-[0.98]",
+                      sortBy === option.id ? "bg-[#f59931]/5 text-[#f59931]" : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center",
+                      sortBy === option.id ? "bg-[#f59931] text-white" : "bg-white text-slate-400"
+                    )}>
+                      {option.icon}
+                    </div>
+                    <span className="font-bold flex-1 text-left text-sm">{option.label}</span>
+                    {sortBy === option.id && <div className="w-2.5 h-2.5 rounded-full bg-[#f59931]" />}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {showFilterOptions && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowFilterOptions(false)}
+              className="fixed inset-0 bg-black/40 z-[600] backdrop-blur-[2px]"
+            />
+            <motion.div 
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed inset-x-4 bottom-24 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[400px] bg-white rounded-[32px] z-[700] px-6 pt-2 pb-6 shadow-2xl overflow-hidden"
+            >
+              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-2 mb-6" />
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-black text-slate-900">Filters</h3>
+                <button 
+                  onClick={() => setFilters({ onlyDiscounted: false })}
+                  className="text-xs font-bold text-[#f59931] uppercase tracking-wider"
+                >
+                  Reset All
+                </button>
+              </div>
+              
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, onlyDiscounted: !prev.onlyDiscounted }))}
+                  className={cn(
+                    "flex items-center justify-between p-4 rounded-2xl transition-all border-2",
+                    filters.onlyDiscounted ? "border-[#f59931] bg-[#f59931]/5" : "border-slate-100 bg-slate-50"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center",
+                      filters.onlyDiscounted ? "bg-[#f59931] text-white" : "bg-white text-slate-400"
+                    )}>
+                      <Star size={20} className={filters.onlyDiscounted ? "fill-white" : ""} />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-slate-900 text-sm">Offers & Discounts</p>
+                      <p className="text-[10px] font-semibold text-slate-500">Show only items with active discounts</p>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "w-6 h-6 rounded-lg flex items-center justify-center transition-colors",
+                    filters.onlyDiscounted ? "bg-[#f59931]" : "border-2 border-slate-200"
+                  )}>
+                    {filters.onlyDiscounted && <div className="w-2 h-2 bg-white rounded-full" />}
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => setShowFilterOptions(false)}
+                  className="mt-2 w-full bg-[#f59931] text-white py-3.5 rounded-2xl font-black shadow-lg shadow-[#f59931]/20 active:scale-[0.98] transition-all"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

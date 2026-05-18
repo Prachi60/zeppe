@@ -65,7 +65,10 @@ export const verifyToken = async (req, res, next) => {
       return handleResponse(res, 403, "This account has been deleted.");
     }
 
-    if (principal.isActive === false) {
+    // Allow profile requests to pass even if the account is suspended/inactive
+    // so the client can display custom pages (e.g. pending approval, account suspended) instead of crashing with sync errors.
+    const isProfileRoute = req.path === "/profile";
+    if (principal.isActive === false && !isProfileRoute) {
       return handleResponse(res, 403, "Account suspended. Please contact support.");
     }
 

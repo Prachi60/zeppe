@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Phone,
@@ -71,6 +71,14 @@ const DeliveryAuth = () => {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(30);
+  const formBodyRef = useRef(null);
+
+  useEffect(() => {
+    if (formBodyRef.current) {
+      formBodyRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [signupStep]);
+
   useEffect(() => {
     let interval;
     if (step === "otp" && timer > 0) {
@@ -78,6 +86,21 @@ const DeliveryAuth = () => {
     }
     return () => clearInterval(interval);
   }, [step, timer]);
+
+  useEffect(() => {
+    const handlePopState = (event) => {
+      if (mode === "signup") {
+        setMode("login");
+        setStep("form");
+        setSignupStep(1);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [mode]);
 
   const handleSendOtp = async () => {
     try {
@@ -124,7 +147,7 @@ const DeliveryAuth = () => {
   };
 
   const handleVerifyOtp = async () => {
-    if (otp.some((d) => d === "") || !agreed) return;
+    if (otp.some((d) => d === "") || (mode === "signup" && !agreed)) return;
     setLoading(true);
     try {
       const email = mode === "login" ? loginEmail : signupEmail;
@@ -170,6 +193,13 @@ const DeliveryAuth = () => {
   };
 
   const switchMode = (newMode) => {
+    if (newMode === "signup" && mode !== "signup") {
+      window.history.pushState({ mode: "signup" }, "");
+    } else if (newMode === "login" && mode === "signup") {
+      window.history.back();
+      return;
+    }
+
     setMode(newMode);
     setStep("form");
     setOtp(["", "", "", ""]);
@@ -246,11 +276,7 @@ const DeliveryAuth = () => {
                 {loading ? "Please wait..." : "Continue"}
               </button>
 
-              <p className="text-center text-xs text-slate-400 max-w-[320px] leading-relaxed mt-2 select-none">
-                By continuing, you agree to our{" "}
-                <span className="underline cursor-pointer hover:text-slate-600">Terms of service</span> &amp;{" "}
-                <span className="underline cursor-pointer hover:text-slate-600">Privacy policy</span>
-              </p>
+
 
               <div className="pt-6">
                 <button 
@@ -295,25 +321,10 @@ const DeliveryAuth = () => {
                 )}
               </div>
 
-              {/* Terms Checkbox */}
-              <div className="flex items-start gap-3 bg-white rounded-xl p-4 border border-slate-200 w-full shadow-sm">
-                <input
-                  id="terms"
-                  type="checkbox"
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-[#0066FF] cursor-pointer"
-                />
-                <label htmlFor="terms" className="text-xs text-slate-500 leading-relaxed cursor-pointer select-none">
-                  I confirm the details are correct and I agree to the{" "}
-                  <span className="text-[#0066FF] font-bold">Terms of Service</span>.
-                </label>
-              </div>
-
               {/* Verify & Proceed */}
               <button
                 onClick={handleVerifyOtp}
-                disabled={!agreed || otp.some((d) => !d) || loading}
+                disabled={otp.some((d) => !d) || loading}
                 className="w-full h-[54px] bg-[#0066FF] hover:bg-[#0052cc] text-white font-bold rounded-xl text-base flex items-center justify-center transition-all shadow-sm disabled:opacity-50"
               >
                 {loading ? "Verifying..." : "Verify & Proceed"}
@@ -347,12 +358,12 @@ const DeliveryAuth = () => {
         className="w-full max-w-[420px] relative z-10"
       >
         {/* Card */}
-        <div className="bg-white rounded-[2.5rem] shadow-[0_24px_60px_rgba(99,102,241,0.1)] border border-indigo-50 overflow-hidden">
+        <div className="bg-white rounded-[2.5rem] shadow-[0_24px_60px_rgba(99,102,241,0.1)] border border-indigo-50 overflow-hidden flex flex-col h-[85vh] max-h-[720px]">
 
           {/* Header with Lottie */}
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-8 flex flex-col items-center relative">
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 flex flex-col items-center relative flex-shrink-0">
 
-            <div className="w-40 h-40 flex items-center justify-center">
+            <div className="w-28 h-28 flex items-center justify-center">
               <img src={imgRider} alt="Rider illustration" className="w-[120%] h-auto object-contain pointer-events-none select-none mt-4" />
             </div>
             <AnimatePresence mode="wait">
@@ -383,7 +394,7 @@ const DeliveryAuth = () => {
 
           {/* Tab Switch */}
           {step === "form" && (
-            <div className="flex mx-6 mt-6 bg-gray-100 rounded-2xl p-1">
+            <div className="flex mx-6 mt-4 bg-gray-100 rounded-2xl p-1 flex-shrink-0">
               {["login", "signup"].map((m) => (
                 <button
                   key={m}
@@ -400,7 +411,7 @@ const DeliveryAuth = () => {
           )}
 
           {/* Form Body */}
-          <div className="p-6 pt-4">
+          <div ref={formBodyRef} className="p-6 pt-2 overflow-y-auto flex-1">
             <AnimatePresence mode="wait">
               {step === "form" && (
                 <motion.div
@@ -428,7 +439,7 @@ const DeliveryAuth = () => {
                               <input
                                 type="text"
                                 value={signupName}
-                                onChange={(e) => setSignupName(e.target.value)}
+                                onChange={(e) => setSignupName(e.target.value.replace(/[^a-zA-Z\s]/g, ""))}
                                 className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
                                 placeholder="Enter your full name"
                               />
@@ -555,7 +566,8 @@ const DeliveryAuth = () => {
                               <input
                                 type="text"
                                 value={signupVehicleNumber}
-                                onChange={(e) => setSignupVehicleNumber(e.target.value.toUpperCase())}
+                                onChange={(e) => setSignupVehicleNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9\s-]/g, ""))}
+                                maxLength={13}
                                 className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
                                 placeholder="KA 05 MN 8921"
                               />
@@ -569,7 +581,8 @@ const DeliveryAuth = () => {
                               <input
                                 type="text"
                                 value={signupDLNumber}
-                                onChange={(e) => setSignupDLNumber(e.target.value.toUpperCase())}
+                                onChange={(e) => setSignupDLNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9\s-]/g, ""))}
+                                maxLength={16}
                                 className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
                                 placeholder="DL-1420110012345"
                               />
@@ -585,13 +598,33 @@ const DeliveryAuth = () => {
                             </button>
                             <button
                               onClick={() => {
-                                if (!signupVehicleNumber) {
-                                  toast.error("Please enter your vehicle plate number");
-                                  return;
-                                }
-                                if (!signupDLNumber) {
-                                  toast.error("Please enter your driving license number");
-                                  return;
+                                if (signupVehicle !== "cycle") {
+                                  if (!signupVehicleNumber) {
+                                    toast.error("Please enter your vehicle plate number");
+                                    return;
+                                  }
+                                  const plateRegex = /^[A-Z]{2}[ -]?[0-9]{2}[ -]?[A-Z]{0,3}[ -]?[0-9]{4}$/;
+                                  if (!plateRegex.test(signupVehicleNumber)) {
+                                    toast.error("Please enter a valid vehicle plate number (e.g. KA 05 MN 8921)");
+                                    return;
+                                  }
+                                  if (!signupDLNumber) {
+                                    toast.error("Please enter your driving license number");
+                                    return;
+                                  }
+                                  const dlRegex = /^[A-Z]{2}[- ]?[0-9]{2}[- ]?[0-9]{4}[- ]?[0-9]{7}$/;
+                                  if (!dlRegex.test(signupDLNumber)) {
+                                    toast.error("Please enter a valid Driving License number (e.g. DL-1420110012345)");
+                                    return;
+                                  }
+                                } else {
+                                  // For cycle partners, auto-set default values if left empty
+                                  if (!signupVehicleNumber) {
+                                    setSignupVehicleNumber("CYCLE");
+                                  }
+                                  if (!signupDLNumber) {
+                                    setSignupDLNumber("NOT APPLICABLE");
+                                  }
                                 }
                                 setSignupStep(3);
                               }}
@@ -625,7 +658,7 @@ const DeliveryAuth = () => {
                             <input
                               type="text"
                               value={signupPanNumber}
-                              onChange={(e) => setSignupPanNumber(e.target.value.toUpperCase().slice(0, 10))}
+                              onChange={(e) => setSignupPanNumber(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))}
                               className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-mono"
                               placeholder="ABCDE1234F"
                             />
@@ -635,7 +668,7 @@ const DeliveryAuth = () => {
                             <input
                               type="text"
                               value={signupAccountHolder}
-                              onChange={(e) => setSignupAccountHolder(e.target.value.toUpperCase())}
+                              onChange={(e) => setSignupAccountHolder(e.target.value.toUpperCase().replace(/[^A-Z\s]/g, ""))}
                               className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
                               placeholder="AS PER BANK RECORDS"
                             />
@@ -645,7 +678,7 @@ const DeliveryAuth = () => {
                             <input
                               type="text"
                               value={signupAccountNumber}
-                              onChange={(e) => setSignupAccountNumber(e.target.value.replace(/\D/g, ""))}
+                              onChange={(e) => setSignupAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 18))}
                               className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
                               placeholder="000000000000"
                             />
@@ -655,7 +688,7 @@ const DeliveryAuth = () => {
                             <input
                               type="text"
                               value={signupIfsc}
-                              onChange={(e) => setSignupIfsc(e.target.value.toUpperCase())}
+                              onChange={(e) => setSignupIfsc(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11))}
                               className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
                               placeholder="HDFC0001234"
                             />
@@ -675,11 +708,21 @@ const DeliveryAuth = () => {
                                   return;
                                 }
                                 if (signupAadharNumber.length !== 12) {
-                                  toast.error("Aadhar number must be 12 digits");
+                                  toast.error("Aadhar number must be exactly 12 digits");
                                   return;
                                 }
-                                if (signupPanNumber.length !== 10) {
-                                  toast.error("PAN number must be 10 characters");
+                                const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+                                if (!panRegex.test(signupPanNumber)) {
+                                  toast.error("Please enter a valid PAN Card number (e.g. ABCDE1234F)");
+                                  return;
+                                }
+                                if (signupAccountNumber.length < 9 || signupAccountNumber.length > 18) {
+                                  toast.error("Bank Account Number must be between 9 and 18 digits");
+                                  return;
+                                }
+                                const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+                                if (!ifscRegex.test(signupIfsc)) {
+                                  toast.error("Please enter a valid 11-digit IFSC code (e.g. HDFC0001234)");
                                   return;
                                 }
                                 setSignupStep(4);
@@ -783,9 +826,19 @@ const DeliveryAuth = () => {
 
                       <p className="text-center text-xs text-gray-400 font-semibold pt-1">
                         By joining, you agree to our{" "}
-                        <span className="text-indigo-500 font-bold cursor-pointer hover:underline">Terms</span>{" "}
-                        &amp;{" "}
-                        <span className="text-indigo-500 font-bold cursor-pointer hover:underline">Privacy Policy</span>
+                        <span 
+                           onClick={() => navigate("/delivery/terms")}
+                           className="text-indigo-500 font-bold cursor-pointer hover:underline"
+                         >
+                           Terms
+                         </span>{" "}
+                         &amp;{" "}
+                         <span 
+                           onClick={() => navigate("/delivery/privacy")}
+                           className="text-indigo-500 font-bold cursor-pointer hover:underline"
+                         >
+                           Privacy Policy
+                         </span>
                       </p>
                     </div>
                   )}
@@ -884,11 +937,22 @@ const DeliveryAuth = () => {
                       onChange={(e) => setAgreed(e.target.checked)}
                       className="mt-0.5 h-4 w-4 accent-indigo-600 cursor-pointer"
                     />
-                    <label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
-                      I confirm my email is correct and I agree to the{" "}
-                      <span className="text-indigo-600 font-bold">Terms of Service</span> &amp;{" "}
-                      <span className="text-indigo-600 font-bold">Privacy Policy</span>.
-                    </label>
+                     <label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
+                       I confirm my email is correct and I agree to the{" "}
+                       <span 
+                         onClick={(e) => { e.preventDefault(); navigate('/delivery/terms'); }}
+                         className="text-indigo-600 font-bold hover:underline cursor-pointer"
+                       >
+                         Terms of Service
+                       </span>{" "}
+                       &amp;{" "}
+                       <span 
+                         onClick={(e) => { e.preventDefault(); navigate('/delivery/privacy'); }}
+                         className="text-indigo-600 font-bold hover:underline cursor-pointer"
+                       >
+                         Privacy Policy
+                       </span>.
+                     </label>
                   </div>
 
                   {/* Verify Button */}

@@ -173,7 +173,7 @@ const ChatPage = () => {
                     </button>
                     <div className="flex items-center gap-3">
                         <div className="relative">
-                            <div className="h-10 w-10 bg-[#45B0E2] rounded-full flex items-center justify-center text-white font-black text-sm shadow-sm ring-2 ring-white">
+                            <div className="h-10 w-10 bg-[#f59931] rounded-full flex items-center justify-center text-black font-black text-sm shadow-sm ring-2 ring-white">
                                 AS
                             </div>
                             <div className="absolute bottom-0 right-0 h-3 w-3 bg-cyan-500 rounded-full border-2 border-white animate-pulse"></div>
@@ -187,9 +187,12 @@ const ChatPage = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
-                    <button className="p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors">
+                    <a 
+                        href="tel:6203858268"
+                        className="p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors"
+                    >
                         <Phone size={20} />
-                    </button>
+                    </a>
                 </div>
             </div>
 
@@ -298,7 +301,7 @@ const ChatPage = () => {
                 <div className="flex items-end gap-2 bg-slate-50 p-2 rounded-[1.5rem] border border-slate-200 focus-within:border-cyan-300 focus-within:shadow-[0_0_0_4px_rgba(97,218,251,0.1)] transition-all">
                     <button
                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className={`p-2.5 rounded-full hover:text-slate-600 hover:bg-slate-200 transition-colors flex-shrink-0 ${showEmojiPicker ? 'text-[#45B0E2] bg-cyan-50' : 'text-slate-400'}`}
+                        className={`p-2.5 rounded-full hover:text-slate-600 hover:bg-slate-200 transition-colors flex-shrink-0 ${showEmojiPicker ? 'text-[#f59931] bg-orange-50' : 'text-slate-400'}`}
                     >
                         <Smile size={22} />
                     </button>
@@ -328,7 +331,7 @@ const ChatPage = () => {
                     <button
                         onClick={handleSend}
                         disabled={!inputText.trim() && !selectedImage}
-                        className="p-2.5 rounded-full bg-[#45B0E2] text-white hover:bg-[#38bdf8] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-cyan-200 flex-shrink-0"
+                        className="p-2.5 rounded-full bg-[#f59931] text-black hover:bg-[#faaf5c] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-orange-200 flex-shrink-0"
                     >
                         <Send size={20} className="ml-0.5" />
                     </button>

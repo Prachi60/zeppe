@@ -279,7 +279,7 @@ export const updateDeliveryProfile = async (req, res) => {
             name, vehicleType, vehicleNumber, drivingLicenseNumber, currentArea, 
             isOnline, dob, bloodGroup, email, address,
             vehicleModel, vehicleColor, fuelType, drivingLicenseExpiry, rcExpiry,
-            accountHolder, accountNumber, ifsc
+            accountHolder, accountNumber, ifsc, avatar
         } = req.body;
 
         const deliveryDoc = await Delivery.findById(req.user.id);
@@ -288,6 +288,7 @@ export const updateDeliveryProfile = async (req, res) => {
         }
 
         if (name) deliveryDoc.name = name;
+        if (avatar !== undefined) deliveryDoc.avatar = avatar;
         if (email) deliveryDoc.email = email;
         if (address) deliveryDoc.address = address;
         if (vehicleType) deliveryDoc.vehicleType = vehicleType;

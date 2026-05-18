@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation as useRouteLocation } from "react-router-dom";
 import Lottie from "lottie-react";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../../../core/context/AuthContext";
@@ -36,7 +36,23 @@ import {
   Shield,
   PawPrint,
   MoreHorizontal,
+  MessageCircle,
+  Twitter,
+  Facebook,
+  Mail,
+  Link2,
+  Navigation,
+  Loader2,
+  Home,
+  Briefcase,
+  AlertCircle
 } from "lucide-react";
+import { 
+  GoogleMap, 
+  Marker, 
+  Autocomplete, 
+  useJsApiLoader 
+} from "@react-google-maps/api";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@shared/components/ui/Toast";
@@ -60,6 +76,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import emptyBoxAnimation from "../../../assets/lottie/Empty box.json";
 
 const CheckoutPage = () => {
@@ -88,12 +105,20 @@ const CheckoutPage = () => {
   const appName = settings?.appName || "App";
   const {
     savedAddresses: locationSavedAddresses,
+    refreshAddresses,
     currentLocation,
     refreshLocation,
     isFetchingLocation,
     updateLocation,
   } = useAppLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshAddresses();
+    }
+  }, [isAuthenticated, refreshAddresses]);
   const navigate = useNavigate();
+  const routeLocation = useRouteLocation();
 
   // State management
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("now");
@@ -101,6 +126,10 @@ const CheckoutPage = () => {
   const [selectedTip, setSelectedTip] = useState(0);
   const [customTip, setCustomTip] = useState("");
   const [gstin, setGstin] = useState("");
+  const validateGSTIN = (gst) => {
+    const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    return regex.test(gst);
+  };
   const [isGstinModalOpen, setIsGstinModalOpen] = useState(false);
   const [donationAmount, setDonationAmount] = useState(0);
   const [customDonation, setCustomDonation] = useState("5");
@@ -122,6 +151,20 @@ const CheckoutPage = () => {
   const [pricingPreview, setPricingPreview] = useState(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [deliveryInstructions, setDeliveryInstructions] = useState([]);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [mapCenter, setMapCenter] = useState({ lat: 20.5937, lng: 78.9629 });
+  const [mapMarker, setMapMarker] = useState(null);
+  const [isMapLoading, setIsMapLoading] = useState(false);
+  
+  const { isLoaded: isMapsLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    libraries: ['places', 'geometry']
+  });
+
+  const autocompleteRef = useRef(null);
+  const mapRef = useRef(null);
+
   const sliderRef = useRef(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -134,6 +177,10 @@ const CheckoutPage = () => {
     landmark: "",
     city: [currentLocation?.city, currentLocation?.state].filter(Boolean).join(", "),
     phone: user?.phone || "",
+    location: currentLocation?.latitude && currentLocation?.longitude ? {
+      lat: currentLocation.latitude,
+      lng: currentLocation.longitude,
+    } : undefined,
   });
   const [isEditAddressOpen, setIsEditAddressOpen] = useState(false);
   const [editAddressForm, setEditAddressForm] = useState({
@@ -148,12 +195,78 @@ const CheckoutPage = () => {
   const [recipientData, setRecipientData] = useState({
     // city: 'Select city',
     completeAddress: "",
+    houseAddress: "",
     landmark: "",
     pincode: "",
     name: "",
     phone: "",
+    lat: null,
+    lng: null,
   });
+
+  // Sync map with currentLocation
+  useEffect(() => {
+    if (isMapsLoaded && currentLocation?.latitude && currentLocation?.longitude) {
+      const pos = { lat: currentLocation.latitude, lng: currentLocation.longitude };
+      setMapCenter(pos);
+      if (!mapMarker) {
+        setMapMarker(pos);
+        // Also update recipientData so it has initial coords
+        setRecipientData(prev => ({
+          ...prev,
+          lat: pos.lat,
+          lng: pos.lng
+        }));
+        // Trigger reverse geocode for the initial spot if completeAddress is empty
+        if (!recipientData.completeAddress) {
+          reverseGeocode(pos);
+        }
+      }
+    }
+  }, [isMapsLoaded, currentLocation, mapMarker, recipientData.completeAddress]);
   const [savedRecipient, setSavedRecipient] = useState(null);
+
+  // 1. Sync currentAddress with savedAddresses (e.g. if one was deleted)
+  useEffect(() => {
+    // Only if we have a saved address selected (has an ID)
+    if (currentAddress?.id) {
+      const stillExists = locationSavedAddresses.some(addr => addr.id === currentAddress.id);
+      if (!stillExists) {
+        // If it's gone, try to pick the first available saved address
+        if (locationSavedAddresses.length > 0) {
+          const first = locationSavedAddresses[0];
+          handleSelectSavedAddress(first);
+        } else {
+          // No saved addresses left? Reset to GPS/Select Location
+          setCurrentAddress({
+            type: "Home",
+            name: user?.name || "",
+            address: currentLocation?.name || "Select Location",
+            landmark: "",
+            city: [currentLocation?.city, currentLocation?.state].filter(Boolean).join(", "),
+            phone: user?.phone || "",
+            location: currentLocation?.latitude && currentLocation?.longitude ? {
+              lat: currentLocation.latitude,
+              lng: currentLocation.longitude,
+            } : undefined,
+          });
+        }
+      }
+    }
+  }, [locationSavedAddresses, currentAddress?.id, user, currentLocation]);
+
+  // 2. Auto-select address if coming back from AddressesPage with a specific ID
+  useEffect(() => {
+    const targetId = routeLocation.state?.selectedAddressId;
+    if (targetId && locationSavedAddresses.length > 0) {
+      const found = locationSavedAddresses.find(a => a.id === targetId || a._id === targetId);
+      if (found) {
+        handleSelectSavedAddress(found);
+        // Clear the state so it doesn't re-trigger on subsequent renders
+        navigate(routeLocation.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [routeLocation.state, locationSavedAddresses, navigate]);
 
   const [recommendedProducts, setRecommendedProducts] = useState([]);
 
@@ -228,7 +341,9 @@ const CheckoutPage = () => {
   const displayPhone =
     savedRecipient?.phone || currentAddress.phone || user?.phone || "";
   const displayAddress = savedRecipient
-    ? `${savedRecipient.completeAddress}${savedRecipient.landmark ? `, ${savedRecipient.landmark}` : ""}${savedRecipient.pincode ? ` - ${savedRecipient.pincode}` : ""}`
+    ? [savedRecipient.houseAddress, savedRecipient.completeAddress, savedRecipient.landmark]
+        .filter(Boolean)
+        .join(", ") + (savedRecipient.pincode ? ` - ${savedRecipient.pincode}` : "")
     : `${currentAddress.address}${currentAddress.landmark ? `, ${currentAddress.landmark}` : ""}, ${currentAddress.city}`;
 
   useEffect(() => {
@@ -252,23 +367,31 @@ const CheckoutPage = () => {
 
   const finalAmountToPay = Math.max(0, (pricingPreview?.grandTotal || 0) + (Number(donationAmount) || 0) + (isGiftPackaging ? 25 : 0) - walletAmountToUse);
 
-  const buildAddressForOrder = () => {
+  const buildAddressForOrder = (overrideAddress = null) => {
+    // Prevent React SyntheticEvents or DOM Events from being treated as address overrides
+    const addressToUse = (overrideAddress && typeof overrideAddress === "object" && overrideAddress.address)
+      ? overrideAddress
+      : null;
+
     if (savedRecipient) {
       return {
         type: "Other",
         name: savedRecipient.name,
-        address: savedRecipient.completeAddress,
+        address: [savedRecipient.houseAddress, savedRecipient.completeAddress]
+          .filter(Boolean)
+          .join(", "),
         landmark: savedRecipient.landmark || "",
         city: savedRecipient.pincode ? `${savedRecipient.pincode}` : "",
         phone: savedRecipient.phone,
         location:
-          currentLocation?.latitude && currentLocation?.longitude
-            ? { lat: currentLocation.latitude, lng: currentLocation.longitude }
+          savedRecipient.lat && savedRecipient.lng
+            ? { lat: savedRecipient.lat, lng: savedRecipient.lng }
             : undefined,
       };
     }
 
-    const addrLoc = currentAddress?.location;
+    const addrObj = addressToUse || currentAddress;
+    const addrLoc = addrObj?.location || (addrObj?.lat && addrObj?.lng ? { lat: addrObj.lat, lng: addrObj.lng } : null);
     const hasAddrLoc =
       addrLoc &&
       typeof addrLoc.lat === "number" &&
@@ -277,7 +400,7 @@ const CheckoutPage = () => {
       Number.isFinite(addrLoc.lng);
 
     return {
-      ...currentAddress,
+      ...addrObj,
       location:
         // Important: delivery fee must be based on the selected delivery address,
         // not the device's last detected location (which can be stale).
@@ -315,12 +438,16 @@ const CheckoutPage = () => {
   };
 
   const handleSaveRecipient = () => {
-    if (
-      !recipientData.completeAddress ||
-      !recipientData.name ||
-      recipientData.phone.length !== 10
-    ) {
-      showToast("Please fill all required fields", "error");
+    if (!recipientData.completeAddress) {
+      showToast("Please select a location on the map", "error");
+      return;
+    }
+    if (!recipientData.houseAddress || !recipientData.name) {
+      showToast("Please fill all required fields (*)", "error");
+      return;
+    }
+    if (recipientData.phone.replace(/\D/g, '').length !== 10) {
+      showToast("Please enter a valid 10-digit phone number", "error");
       return;
     }
     setSavedRecipient(recipientData);
@@ -456,16 +583,18 @@ const CheckoutPage = () => {
         return;
       }
 
-      setCurrentAddress({
+      const newAddr = {
+        id: addr.id,
         type: addr.label,
-        name: user?.name || currentAddress.name,
+        name: addr.name || user?.name || "",
         address: rawText,
         city: "", // already part of addr.address string
-        phone: addr.phone || currentAddress.phone,
+        phone: addr.phone || user?.phone || "",
         landmark: "", // already baked into addr.address if present
         ...(pid ? { placeId: pid } : {}),
         ...(resolvedLoc ? { location: resolvedLoc } : {}),
-      });
+      };
+      setCurrentAddress(newAddr);
 
       if (resolvedLoc) {
         updateLocation(
@@ -596,19 +725,146 @@ const CheckoutPage = () => {
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${appName} Checkout`,
-          text: `Hey! I'm ordering some goodies from ${appName}. Total: ₹${totalAmount}`,
-          url: window.location.href,
-        });
-      } catch (err) {
-        console.log("Error sharing:", err);
+    setIsShareModalOpen(true);
+  };
+
+  const shareLinks = [
+    {
+      name: "WhatsApp",
+      icon: MessageCircle,
+      color: "bg-emerald-500",
+      textColor: "text-emerald-500",
+      action: () => {
+        const text = `Hi, I have created a cart with ${cartCount} items worth ₹${Math.ceil(finalAmountToPay)}. Please review and make the payment to place the order on ${appName}.`;
+        const url = window.location.href;
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + url)}`, "_blank");
+      },
+    },
+    {
+      name: "Twitter",
+      icon: Twitter,
+      color: "bg-sky-500",
+      textColor: "text-sky-500",
+      action: () => {
+        const text = `Hi, I have created a cart with ${cartCount} items on ${appName}. Please review and pay to place the order.`;
+        const url = window.location.href;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, "_blank");
+      },
+    },
+    {
+      name: "Facebook",
+      icon: Facebook,
+      color: "bg-blue-600",
+      textColor: "text-blue-600",
+      action: () => {
+        const url = window.location.href;
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank");
+      },
+    },
+    {
+      name: "Email",
+      icon: Mail,
+      color: "bg-slate-600",
+      textColor: "text-slate-600",
+      action: () => {
+        const subject = `${appName} Cart Ready for Payment`;
+        const body = `Hi, I have created a cart with ${cartCount} items worth ₹${Math.ceil(finalAmountToPay)} on ${appName}.\n\nPlease review and make the payment to place the order here: ${window.location.href}`;
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      },
+    },
+    {
+      name: "Copy Link",
+      icon: Link2,
+      color: "bg-slate-200",
+      textColor: "text-slate-600",
+      action: () => {
+        navigator.clipboard.writeText(window.location.href);
+        showToast("Link copied to clipboard!", "success");
+      },
+    },
+  ];
+
+  const handleMapClick = (e) => {
+    const newPos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+    setMapMarker(newPos);
+    reverseGeocode(newPos);
+  };
+
+  const handleMarkerDragEnd = (e) => {
+    const newPos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+    setMapMarker(newPos);
+    reverseGeocode(newPos);
+  };
+
+  const handlePlaceSelect = () => {
+    if (autocompleteRef.current) {
+      const place = autocompleteRef.current.getPlace();
+      if (place.geometry) {
+        const newPos = {
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng()
+        };
+        setMapCenter(newPos);
+        setMapMarker(newPos);
+        
+        // Extract components
+        const components = place.address_components || [];
+        const pincode = components.find(c => c.types.includes('postal_code'))?.long_name || '';
+        const city = components.find(c => c.types.includes('locality'))?.long_name || '';
+        
+        setRecipientData(prev => ({
+          ...prev,
+          completeAddress: place.formatted_address || '',
+          pincode: pincode || prev.pincode,
+          city: city || prev.city,
+          lat: newPos.lat,
+          lng: newPos.lng
+        }));
       }
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      showToast("Link copied to clipboard!", "success");
+    }
+  };
+
+  const reverseGeocode = (pos) => {
+    if (!window.google) return;
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ location: pos }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        const result = results[0];
+        const components = result.address_components || [];
+        const pincode = components.find(c => c.types.includes('postal_code'))?.long_name || '';
+        const city = components.find(c => c.types.includes('locality'))?.long_name || '';
+        
+        setRecipientData(prev => ({
+          ...prev,
+          completeAddress: result.formatted_address || '',
+          pincode: pincode || prev.pincode,
+          city: city || prev.city,
+          lat: pos.lat,
+          lng: pos.lng
+        }));
+      }
+    });
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (navigator.geolocation) {
+      setIsMapLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const pos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setMapCenter(pos);
+          setMapMarker(pos);
+          reverseGeocode(pos);
+          setIsMapLoading(false);
+        },
+        () => {
+          showToast("Unable to get current location", "error");
+          setIsMapLoading(false);
+        }
+      );
     }
   };
 
@@ -766,9 +1022,16 @@ const CheckoutPage = () => {
     currentLocation,
   ]);
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (overrideAddress = null) => {
+    // Prevent React SyntheticEvents or DOM Events from being treated as address overrides
+    const addressToUse = (overrideAddress && typeof overrideAddress === "object" && overrideAddress.address)
+      ? overrideAddress
+      : null;
+
+    const activeAddress = addressToUse || currentAddress;
+
     // Guard: ensure phone number exists
-    if (!user?.phone && !currentAddress.phone && !savedRecipient?.phone) {
+    if (!user?.phone && !activeAddress.phone && !savedRecipient?.phone) {
       setIsPhoneModalOpen(true);
       showToast("Please provide a phone number for delivery coordination", "warning");
       return;
@@ -784,18 +1047,10 @@ const CheckoutPage = () => {
       return;
     }
 
-    // Guard: ensure location exists for delivery
-    const finalAddressForCheck = buildAddressForOrder();
-    if (!finalAddressForCheck?.location?.lat || !finalAddressForCheck?.location?.lng) {
-      showToast("Delivery location is missing. Please select your address to continue.", "warning");
-      setIsAddressModalOpen(true);
-      return;
-    }
-
     setIsPlacingOrder(true);
     try {
         const orderData = {
-          address: buildAddressForOrder(),
+          address: buildAddressForOrder(addressToUse),
           paymentMode: selectedPayment === "online" ? "ONLINE" : "COD",
           discountTotal: discountAmount,
           taxTotal: taxAmount,
@@ -1003,7 +1258,7 @@ const CheckoutPage = () => {
 
           <Link
             to="/"
-            className="group relative inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-[#45B0E2] to-[#38bdf8] text-white font-bold rounded-2xl overflow-hidden shadow-xl shadow-cyan-600/20 transition-all hover:scale-[1.02] active:scale-95 w-full sm:w-auto">
+            className="group relative inline-flex items-center justify-center px-8 py-4 bg-[#f59931] text-black font-bold rounded-2xl overflow-hidden shadow-xl shadow-orange-600/20 transition-all hover:scale-[1.02] active:scale-95 w-full sm:w-auto">
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
             <span className="relative flex items-center gap-2 text-lg">
               Start Shopping <ChevronRight size={20} />
@@ -1076,6 +1331,48 @@ const CheckoutPage = () => {
         </div>
       </div>
 
+      {/* Share Modal */}
+      <Dialog open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-800 mb-2">Share Order</DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium">
+              Share your {appName} shopping cart with friends and family.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-4 py-6">
+            {shareLinks.map((platform) => (
+              <button
+                key={platform.name}
+                onClick={() => {
+                  platform.action();
+                  if (platform.name !== "Copy Link") setIsShareModalOpen(false);
+                }}
+                className="flex flex-col items-center gap-2 group"
+              >
+                <div className={cn(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm",
+                  platform.color
+                )}>
+                  <platform.icon size={20} className="text-white" />
+                </div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{platform.name}</span>
+              </button>
+            ))}
+          </div>
+          <DialogFooter className="sm:justify-start">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsShareModalOpen(false)}
+              className="w-full rounded-xl font-bold py-6 bg-slate-50 hover:bg-slate-100 text-slate-600 border-none"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="max-w-2xl mx-auto px-4 md:px-6 mt-4 pb-48 relative z-20 space-y-3">
         
         {/* 1. Show all products first */}
@@ -1102,7 +1399,7 @@ const CheckoutPage = () => {
                 )}
                 <button
                   onClick={() => handleMoveToWishlist(item)}
-                  className="text-xs text-slate-400 underline font-semibold hover:text-[#45B0E2] transition-colors">
+                  className="text-xs text-slate-400 underline font-semibold hover:text-[#f59931] transition-colors">
                   Move to wishlist
                 </button>
               </div>
@@ -1156,7 +1453,7 @@ const CheckoutPage = () => {
         <div
           onClick={() => setIsCouponModalOpen(true)}
           className="bg-white rounded-2xl p-4 flex items-center justify-center cursor-pointer border border-slate-100 shadow-sm">
-          <span className="text-slate-600 font-bold text-sm flex items-center gap-1 hover:text-[#45B0E2] transition-colors">
+          <span className="text-slate-600 font-bold text-sm flex items-center gap-1 hover:text-[#f59931] transition-colors">
             See all coupons <ChevronRight size={18} className="text-slate-400" />
           </span>
         </div>
@@ -1173,7 +1470,7 @@ const CheckoutPage = () => {
                 <Clipboard size={16} className="text-slate-400" />
                 Items total
                 {selectedCoupon && (
-                  <span className="bg-blue-50 text-[#45B0E2] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  <span className="bg-blue-50 text-[#f59931] text-[10px] font-bold px-1.5 py-0.5 rounded">
                     You saved ₹{discountAmount}
                   </span>
                 )}
@@ -1217,10 +1514,22 @@ const CheckoutPage = () => {
             
             {tipAmount > 0 && (
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600 flex items-center gap-2">
-                  <Heart size={16} className="text-slate-400" />
-                  Partner Tip
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-600 flex items-center gap-2">
+                    <Heart size={16} className="text-slate-400" />
+                    Partner Tip
+                  </span>
+                  <button 
+                    onClick={() => {
+                      setSelectedTip(0);
+                      setCustomTip("");
+                      showToast("Tip removed", "success");
+                    }}
+                    className="text-xs text-red-500 font-bold hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
                 <span className="font-bold text-slate-800">
                   ₹{tipAmount}
                 </span>
@@ -1229,10 +1538,22 @@ const CheckoutPage = () => {
             
             {donationAmount > 0 && (
               <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600 flex items-center gap-2">
-                  <Heart size={16} className="text-slate-400" />
-                  Feeding India Donation
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-600 flex items-center gap-2">
+                    <Heart size={16} className="text-slate-400" />
+                    Feeding India Donation
+                  </span>
+                  <button 
+                    onClick={() => {
+                      setDonationAmount(0);
+                      setCustomDonation("");
+                      showToast("Donation removed", "success");
+                    }}
+                    className="text-xs text-red-500 font-bold hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
                 <span className="font-bold text-slate-800">
                   ₹{donationAmount}
                 </span>
@@ -1257,7 +1578,7 @@ const CheckoutPage = () => {
               Grand Amount
             </span>
             <span className="font-black text-slate-900 text-lg">
-              ₹{isPreviewLoading ? "..." : Math.ceil(finalAmountToPay)}
+              ₹{Math.ceil(finalAmountToPay)}
             </span>
           </div>
 
@@ -1272,7 +1593,7 @@ const CheckoutPage = () => {
                 <button
                   onClick={() => setUseWallet(!useWallet)}
                   className={`w-10 h-5 rounded-full transition-all relative flex items-center px-1 ${
-                    useWallet ? "bg-[#45B0E2]" : "bg-slate-200"
+                    useWallet ? "bg-[#f59931]" : "bg-slate-200"
                   }`}>
                   <motion.div
                     animate={{ x: useWallet ? 20 : 0 }}
@@ -1329,16 +1650,16 @@ const CheckoutPage = () => {
                     )
                   }
                   className={`flex-shrink-0 w-[110px] p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between h-[100px] bg-white ${
-                    isChecked ? "border-[#45B0E2]" : "border-slate-100"
+                    isChecked ? "border-[#f59931]" : "border-slate-100"
                   }`}>
                   <div className="flex justify-between items-start">
                     <Icon
                       size={18}
-                      className={isChecked ? "text-[#45B0E2]" : "text-slate-400"}
+                      className={isChecked ? "text-[#f59931]" : "text-slate-400"}
                     />
                     <div
                       className={`h-4 w-4 rounded border flex items-center justify-center ${
-                        isChecked ? "bg-[#45B0E2] border-[#45B0E2]" : "border-slate-300"
+                        isChecked ? "bg-[#f59931] border-[#f59931]" : "border-slate-300"
                       }`}>
                       {isChecked && (
                         <Check size={10} className="text-white stroke-[3]" />
@@ -1374,14 +1695,14 @@ const CheckoutPage = () => {
           {savedRecipient && !showRecipientForm && (
             <div className="mb-4 p-4 bg-cyan-50 border border-cyan-100 rounded-2xl flex items-start justify-between">
               <div className="flex gap-3">
-                <div className="h-10 w-10 rounded-full bg-cyan-100 flex items-center justify-center text-[#45B0E2] flex-shrink-0">
+                <div className="h-10 w-10 rounded-full bg-cyan-100 flex items-center justify-center text-[#f59931] flex-shrink-0">
                   <Contact2 size={18} />
                 </div>
                 <div>
                   <p className="text-sm font-bold text-slate-800">
                     {savedRecipient.name}
                   </p>
-                  <p className="text-xs text-[#45B0E2] font-bold mb-1">
+                  <p className="text-xs text-[#f59931] font-bold mb-1">
                     {savedRecipient.phone}
                   </p>
                   <p className="text-xs text-slate-500 leading-tight">
@@ -1394,7 +1715,20 @@ const CheckoutPage = () => {
                 </div>
               </div>
               <button
-                onClick={() => setSavedRecipient(null)}
+                onClick={() => {
+                  setSavedRecipient(null);
+                  setRecipientData({
+                    completeAddress: "",
+                    houseAddress: "",
+                    landmark: "",
+                    pincode: "",
+                    name: "",
+                    phone: "",
+                    lat: null,
+                    lng: null,
+                  });
+                  localStorage.removeItem(RECIPIENT_STORAGE_KEY);
+                }}
                 className="text-red-500 text-xs font-bold hover:underline">
                 Remove
               </button>
@@ -1410,44 +1744,117 @@ const CheckoutPage = () => {
                 transition={{ duration: 0.3, ease: "easeInOut" }}
                 className="overflow-hidden mb-4">
                 <div className="bg-[#f8f9fb] rounded-2xl p-4 border border-slate-100 space-y-4">
+                  {/* Map Integration */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-bold text-slate-800">
+                      Pin delivery location
+                    </h4>
+                    <div className="rounded-2xl overflow-hidden border border-slate-200 h-48 relative bg-slate-100">
+                      {isMapsLoaded ? (
+                        <>
+                          <GoogleMap
+                            mapContainerStyle={{ width: '100%', height: '100%' }}
+                            center={mapCenter}
+                            zoom={15}
+                            onClick={handleMapClick}
+                            onLoad={map => mapRef.current = map}
+                            options={{
+                              disableDefaultUI: true,
+                              zoomControl: true,
+                              gestureHandling: 'greedy'
+                            }}
+                          >
+                            {mapMarker && (
+                              <Marker
+                                position={mapMarker}
+                                draggable={true}
+                                onDragEnd={handleMarkerDragEnd}
+                              />
+                            )}
+                          </GoogleMap>
+                          
+                          {/* Location actions overlay on map */}
+                          <div className="absolute top-2 right-2 flex gap-2">
+                            <button
+                              onClick={handleUseCurrentLocation}
+                              disabled={isMapLoading}
+                              className="h-10 w-10 bg-white/95 backdrop-blur-sm rounded-xl flex items-center justify-center text-[#f59931] shadow-lg hover:bg-white transition-colors"
+                            >
+                              {isMapLoading ? <Loader2 size={16} className="animate-spin" /> : <Navigation size={16} />}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Loader2 className="animate-spin text-slate-300" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      Tap on map or drag pin to set exact delivery spot
+                    </p>
+                  </div>
+
                   <div>
                     <h4 className="text-sm font-bold text-slate-800 mb-3">
                       Enter delivery address details
                     </h4>
                     <div className="space-y-3">
-                      <Input
-                        placeholder="Enter complete address*"
-                        value={recipientData.completeAddress}
-                        onChange={(e) =>
-                          setRecipientData({
-                            ...recipientData,
-                            completeAddress: e.target.value,
-                          })
-                        }
-                        className="h-12 rounded-xl border-slate-200 focus:ring-[#45B0E2] focus:border-[#45B0E2] text-sm"
-                      />
-                      <Input
-                        placeholder="Find landmark (optional)"
-                        value={recipientData.landmark}
-                        onChange={(e) =>
-                          setRecipientData({
-                            ...recipientData,
-                            landmark: e.target.value,
-                          })
-                        }
-                        className="h-12 rounded-xl border-slate-200 focus:ring-[#45B0E2] focus:border-[#45B0E2] text-sm"
-                      />
-                      <Input
-                        placeholder="Enter pin code (optional)"
-                        value={recipientData.pincode}
-                        onChange={(e) =>
-                          setRecipientData({
-                            ...recipientData,
-                            pincode: e.target.value,
-                          })
-                        }
-                        className="h-12 rounded-xl border-slate-200 focus:ring-[#45B0E2] focus:border-[#45B0E2] text-sm"
-                      />
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Location Area (from map)</Label>
+                        <Input
+                          placeholder="Move pin to the desired location area"
+                          value={recipientData.completeAddress}
+                          readOnly
+                          className="h-12 rounded-xl border-slate-100 bg-slate-50 text-slate-500 text-sm font-medium cursor-not-allowed"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">House / Flat / Floor*</Label>
+                        <Input
+                          placeholder="e.g. Flat 402, 4th Floor"
+                          value={recipientData.houseAddress}
+                          maxLength={150}
+                          onChange={(e) =>
+                            setRecipientData({
+                              ...recipientData,
+                              houseAddress: e.target.value,
+                            })
+                          }
+                          className="h-12 rounded-xl border-slate-200 focus:ring-[#f59931] focus:border-[#f59931] text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Nearest Landmark (optional)</Label>
+                        <Input
+                          placeholder="e.g. Near City Mall"
+                          value={recipientData.landmark}
+                          maxLength={100}
+                          onChange={(e) =>
+                            setRecipientData({
+                              ...recipientData,
+                              landmark: e.target.value,
+                            })
+                          }
+                          className="h-12 rounded-xl border-slate-200 focus:ring-[#f59931] focus:border-[#f59931] text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Pincode</Label>
+                        <Input
+                          placeholder="Enter pin code"
+                          value={recipientData.pincode}
+                          maxLength={6}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                            setRecipientData({
+                              ...recipientData,
+                              pincode: val,
+                            });
+                          }}
+                          className="h-12 rounded-xl border-slate-200 focus:ring-[#f59931] focus:border-[#f59931] text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -1463,37 +1870,34 @@ const CheckoutPage = () => {
                       <Input
                         placeholder="Receiver's name*"
                         value={recipientData.name}
+                        maxLength={50}
                         onChange={(e) =>
                           setRecipientData({
                             ...recipientData,
                             name: e.target.value,
                           })
                         }
-                        className="h-12 rounded-xl border-slate-200 focus:ring-[#45B0E2] focus:border-[#45B0E2] text-sm"
+                        className="h-12 rounded-xl border-slate-200 focus:ring-[#f59931] focus:border-[#f59931] text-sm"
                       />
-                      <div className="relative">
-                        <Input
-                          placeholder="Receiver's phone number*"
-                          value={recipientData.phone}
-                          onChange={(e) =>
-                            setRecipientData({
-                              ...recipientData,
-                              phone: e.target.value,
-                            })
-                          }
-                          className="h-12 rounded-xl border-slate-200 focus:ring-[#45B0E2] focus:border-[#45B0E2] text-sm pr-10"
-                        />
-                        <Contact2
-                          size={18}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-                      </div>
+                      <Input
+                        placeholder="Receiver's phone number*"
+                        value={recipientData.phone}
+                        maxLength={10}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setRecipientData({
+                            ...recipientData,
+                            phone: val,
+                          });
+                        }}
+                        className="h-12 rounded-xl border-slate-200 focus:ring-[#f59931] focus:border-[#f59931] text-sm"
+                      />
                     </div>
                   </div>
 
                   <Button
                     onClick={handleSaveRecipient}
-                    className="w-full h-12 bg-[#0086a8] hover:bg-[#00a3cc] text-white font-bold rounded-xl">
+                    className="w-full h-12 bg-[#FF9F33] hover:bg-[#E68A1F] text-black font-extrabold rounded-xl shadow-md transition-all active:scale-[0.98]">
                     Save address
                   </Button>
                 </div>
@@ -1680,26 +2084,32 @@ const CheckoutPage = () => {
         <div className="max-w-2xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           
           {/* Bottom Address Selector */}
-          <div className="flex-1 flex items-center justify-between gap-3 group border border-slate-100 rounded-2xl p-2 bg-slate-50/50 min-w-0">
+          <div 
+            onClick={() => setIsAddressModalOpen(true)}
+            className="flex-1 flex items-center justify-between gap-3 group border border-slate-100 rounded-2xl p-2 bg-slate-50/50 min-w-0 cursor-pointer hover:bg-slate-50 transition-all"
+          >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-100 flex items-center justify-center text-slate-800 flex-shrink-0 group-hover:bg-[#45B0E2]/10 transition-colors">
-                <MapPin size={20} />
+              <div className={`h-10 w-10 rounded-xl border flex items-center justify-center flex-shrink-0 transition-colors ${
+                displayAddress === "Select Location" 
+                  ? "bg-amber-50 border-amber-100 text-amber-500 animate-pulse" 
+                  : "bg-slate-100 border-slate-100 text-slate-800 group-hover:bg-[#f59931]/10"
+              }`}>
+                {displayAddress === "Select Location" ? <AlertCircle size={20} /> : <MapPin size={20} />}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-slate-800 font-bold text-xs">
-                    Delivering to: {displayName}
+                  <span className={`font-bold text-xs ${displayAddress === "Select Location" ? "text-amber-600" : "text-slate-800"}`}>
+                    {displayAddress === "Select Location" ? "Select delivery address" : `Delivering to: ${displayName}`}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 truncate mt-0.5 leading-tight font-medium">
-                  {displayAddress}
+                  {displayAddress === "Select Location" ? "Choose from saved addresses or use GPS" : displayAddress}
                 </p>
               </div>
             </div>
             <button
-              onClick={() => setIsAddressModalOpen(true)}
-              className="text-emerald-600 text-xs font-bold hover:underline px-2 py-1 flex-shrink-0">
-              Change
+              className="text-emerald-600 text-xs font-black hover:underline px-2 py-1 flex-shrink-0">
+              {displayAddress === "Select Location" ? (locationSavedAddresses.length > 0 ? "Select" : "Add") : "Change"}
             </button>
           </div>
 
@@ -1745,39 +2155,30 @@ const CheckoutPage = () => {
               Add GST Details
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4">
-            <p className="text-[11px] text-slate-500 font-medium">
-              Claim up to 18% GST input credit on eligible products in this order.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="gstin_input" className="text-xs font-bold text-slate-700">Enter GSTIN</Label>
-              <Input 
-                id="gstin_input"
-                placeholder="22AAAAA0000A1Z5"
-                value={gstin}
-                onChange={(e) => setGstin(e.target.value.toUpperCase().slice(0, 15))}
-                className="h-12 rounded-xl border-slate-200 focus:ring-[#f59931] focus:border-[#f59931] font-bold text-sm"
-              />
-            </div>
-            <Button
-              onClick={() => {
-                if (gstin.length > 0 && gstin.length < 15) {
-                  showToast("GSTIN must be 15 characters long", "warning");
-                  return;
-                }
-                setIsGstinModalOpen(false);
-                if (gstin) showToast("GSTIN saved successfully!", "success");
-              }}
-              className="w-full h-12 bg-[#f59931] hover:bg-[#faaf5c] text-black font-extrabold rounded-2xl shadow-md transition-all flex items-center justify-center text-sm mt-4"
-            >
-              Confirm GSTIN
-            </Button>
-          </div>
+          <GstModalContent 
+            initialValue={gstin} 
+            onSave={(val, isInvalid) => {
+              if (isInvalid) {
+                showToast("Please enter a valid 15-digit GSTIN format", "warning");
+                return;
+              }
+              setGstin(val);
+              setIsGstinModalOpen(false);
+              if (val) showToast("GSTIN saved successfully!", "success");
+            }}
+            validate={validateGSTIN}
+          />
         </DialogContent>
       </Dialog>
 
       {/* Address Selection Modal */}
-      <Dialog open={isAddressModalOpen} onOpenChange={setIsAddressModalOpen}>
+      <Dialog 
+        open={isAddressModalOpen} 
+        onOpenChange={(open) => {
+          setIsAddressModalOpen(open);
+          if (open) refreshAddresses();
+        }}
+      >
         <DialogContent className="fixed !bottom-0 !top-auto !left-0 !right-0 !translate-x-0 !translate-y-0 w-full sm:max-w-[425px] mx-auto rounded-t-[32px] rounded-b-none p-6 border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom">
           <DialogHeader className="border-b border-slate-50 pb-4 flex flex-row items-center justify-between">
             <DialogTitle className="text-slate-800 font-extrabold text-lg">
@@ -1788,7 +2189,7 @@ const CheckoutPage = () => {
           <div className="py-4 space-y-4">
             {/* Add New Address trigger bar */}
             <div 
-              onClick={() => navigate("/addresses")}
+              onClick={() => navigate("/addresses", { state: { from: 'checkout' } })}
               className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-50/50 shadow-sm"
             >
               <span className="text-emerald-600 font-bold text-sm flex items-center gap-2">
@@ -1798,81 +2199,137 @@ const CheckoutPage = () => {
             </div>
 
             {/* Saved Addresses List */}
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 no-scrollbar">
-              {/* CURRENT address displayed at the very top */}
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 no-scrollbar pb-2">
+              {/* 1. CURRENT DETECTED LOCATION */}
               <div
-                onClick={() => setIsAddressModalOpen(false)}
-                className="w-full p-4 rounded-3xl border-2 cursor-pointer transition-all border-black bg-white"
+                onClick={() => {
+                  if (currentLocation?.name && currentLocation.name !== "Select Location") {
+                    setCurrentAddress({
+                      id: null,
+                      name: user?.name || "",
+                      phone: user?.phone || "",
+                      address: currentLocation?.name || "",
+                      landmark: "",
+                      city: [currentLocation?.city, currentLocation?.state].filter(Boolean).join(", "),
+                      pincode: currentLocation?.pincode || "",
+                      location: {
+                        lat: currentLocation?.latitude,
+                        lng: currentLocation?.longitude,
+                      }
+                    });
+                    setIsAddressModalOpen(false);
+                  } else {
+                    refreshLocation();
+                  }
+                }}
+                className={`w-full p-4 rounded-3xl border-2 cursor-pointer transition-all ${
+                  !currentAddress?.id ? "border-black bg-white shadow-md" : "border-slate-100 bg-white hover:border-slate-200"
+                }`}
               >
-                <div className="flex items-start gap-3 mb-2">
-                  <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-800 flex-shrink-0 border border-slate-100">
-                    <MapPin size={18} />
+                <div className="flex items-start gap-3">
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 border ${
+                    !currentAddress?.id ? "bg-black text-white border-black" : "bg-slate-50 text-slate-800 border-slate-100"
+                  }`}>
+                    <Navigation size={18} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center mb-1">
-                      <span className="bg-black text-white text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider">
-                        Current
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Current Location
                       </span>
+                      <div className="flex items-center gap-2">
+                        {isFetchingLocation ? (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 rounded-full border border-slate-100">
+                            <Loader2 size={10} className="animate-spin text-[#FF9F33]" />
+                            <span className="text-[9px] font-bold text-slate-500 uppercase">Detecting...</span>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              refreshLocation();
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 hover:bg-emerald-100 transition-colors"
+                          >
+                            <Navigation size={10} className="fill-current" />
+                            <span className="text-[9px] font-black uppercase">Locate</span>
+                          </button>
+                        )}
+                        {!currentAddress?.id && (
+                          <span className="bg-[#FF9F33] text-black text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-tighter shadow-sm">
+                            Selected
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                      {displayAddress}
+                    <p className="text-[14px] font-bold text-slate-900 leading-snug mb-1.5 break-words">
+                      {isFetchingLocation ? "Detecting your location..." : (currentLocation?.name && currentLocation.name !== "Select Location" ? currentLocation.name : "Click on Locate to detect current address")}
                     </p>
-                    {displayPhone && (
-                      <p className="text-xs text-slate-700 font-bold mt-2">
-                        Phone: {displayPhone}
-                      </p>
-                    )}
+                    <p className="text-[11px] text-slate-500 font-bold flex items-center gap-1.5">
+                      <span className={`h-1.5 w-1.5 rounded-full ${isFetchingLocation ? 'bg-slate-300' : 'bg-emerald-500 animate-pulse'}`} />
+                      {isFetchingLocation ? 'Updating your position...' : 'Live GPS detection'}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {locationSavedAddresses
-                .filter((addr) => addr.address !== displayAddress)
-                .map((addr) => {
-                  const isSelected = currentAddress?.id === addr.id;
-                  return (
-                    <div
-                      key={addr.id}
-                    onClick={() => handleSelectSavedAddress(addr)}
-                    className={`w-full p-4 rounded-3xl border-2 cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-black bg-white"
-                        : "border-slate-100 bg-white hover:border-slate-200"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-800 flex-shrink-0 border border-slate-100">
-                        <MapPin size={18} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center mb-1">
-                          <span className="bg-black text-white text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider">
-                            {addr.label || "Home"}
-                          </span>
+              {locationSavedAddresses.length > 0 && (
+                <div className="pt-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] mb-3 px-1">
+                    Saved Addresses
+                  </p>
+                  <div className="space-y-3">
+                    {locationSavedAddresses.map((addr) => {
+                      const isSelected = currentAddress?.id === addr.id;
+                      return (
+                        <div
+                          key={addr.id}
+                          onClick={() => handleSelectSavedAddress(addr)}
+                          className={`w-full p-4 rounded-3xl border-2 cursor-pointer transition-all ${
+                            isSelected
+                              ? "border-black bg-white shadow-md"
+                              : "border-slate-100 bg-white hover:border-slate-200"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 border ${
+                              isSelected ? "bg-black text-white border-black" : "bg-slate-50 text-slate-800 border-slate-100"
+                            }`}>
+                              {addr.label?.toLowerCase() === "home" ? <Home size={18} /> : 
+                               addr.label?.toLowerCase() === "work" ? <Briefcase size={18} /> : <MapPin size={18} />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                  {addr.label || "Address"}
+                                </span>
+                                {isSelected && (
+                                  <span className="bg-[#FF9F33] text-black text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-tighter shadow-sm">
+                                    Selected
+                                  </span>
+                                )}
+                              </div>
+                              {addr.name && (
+                                <p className="text-[13px] font-bold text-slate-800 mb-0.5">
+                                  {addr.name}
+                                </p>
+                              )}
+                              <p className="text-[14px] font-bold text-slate-900 leading-snug mb-1 break-words">
+                                {addr.address}
+                              </p>
+                              {addr.phone && (
+                                <p className="text-[11px] text-slate-500 font-bold">
+                                  Phone: {addr.phone}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                          {addr.address}
-                        </p>
-                        {addr.phone && (
-                          <p className="text-xs text-slate-700 font-bold mt-2">
-                            Phone: {addr.phone}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Share and more icons precisely mimicking screenshot */}
-                    <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-50">
-                      <button className="h-8 w-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600">
-                        <MoreHorizontal size={16} />
-                      </button>
-                      <button className="h-8 w-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600">
-                        <Share2 size={16} />
-                      </button>
-                    </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -2008,7 +2465,7 @@ const CheckoutPage = () => {
               </Button>
               <Button
                 onClick={handleSaveEditedAddress}
-                className="bg-[#45B0E2] hover:bg-[#0b721b] text-white font-bold">
+                className="bg-[#f59931] hover:bg-[#e08820] text-black font-bold">
                 Save changes
               </Button>
             </DialogFooter>
@@ -2031,17 +2488,17 @@ const CheckoutPage = () => {
                 key={coupon.code}
                 className={`p-4 rounded-2xl border-2 transition-all relative overflow-hidden ${
                   selectedCoupon?.code === coupon.code
-                    ? "border-[#45B0E2] bg-brand-50 shadow-sm"
+                    ? "border-[#f59931] bg-brand-50 shadow-sm"
                     : "border-slate-100 bg-white hover:border-slate-200"
                 }`}>
                 {selectedCoupon?.code === coupon.code && (
-                  <div className="absolute top-0 right-0 p-1.5 bg-[#45B0E2] text-white rounded-bl-xl">
+                  <div className="absolute top-0 right-0 p-1.5 bg-[#f59931] text-black rounded-bl-xl">
                     <Check size={12} strokeWidth={4} />
                   </div>
                 )}
                 <div className="flex items-start gap-3">
                   <div
-                    className={`p-3 rounded-2xl ${selectedCoupon?.code === coupon.code ? "bg-[#45B0E2]/10 text-[#45B0E2]" : "bg-orange-50 text-orange-500"}`}>
+                    className={`p-3 rounded-2xl ${selectedCoupon?.code === coupon.code ? "bg-[#f59931]/10 text-[#f59931]" : "bg-orange-50 text-orange-500"}`}>
                     <Tag size={20} />
                   </div>
                   <div className="flex-1">
@@ -2056,8 +2513,8 @@ const CheckoutPage = () => {
                       disabled={selectedCoupon?.code === coupon.code}
                       className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all ${
                         selectedCoupon?.code === coupon.code
-                          ? "bg-white text-[#45B0E2] border-2 border-[#45B0E2] cursor-default"
-                          : "bg-[#45B0E2] text-white hover:bg-[#0b721b]"
+                          ? "bg-white text-[#f59931] border-2 border-[#f59931] cursor-default"
+                          : "bg-[#f59931] text-black hover:bg-[#e08820]"
                       }`}>
                       {selectedCoupon?.code === coupon.code
                         ? "Applied"
@@ -2078,10 +2535,10 @@ const CheckoutPage = () => {
                 placeholder="Enter coupon code manually"
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                className="pl-10 h-12 rounded-xl focus-visible:ring-[#45B0E2]"
+                className="pl-10 h-12 rounded-xl focus-visible:ring-[#f59931]"
               />
               <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#45B0E2] font-bold text-xs"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#f59931] font-bold text-xs"
                 onClick={async () => {
                   if (!manualCode.trim()) {
                     showToast("Please enter a coupon code", "error");
@@ -2156,7 +2613,7 @@ const CheckoutPage = () => {
             </div>
             
             <Button 
-              className="w-full h-12 rounded-xl bg-[#f59931] hover:bg-[#e08820] text-white font-black text-base transition-all active:scale-[0.98]"
+              className="w-full h-12 rounded-xl bg-[#f59931] hover:bg-[#e08820] text-black font-black text-base transition-all active:scale-[0.98]"
               onClick={handleUpdatePhone}
               disabled={newPhone.length !== 10 || isUpdatingPhone}
             >
@@ -2185,7 +2642,7 @@ const CheckoutPage = () => {
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", damping: 12 }}
-              className="w-24 h-24 bg-brand-100 rounded-full flex items-center justify-center text-[#45B0E2] mb-6">
+              className="w-24 h-24 bg-brand-100 rounded-full flex items-center justify-center text-[#f59931] mb-6">
               <Check size={48} strokeWidth={4} />
             </motion.div>
             <motion.h2
@@ -2229,6 +2686,42 @@ const CheckoutPage = () => {
             `,
         }}
       />
+    </div>
+  );
+};
+
+const GstModalContent = ({ initialValue, onSave, validate }) => {
+  const [val, setVal] = useState(initialValue);
+
+  return (
+    <div className="py-4 space-y-4">
+      <p className="text-[11px] text-slate-500 font-medium">
+        Claim up to 18% GST input credit on eligible products in this order.
+      </p>
+      <div className="space-y-2">
+        <Label htmlFor="gstin_input" className="text-xs font-bold text-slate-700">Enter GSTIN</Label>
+        <Input 
+          id="gstin_input"
+          placeholder="22AAAAA0000A1Z5"
+          value={val}
+          onChange={(e) => setVal(e.target.value.toUpperCase().slice(0, 15))}
+          className="h-12 rounded-xl border-slate-200 focus:ring-[#f59931] focus:border-[#f59931] font-bold text-sm"
+          autoFocus
+        />
+      </div>
+      <Button
+        onClick={() => {
+          if (val.length > 0 && !validate(val)) {
+            const toast = document.createElement('div'); // Simple way if showToast is not in scope, but we pass onSave
+            onSave(val, true); // We'll handle validation inside onSave or here
+          } else {
+            onSave(val);
+          }
+        }}
+        className="w-full h-12 bg-[#f59931] hover:bg-[#faaf5c] text-black font-extrabold rounded-2xl shadow-md transition-all flex items-center justify-center text-sm mt-4"
+      >
+        Confirm GSTIN
+      </Button>
     </div>
   );
 };

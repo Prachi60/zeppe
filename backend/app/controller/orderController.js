@@ -367,9 +367,9 @@ export const getOrderDetails = async (req, res) => {
     let order = await Order.findOne(orderKey)
       .populate("customer", "name email phone")
       .populate("items.product", "name mainImage price salePrice")
-      .populate("deliveryBoy", "name phone")
-      .populate("deliveryPartner", "name phone")
-      .populate("returnDeliveryBoy", "name phone")
+      .populate("deliveryBoy", "name phone avatar")
+      .populate("deliveryPartner", "name phone avatar")
+      .populate("returnDeliveryBoy", "name phone avatar")
       .populate("seller", "shopName name address phone location")
       .lean();
 

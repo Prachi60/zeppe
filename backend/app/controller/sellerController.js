@@ -1,4 +1,6 @@
 import Seller from "../models/seller.js";
+import Product from "../models/product.js";
+import Review from "../models/review.js";
 import Transaction from "../models/transaction.js";
 import UserSubscription from "../models/userSubscription.js";
 import Setting from "../models/setting.js";
@@ -150,7 +152,6 @@ export const getSellerProfile = async (req, res) => {
 
     const sellerObj = seller.toObject();
     sellerObj.subscriptionStatus = (activeSub || !isGlobalEnabled) ? "active" : "inactive";
-    sellerObj.subscriptionStatus = activeSub ? "active" : "inactive";
     sellerObj.plansAvailable = activePlansCount > 0;
 
     return handleResponse(
@@ -288,6 +289,30 @@ export const getPublicSellerById = async (req, res) => {
         sellerLng,
       );
     }
+
+    // Fetch rating stats
+    const products = await Product.find({ sellerId: id }).select("_id");
+    const productIds = products.map((p) => p._id);
+
+    const reviewStats = await Review.aggregate([
+      {
+        $match: {
+          productId: { $in: productIds },
+          status: "approved",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          avgRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const stats = reviewStats[0] || { avgRating: 0, totalReviews: 0 };
+    seller.rating = stats.avgRating || 0;
+    seller.totalReviews = stats.totalReviews || 0;
 
     return handleResponse(
       res,

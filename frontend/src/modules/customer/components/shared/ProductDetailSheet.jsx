@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence, useAnimation, useDragControls } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { X, ChevronDown, Share2, Heart, Search, Clock, Minus, Plus, ShoppingBag, Star, MessageSquare, ArrowLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Share2, Heart, Search, Clock, Minus, Plus, ShoppingBag, Star, MessageSquare, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useProductDetail } from '../../context/ProductDetailContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -12,8 +12,145 @@ import { customerApi } from '../../services/customerApi';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
+const AccordionItem = ({ title, children, id, icon, expandedSections, toggleSection }) => {
+    const isOpen = expandedSections.includes(id);
+    return (
+        <div className="border-b border-slate-100 last:border-0">
+            <button
+                onClick={() => toggleSection(id)}
+                className="w-full py-4 flex items-center justify-between transition-all hover:bg-slate-50/50 rounded-lg group px-2"
+            >
+                <div className="flex items-center">
+                    <span className={cn(
+                        "font-bold text-[13px] uppercase tracking-wider",
+                        isOpen ? "text-[#1A1A1A]" : "text-slate-500"
+                    )}>{title}</span>
+                </div>
+                <motion.div
+                    animate={{ rotate: isOpen ? 180 : 0 }}
+                    className={cn("transition-colors", isOpen ? "text-[#e88a31]" : "text-slate-300")}
+                >
+                    <ChevronDown size={18} strokeWidth={3} />
+                </motion.div>
+            </button>
+            <AnimatePresence initial={false}>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                    >
+                        <div className="pt-2 pb-6 px-2">
+                            {children}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+const SearchOverlay = ({ 
+    isSearching, 
+    setIsSearching, 
+    searchQuery, 
+    setSearchQuery, 
+    isStoreProductsLoading, 
+    filteredStoreProducts, 
+    selectedProduct, 
+    openProduct 
+}) => {
+    const rawSid = selectedProduct?.sellerId || selectedProduct?.seller;
+    const sid = typeof rawSid === 'object' ? rawSid?._id : rawSid;
+
+    return (
+        <AnimatePresence>
+            {isSearching && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="absolute inset-0 bg-white z-[240] flex flex-col"
+                >
+                    <div className="p-4 border-b border-slate-100 flex items-center gap-3">
+                        <button
+                            onClick={() => setIsSearching(false)}
+                            className="p-2 hover:bg-slate-50 rounded-xl transition-colors"
+                        >
+                            <X size={20} className="text-slate-500" />
+                        </button>
+                        <div className="flex-1 relative">
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                autoFocus
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search in this store..."
+                                className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold focus:ring-2 focus:ring-[#f59931] outline-none transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 hide-scrollbar">
+                        {!sid ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mb-4 text-slate-300">
+                                    <ShoppingBag size={24} />
+                                </div>
+                                <p className="text-sm font-black text-slate-800">Store info unavailable</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Unable to search in this store context</p>
+                            </div>
+                        ) : isStoreProductsLoading ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                <Loader2 size={32} className="animate-spin text-[#f59931]" />
+                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Finding items...</p>
+                            </div>
+                        ) : filteredStoreProducts.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-3 pb-20">
+                                {filteredStoreProducts.map(p => (
+                                    <button
+                                        key={p._id}
+                                        onClick={() => {
+                                            openProduct(p);
+                                            setIsSearching(false);
+                                            setSearchQuery('');
+                                        }}
+                                        className="flex flex-col items-center p-3 rounded-2xl border border-slate-100 hover:border-[#f59931] hover:bg-orange-50/30 transition-all text-center group"
+                                    >
+                                        <div className="w-20 h-20 mb-3 flex items-center justify-center bg-[#f9f9f9] rounded-xl p-2">
+                                            <img src={p.mainImage || p.image} alt={p.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                                        </div>
+                                        <h4 className="text-[11px] font-black text-slate-800 line-clamp-1 mb-1">{p.name}</h4>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] font-bold text-[#f59931]">₹{p.price}</span>
+                                            {p.originalPrice > p.price && (
+                                                <span className="text-[8px] font-medium text-slate-400 line-through">₹{p.originalPrice}</span>
+                                            )}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mb-4">
+                                    <Search size={24} className="text-slate-300" />
+                                </div>
+                                <p className="text-sm font-black text-slate-800">No products found</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Try searching for something else</p>
+                            </div>
+                        )}
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+};
+
 const ProductDetailSheet = () => {
-    const { selectedProduct, isOpen, closeProduct } = useProductDetail();
+    const { selectedProduct, isOpen, closeProduct, openProduct } = useProductDetail();
     const { cart, cartCount, addToCart, updateQuantity, removeFromCart } = useCart();
     const { toggleWishlist: toggleWishlistGlobal, isInWishlist } = useWishlist();
     const { showToast } = useToast();
@@ -31,6 +168,79 @@ const ProductDetailSheet = () => {
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
     const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
     const [expandedSections, setExpandedSections] = useState(['description']); // Start with description open
+
+    // Search functionality inside modal
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [storeProducts, setStoreProducts] = useState([]);
+    const [isStoreProductsLoading, setIsStoreProductsLoading] = useState(false);
+    const [seller, setSeller] = useState(null);
+
+    // Reset store products when seller changes or modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setIsSearching(false);
+            setSearchQuery('');
+        }
+        setStoreProducts([]); // Clear products when context changes
+    }, [isOpen, selectedProduct?.sellerId]);
+    
+    // Fetch seller info
+    useEffect(() => {
+        const rawSid = selectedProduct?.sellerId || selectedProduct?.seller;
+        const sid = typeof rawSid === 'object' ? rawSid?._id : rawSid;
+        
+        if (sid && typeof sid === 'string') {
+            customerApi.getPublicSellerById(sid).then(res => {
+                if (res?.data?.success) {
+                    setSeller(res.data.result);
+                }
+            });
+        }
+    }, [selectedProduct?.sellerId, selectedProduct?.seller]);
+
+    // Fetch store products when search is opened
+    useEffect(() => {
+        const rawSid = selectedProduct?.sellerId || selectedProduct?.seller;
+        const sid = typeof rawSid === 'object' ? rawSid?._id : rawSid;
+
+        if (isSearching && sid) {
+            const fetchStoreProducts = async () => {
+                try {
+                    setIsStoreProductsLoading(true);
+                    const res = await customerApi.getStoreProducts(sid);
+                    if (res?.data?.success) {
+                        const rawProducts = res.data.result?.items || res.data.result || res.data.results || [];
+                        // Map products to match the expected structure
+                        const mapped = (Array.isArray(rawProducts) ? rawProducts : []).map(p => ({
+                            ...p,
+                            id: p._id,
+                            price: p.salePrice ?? p.price,
+                            originalPrice: p.price,
+                            sellerId: sid,
+                            sellerIsOpen: selectedProduct.sellerIsOpen
+                        }));
+                        setStoreProducts(mapped);
+                    }
+                } catch (error) {
+                    console.error("Error fetching store products:", error);
+                } finally {
+                    setIsStoreProductsLoading(false);
+                }
+            };
+            fetchStoreProducts();
+        }
+    }, [isSearching, selectedProduct?.sellerId, selectedProduct?.seller]);
+
+    const filteredStoreProducts = useMemo(() => {
+        if (!storeProducts || storeProducts.length === 0) return [];
+        if (!searchQuery.trim()) return storeProducts;
+        const q = searchQuery.toLowerCase();
+        return storeProducts.filter(p => 
+            p.name?.toLowerCase().includes(q) || 
+            p.description?.toLowerCase().includes(q)
+        );
+    }, [searchQuery, storeProducts]);
 
     const toggleSection = (section) => {
         setExpandedSections(prev => 
@@ -63,10 +273,14 @@ const ProductDetailSheet = () => {
         }
         setActiveImageIndex(0);
 
-        if (selectedProduct?.id) {
-            fetchReviews(selectedProduct.id);
+        // Reset reviews while loading new ones
+        setReviews([]);
+        
+        const pid = selectedProduct?.id || selectedProduct?._id;
+        if (pid) {
+            fetchReviews(pid);
         }
-    }, [selectedProduct]);
+    }, [selectedProduct?.id, selectedProduct?._id]);
 
     const fetchReviews = async (productId) => {
         try {
@@ -94,7 +308,7 @@ const ProductDetailSheet = () => {
         try {
             setIsSubmittingReview(true);
             const res = await customerApi.submitReview({
-                productId: selectedProduct.id,
+                productId: selectedProduct.id || selectedProduct._id,
                 rating: newReview.rating,
                 comment: newReview.comment
             });
@@ -237,45 +451,6 @@ const ProductDetailSheet = () => {
 
     const cleanDesc = cleanDescription(selectedProduct?.description);
 
-    const AccordionItem = ({ title, children, id, icon }) => {
-        const isOpen = expandedSections.includes(id);
-        return (
-            <div className="border-b border-slate-100 last:border-0">
-                <button
-                    onClick={() => toggleSection(id)}
-                    className="w-full py-4 flex items-center justify-between transition-all hover:bg-slate-50/50 rounded-lg group px-2"
-                >
-                    <div className="flex items-center">
-                        <span className={cn(
-                            "font-bold text-[13px] uppercase tracking-wider",
-                            isOpen ? "text-[#1A1A1A]" : "text-slate-500"
-                        )}>{title}</span>
-                    </div>
-                    <motion.div
-                        animate={{ rotate: isOpen ? 180 : 0 }}
-                        className={cn("transition-colors", isOpen ? "text-[#e88a31]" : "text-slate-300")}
-                    >
-                        <ChevronDown size={18} strokeWidth={3} />
-                    </motion.div>
-                </button>
-                <AnimatePresence initial={false}>
-                    {isOpen && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="overflow-hidden"
-                        >
-                            <div className="pt-2 pb-6 px-2">
-                                {children}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        );
-    };
 
     return (
         <AnimatePresence>
@@ -330,6 +505,15 @@ const ProductDetailSheet = () => {
                                         <motion.button
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.9 }}
+                                            onClick={() => setIsSearching(true)}
+                                            className="w-10 h-10 bg-white/95 backdrop-blur-md rounded-xl shadow-md shadow-black/5 flex items-center justify-center hover:shadow-lg transition-all border border-gray-100/80 mx-2"
+                                        >
+                                            <Search size={18} className="text-gray-700" strokeWidth={2.5} />
+                                        </motion.button>
+
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.9 }}
                                             onClick={toggleWishlist}
                                             className={cn(
                                                 "w-10 h-10 backdrop-blur-md rounded-xl shadow-md shadow-black/5 flex items-center justify-center hover:shadow-lg transition-all border",
@@ -342,6 +526,17 @@ const ProductDetailSheet = () => {
                                             )} />
                                         </motion.button>
                                     </div>
+
+                                    <SearchOverlay 
+                                        isSearching={isSearching}
+                                        setIsSearching={setIsSearching}
+                                        searchQuery={searchQuery}
+                                        setSearchQuery={setSearchQuery}
+                                        isStoreProductsLoading={isStoreProductsLoading}
+                                        filteredStoreProducts={filteredStoreProducts}
+                                        selectedProduct={selectedProduct}
+                                        openProduct={openProduct}
+                                    />
 
                                     {/* Main content area: vertical thumbnails + main image */}
                                     <div className="flex-1 flex mt-[64px] mb-3 overflow-hidden">
@@ -610,6 +805,8 @@ const ProductDetailSheet = () => {
                                                     id="description" 
                                                     title="Product Description" 
                                                     icon={<Clock size={16} />}
+                                                    expandedSections={expandedSections}
+                                                    toggleSection={toggleSection}
                                                 >
                                                     <div
                                                         className="text-[13px] text-slate-500 font-medium leading-relaxed whitespace-pre-line"
@@ -619,31 +816,45 @@ const ProductDetailSheet = () => {
                                             )}
 
                                             {/* Product Details */}
-                                            <AccordionItem 
-                                                id="details" 
-                                                title="Product Details" 
-                                                icon={<Search size={16} />}
-                                            >
-                                                <div className="grid grid-cols-2 gap-3 mt-1">
-                                                    {[
-                                                        { label: 'Shelf Life', value: '3 Days', emoji: '📅' },
-                                                        { label: 'Country of Origin', value: 'India', emoji: '🇮🇳' },
-                                                        { label: 'FSSAI License', value: '1001234567890', emoji: '🛡️' },
-                                                        { label: 'Customer Care', value: supportEmail, emoji: '📧' }
-                                                    ].map((d) => (
-                                                        <div key={d.label} className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 group hover:bg-white hover:shadow-sm transition-all">
-                                                            <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">{d.label}</span>
-                                                            <span className="font-black text-slate-800 text-[12px]">{d.value}</span>
+                                            {(() => {
+                                                const details = [
+                                                    { label: 'Shelf Life', value: selectedProduct.shelfLife, emoji: '📅' },
+                                                    { label: 'Country of Origin', value: selectedProduct.origin || selectedProduct.countryOfOrigin, emoji: '🇮🇳' },
+                                                    { label: 'Seller', value: seller?.shopName, emoji: '🏪' },
+                                                    { label: 'Seller Address', value: seller ? `${seller.address || ''}, ${seller.city || ''}, ${seller.state || ''} ${seller.pincode || ''}`.trim().replace(/^,|,$/g, '').replace(/,\s*,/g, ',') : null, emoji: '📍' },
+                                                    { label: 'FSSAI License', value: seller?.documents?.fssaiLicense, emoji: '🛡️' },
+                                                    { label: 'Customer Care', value: supportEmail, emoji: '📧' }
+                                                ].filter(d => d.value);
+
+                                                if (details.length === 0) return null;
+
+                                                return (
+                                                    <AccordionItem 
+                                                        id="details" 
+                                                        title="Product Details" 
+                                                        icon={<Search size={16} />}
+                                                        expandedSections={expandedSections}
+                                                        toggleSection={toggleSection}
+                                                    >
+                                                        <div className="grid grid-cols-2 gap-3 mt-1">
+                                                            {details.map((d) => (
+                                                                <div key={d.label} className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 group hover:bg-white hover:shadow-sm transition-all">
+                                                                    <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">{d.label}</span>
+                                                                    <span className="font-black text-slate-800 text-[12px]">{d.value}</span>
+                                                                </div>
+                                                            ))}
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            </AccordionItem>
+                                                    </AccordionItem>
+                                                );
+                                            })()}
 
                                             {/* Customer Reviews */}
                                             <AccordionItem 
                                                 id="reviews" 
                                                 title={`Customer Reviews (${reviews.length})`}
                                                 icon={<Star size={16} />}
+                                                expandedSections={expandedSections}
+                                                toggleSection={toggleSection}
                                             >
                                                 <div className="space-y-6 mt-2">
                                                     <div className="flex items-center justify-between mb-4">
@@ -789,6 +1000,7 @@ const ProductDetailSheet = () => {
                                     <Heart size={16} className={cn(isWishlisted ? "text-red-500 fill-red-500" : "text-slate-700")} strokeWidth={2.5} />
                                 </motion.button>
                                 <motion.button
+                                    onClick={() => setIsSearching(true)}
                                     whileTap={{ scale: 0.9 }}
                                     className="w-9 h-9 bg-white shadow rounded-full flex items-center justify-center border border-gray-100/50"
                                 >
@@ -796,12 +1008,24 @@ const ProductDetailSheet = () => {
                                 </motion.button>
                                 <motion.button
                                     whileTap={{ scale: 0.9 }}
+                                    onClick={() => setIsExpanded(!isExpanded)}
                                     className="w-9 h-9 bg-white shadow rounded-full flex items-center justify-center border border-gray-100/50"
                                 >
-                                    <ChevronDown size={18} className="text-slate-700 rotate-180" strokeWidth={2.5} />
+                                    {isExpanded ? <ChevronDown size={18} className="text-slate-700" strokeWidth={2.5} /> : <ChevronUp size={18} className="text-slate-700" strokeWidth={2.5} />}
                                 </motion.button>
                             </div>
                         </div>
+
+                        <SearchOverlay 
+                            isSearching={isSearching}
+                            setIsSearching={setIsSearching}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            isStoreProductsLoading={isStoreProductsLoading}
+                            filteredStoreProducts={filteredStoreProducts}
+                            selectedProduct={selectedProduct}
+                            openProduct={openProduct}
+                        />
 
                         {/* Scrollable Content */}
                         <div
@@ -944,64 +1168,98 @@ const ProductDetailSheet = () => {
                                 {/* Product Information Accordion (Mobile) */}
                                 <div className="mt-2 border-t border-slate-100">
                                     {/* Highlights */}
-                                    <AccordionItem 
-                                        id="highlights" 
-                                        title="Highlights" 
-                                        icon={<Search size={18} strokeWidth={2.5} />}
-                                    >
-                                        <div className="flex flex-col gap-2 mt-1">
-                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
-                                                <span className="text-xs text-slate-400 font-bold">Key Features:</span>
-                                                <span className="text-xs text-slate-800 font-extrabold">Bestseller</span>
-                                            </div>
-                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
-                                                <span className="text-xs text-slate-400 font-bold">Source:</span>
-                                                <span className="text-xs text-slate-800 font-extrabold">From India</span>
-                                            </div>
-                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
-                                                <span className="text-xs text-slate-400 font-bold">Category:</span>
-                                                <span className="text-xs text-slate-800 font-extrabold">
-                                                    {selectedProduct.headerId?.name || selectedProduct.category || "General"}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </AccordionItem>
+                                    {(() => {
+                                        const highlights = [
+                                            { label: 'Brand', value: selectedProduct.brand },
+                                            { label: 'Key Features', value: (selectedProduct.isFeatured ? 'Featured Product' : (selectedProduct.isBestseller ? 'Bestseller' : null)) },
+                                            { label: 'Source', value: selectedProduct.origin || selectedProduct.countryOfOrigin },
+                                            { label: 'Category', value: 
+                                                (typeof selectedProduct.headerId === 'object' && selectedProduct.headerId?.name) || 
+                                                (typeof selectedProduct.categoryId === 'object' && selectedProduct.categoryId?.name) || 
+                                                (typeof selectedProduct.subcategoryId === 'object' && selectedProduct.subcategoryId?.name) || 
+                                                (typeof selectedProduct.category === 'string' && selectedProduct.category) ||
+                                                (selectedProduct.category?.name)
+                                            }
+                                        ].filter(h => h.value);
+
+                                        if (highlights.length === 0) return null;
+
+                                        return (
+                                            <AccordionItem 
+                                                id="highlights" 
+                                                title="Highlights" 
+                                                icon={<Search size={18} strokeWidth={2.5} />}
+                                                expandedSections={expandedSections}
+                                                toggleSection={toggleSection}
+                                            >
+                                                <div className="flex flex-col gap-1 mt-1">
+                                                    {highlights.map((h) => (
+                                                        <div key={h.label} className="flex flex-col py-2 border-b border-slate-50 last:border-0">
+                                                            <span className="text-[9px] text-slate-400 font-black uppercase tracking-[0.1em] mb-1">{h.label}</span>
+                                                            <span className="text-xs text-slate-800 font-extrabold leading-relaxed">{h.value}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </AccordionItem>
+                                        );
+                                    })()}
 
                                     {/* Info */}
-                                    <AccordionItem 
-                                        id="info" 
-                                        title="Info" 
-                                        icon={<Clock size={18} strokeWidth={2.5} />}
-                                    >
-                                        <div className="flex flex-col gap-2 mt-1">
-                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
-                                                <span className="text-xs text-slate-400 font-bold">Unit:</span>
-                                                <span className="text-xs text-slate-800 font-extrabold">
-                                                    {selectedVariant?.name || selectedProduct.weight || "1 unit"}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
-                                                <span className="text-xs text-slate-400 font-bold">FSSAI License:</span>
-                                                <span className="text-xs text-slate-800 font-extrabold">1001234567890</span>
-                                            </div>
-                                            <div className="flex justify-between items-center py-1 border-b border-slate-50">
-                                                <span className="text-xs text-slate-400 font-bold">Shelf Life:</span>
-                                                <span className="text-xs text-slate-800 font-extrabold">3 Days</span>
-                                            </div>
-                                            <div className="flex flex-col py-1">
-                                                <span className="text-xs text-slate-400 font-bold mb-1">Disclaimer:</span>
-                                                <span className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                                                    Every effort is made to maintain accuracy of all information. However, actual product packaging and materials may contain more and/or different information.
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </AccordionItem>
+                                    {(() => {
+                                        const unitValue = selectedVariant?.name || selectedProduct.weight;
+                                        const infoItems = [
+                                            { label: 'Unit', value: unitValue },
+                                            { label: 'Seller', value: seller?.shopName },
+                                            { label: 'Seller Address', value: seller ? `${seller.address || ''}, ${seller.city || ''}, ${seller.state || ''} ${seller.pincode || ''}`.trim().replace(/^,|,$/g, '').replace(/,\s*,/g, ',') : null },
+                                            { label: 'FSSAI License', value: seller?.documents?.fssaiLicense },
+                                            { label: 'Shelf Life', value: selectedProduct.shelfLife }
+                                        ].filter(i => i.value);
+
+                                        if (infoItems.length === 0) return null;
+
+                                        return (
+                                            <AccordionItem 
+                                                id="info" 
+                                                title="Info" 
+                                                icon={<Clock size={18} strokeWidth={2.5} />}
+                                                expandedSections={expandedSections}
+                                                toggleSection={toggleSection}
+                                            >
+                                                <div className="flex flex-col gap-1 mt-1">
+                                                    {infoItems.map((i) => (
+                                                        <div key={i.label} className="flex flex-col py-2 border-b border-slate-50 last:border-0">
+                                                            <span className="text-[9px] text-slate-400 font-black uppercase tracking-[0.1em] mb-1">{i.label}</span>
+                                                            <span className="text-xs text-slate-800 font-extrabold leading-relaxed">{i.value}</span>
+                                                        </div>
+                                                    ))}
+                                                    
+                                                    {selectedProduct.description && (
+                                                        <div className="flex flex-col py-2 border-b border-slate-50">
+                                                            <span className="text-xs text-slate-400 font-bold mb-1">About this Item:</span>
+                                                            <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                                                                {selectedProduct.description}
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex flex-col py-1">
+                                                        <span className="text-xs text-slate-400 font-bold mb-1">Disclaimer:</span>
+                                                        <span className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                                                            Every effort is made to maintain accuracy of all information. However, actual product packaging and materials may contain more and/or different information.
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </AccordionItem>
+                                        );
+                                    })()}
 
                                     {/* Customer Reviews */}
                                     <AccordionItem 
                                         id="reviews" 
                                         title={`Customer Reviews (${reviews.length})`}
                                         icon={<Star size={18} strokeWidth={2.5} />}
+                                        expandedSections={expandedSections}
+                                        toggleSection={toggleSection}
                                     >
                                         <div className="space-y-6 mt-2">
                                             <div className="flex items-center justify-between mb-4">

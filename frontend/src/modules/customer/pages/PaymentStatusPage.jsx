@@ -12,7 +12,7 @@ const PaymentStatusPage = () => {
     const navigate = useNavigate();
     const { showToast } = useToast();
     const { clearCart } = useCart();
-    
+
     const merchantOrderId = searchParams.get("merchantOrderId");
     const [status, setStatus] = useState("verifying"); // verifying, success, failure, timeout
     const [orderDetails, setOrderDetails] = useState(null);
@@ -39,7 +39,7 @@ const PaymentStatusPage = () => {
                     setStatus("success");
                     clearCart(); // C-4 FIX: Clear cart only AFTER payment is confirmed
                     if (pollInterval.current) clearInterval(pollInterval.current);
-                    
+
                     // Auto redirect after 3 seconds
                     setTimeout(() => {
                         const targetId = payment.checkoutGroupId || payment.publicOrderId || payment.order;
@@ -109,7 +109,7 @@ const PaymentStatusPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="max-w-md w-full bg-white rounded-[2.5rem] p-8 shadow-2xl shadow-slate-200 border border-slate-100 text-center relative overflow-hidden"
@@ -117,14 +117,14 @@ const PaymentStatusPage = () => {
                 {/* Status-specific background elements */}
                 <AnimatePresence mode="wait">
                     {status === 'success' && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-50 rounded-full blur-3xl pointer-events-none"
                         />
                     )}
                     {(status === 'failure' || status === 'timeout') && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             className="absolute -top-24 -right-24 w-64 h-64 bg-rose-50 rounded-full blur-3xl pointer-events-none"
@@ -137,7 +137,7 @@ const PaymentStatusPage = () => {
                     <div className="mb-8 flex justify-center">
                         <AnimatePresence mode="wait">
                             {status === "verifying" && (
-                                <motion.div 
+                                <motion.div
                                     key="verifying"
                                     initial={{ scale: 0.5, rotate: 0 }}
                                     animate={{ scale: 1, rotate: 360 }}
@@ -150,7 +150,7 @@ const PaymentStatusPage = () => {
                             )}
 
                             {status === "success" && (
-                                <motion.div 
+                                <motion.div
                                     key="success"
                                     initial={{ scale: 0.5, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
@@ -162,7 +162,7 @@ const PaymentStatusPage = () => {
                             )}
 
                             {status === "failure" && (
-                                <motion.div 
+                                <motion.div
                                     key="failure"
                                     initial={{ scale: 0.5, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
@@ -173,7 +173,7 @@ const PaymentStatusPage = () => {
                             )}
 
                             {status === "timeout" && (
-                                <motion.div 
+                                <motion.div
                                     key="timeout"
                                     initial={{ scale: 0.5, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
@@ -216,7 +216,7 @@ const PaymentStatusPage = () => {
                                     <div className="h-px bg-slate-200 my-2" />
                                     <p className="text-[11px] text-slate-500 font-medium">Redirecting to your order details in 4 seconds...</p>
                                 </div>
-                                <Button 
+                                <Button
                                     onClick={() => navigate('/orders')}
                                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2"
                                 >
@@ -231,13 +231,13 @@ const PaymentStatusPage = () => {
                                 <p className="text-rose-600 text-sm font-black mb-6 uppercase tracking-wider">{error || "Transaction Rejected"}</p>
                                 <p className="text-slate-500 text-sm font-medium mb-8">Oops! Something went wrong with the transaction. Your money (if debited) will be refunded automatically by PhonePe.</p>
                                 <div className="flex flex-col gap-3">
-                                    <Button 
+                                    <Button
                                         onClick={() => navigate('/checkout')}
                                         className="w-full bg-slate-900 hover:bg-black text-white font-bold h-12 rounded-xl"
                                     >
                                         Try Again
                                     </Button>
-                                    <Button 
+                                    <Button
                                         variant="outline"
                                         onClick={() => navigate('/')}
                                         className="w-full border-slate-200 text-slate-600 font-bold h-12 rounded-xl"
@@ -259,13 +259,13 @@ const PaymentStatusPage = () => {
                                     </p>
                                 </div>
                                 <div className="flex flex-col gap-3">
-                                    <Button 
+                                    <Button
                                         onClick={handleManualRetry}
                                         className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2"
                                     >
                                         <RefreshCcw size={18} /> Check Again
                                     </Button>
-                                    <Button 
+                                    <Button
                                         variant="outline"
                                         onClick={() => navigate('/orders')}
                                         className="w-full border-slate-200 text-slate-600 font-bold h-12 rounded-xl"
@@ -281,7 +281,7 @@ const PaymentStatusPage = () => {
                 {/* Progress bar for verification */}
                 {status === "verifying" && (
                     <div className="absolute bottom-0 left-0 w-full h-1 bg-slate-100">
-                        <motion.div 
+                        <motion.div
                             className="h-full bg-blue-500"
                             initial={{ width: 0 }}
                             animate={{ width: `${(retryCount / maxRetries) * 100}%` }}
