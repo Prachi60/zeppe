@@ -73,6 +73,13 @@ const Orders = () => {
         return [addr.name, addr.address, addr.landmark, addr.city].filter(Boolean).join(', ');
     };
 
+    const getSellerProductAmount = (order) =>
+        Number(
+            order?.pricing?.productSubtotal ??
+            order?.pricing?.subtotal ??
+            0
+        ) || 0;
+
     const safeOrders = useMemo(
         () => (Array.isArray(contextOrders) ? contextOrders : []),
         [contextOrders]
@@ -190,14 +197,14 @@ const Orders = () => {
             const s = String(v ?? "").replace(/"/g, '""');
             return /[",\n\r]/.test(s) ? `"${s}"` : s;
         };
-        const headers = ["Order ID", "Customer", "Phone", "Date", "Time", "Total (₹)", "Status", "Address", "Payment"];
+        const headers = ["Order ID", "Customer", "Phone", "Date", "Time", "Product Amount (₹)", "Status", "Address", "Payment"];
         const rows = data.map((o) => [
             o.id || o.orderId,
             o.customer?.name ?? "",
             o.customer?.phone ?? "",
             o.date || (o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ""),
             o.time || (o.createdAt ? new Date(o.createdAt).toLocaleTimeString() : ""),
-            o.pricing?.total || o.total || 0,
+            getSellerProductAmount(o),
             o.status,
             formatAddr(o.address),
             (o.payment && typeof o.payment === 'object') ? `${o.payment.method} (${o.payment.status})` : (o.payment ?? ""),
@@ -416,7 +423,7 @@ const Orders = () => {
                                                 </div>
                                             </div>
                                             <div className="text-right shrink-0">
-                                                <p className="text-sm font-black text-primary tracking-tight">₹{(o.pricing?.total || 0).toLocaleString()}</p>
+                                                <p className="text-sm font-black text-primary tracking-tight">₹{getSellerProductAmount(o).toLocaleString()}</p>
                                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{(o.items || []).length} ITEMS</p>
                                             </div>
                                         </div>
@@ -472,10 +479,10 @@ const Orders = () => {
                                 )
                             },
                             {
-                                header: "Total",
+                                header: "Product Amount",
                                 cell: (o) => (
                                     <div className="flex flex-col">
-                                        <span className="text-sm font-black text-slate-900">₹{(o.pricing?.grandTotal || o.pricing?.total || 0).toLocaleString()}</span>
+                                        <span className="text-sm font-black text-slate-900">₹{getSellerProductAmount(o).toLocaleString()}</span>
                                         <span className="text-[9px] font-bold text-emerald-600 uppercase">Payout: ₹{(o.pricing?.sellerPayoutTotal || 0).toLocaleString()}</span>
                                     </div>
                                 )
@@ -571,11 +578,11 @@ const Orders = () => {
                                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                     <div className="p-3 sm:p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
                                         <p className="text-[10px] sm:text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Total Revenue</p>
-                                        <p className="text-base sm:text-xl font-black text-indigo-700 truncate">₹{safeOrders.reduce((acc, o) => acc + (o.pricing?.total || o.total || 0), 0).toLocaleString()}</p>
+                                        <p className="text-base sm:text-xl font-black text-indigo-700 truncate">₹{safeOrders.reduce((acc, o) => acc + getSellerProductAmount(o), 0).toLocaleString()}</p>
                                     </div>
                                     <div className="p-3 sm:p-4 rounded-2xl bg-brand-50 border border-brand-100">
                                         <p className="text-[10px] sm:text-xs font-bold text-brand-400 uppercase tracking-widest mb-1">Avg. Order Value</p>
-                                        <p className="text-base sm:text-xl font-black text-brand-700">₹{safeOrders.length ? (safeOrders.reduce((acc, o) => acc + (o.pricing?.total || o.total || 0), 0) / safeOrders.length).toFixed(0) : '0'}</p>
+                                        <p className="text-base sm:text-xl font-black text-brand-700">₹{safeOrders.length ? (safeOrders.reduce((acc, o) => acc + getSellerProductAmount(o), 0) / safeOrders.length).toFixed(0) : '0'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -698,8 +705,8 @@ const Orders = () => {
                                                 </div>
                                                 <div className="h-px bg-primary/10 my-2" />
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="font-black text-slate-900">Order Value</span>
-                                                    <span className="font-black text-primary">₹{(selectedOrder.pricing?.grandTotal || selectedOrder.pricing?.total || 0).toFixed(2)}</span>
+                                                    <span className="font-black text-slate-900">Product Amount</span>
+                                                    <span className="font-black text-primary">₹{getSellerProductAmount(selectedOrder).toFixed(2)}</span>
                                                 </div>
                                         </div>
                                         <div className="bg-slate-900 p-3 sm:p-4 rounded-3xl text-white shadow-xl shadow-slate-900/10">

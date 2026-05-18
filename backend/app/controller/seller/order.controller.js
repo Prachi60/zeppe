@@ -35,7 +35,18 @@ const sellerOrderController = createSellerController(Order, {
                         $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] } 
                     },
                     totalRevenue: { 
-                        $sum: { $cond: [{ $ne: ["$status", "cancelled"] }, { $ifNull: ["$pricing.sellerPayoutTotal", "$pricing.total"] }, 0] } 
+                        $sum: {
+                            $cond: [
+                                { $ne: ["$status", "cancelled"] },
+                                {
+                                    $ifNull: [
+                                        "$pricing.productSubtotal",
+                                        { $ifNull: ["$pricing.subtotal", { $ifNull: ["$pricing.sellerPayoutTotal", 0] }] }
+                                    ]
+                                },
+                                0
+                            ]
+                        }
                     }
                 }
             }
