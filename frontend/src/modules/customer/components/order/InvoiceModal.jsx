@@ -6,8 +6,14 @@ import { useSettings } from '@core/context/SettingsContext';
 const InvoiceModal = ({ isOpen, onClose, order }) => {
     const { settings } = useSettings();
     const appName = settings?.appName || 'App';
-    const primaryColor = settings?.primaryColor || '#45B0E2';
+    const primaryColor = '#f59931';
     if (!order) return null;
+
+    const donationVal = (Number(localStorage.getItem(`donation_${order?.orderId || order?.id || 'latest'}`)) || Number(localStorage.getItem('latest_donation_amount')) || order.donationAmount || 0);
+    const tipVal = order.pricing?.tip || order.tipAmount || 0;
+    const handlingVal = order.pricing?.handlingFee || order.pricing?.platformFee || order.platformFee || order.handlingFee || 0;
+    const taxVal = order.pricing?.tax || order.pricing?.taxTotal || order.bill?.tax || 0;
+    const deliveryVal = order.pricing?.deliveryFee || order.bill?.deliveryFee || 0;
 
     const handlePrint = () => {
         const printContent = document.getElementById('printable-invoice');
@@ -101,22 +107,36 @@ const InvoiceModal = ({ isOpen, onClose, order }) => {
                         </div>
                         <div class="total-row">
                             <span>Tax</span>
-                            <span>₹${order.pricing?.tax || order.bill?.tax || 0}</span>
+                            <span>₹${taxVal}</span>
                         </div>
-                        ${(() => {
-                            const donationKey = `donation_${order?.orderId || order?.id || 'latest'}`;
-                            const localDonationAmount = Number(localStorage.getItem(donationKey)) || Number(localStorage.getItem('latest_donation_amount')) || 0;
-                            return localDonationAmount > 0 ? `
-                                <div class="total-row">
-                                    <span>Donation</span>
-                                    <span>₹${localDonationAmount}</span>
-                                </div>
-                            ` : '';
-                        })()}
+                        ${deliveryVal > 0 ? `
+                            <div class="total-row">
+                                <span>Delivery Fee</span>
+                                <span>₹${deliveryVal}</span>
+                            </div>
+                        ` : ''}
+                        ${handlingVal > 0 ? `
+                            <div class="total-row">
+                                <span>Platform Fee</span>
+                                <span>₹${handlingVal}</span>
+                            </div>
+                        ` : ''}
+                        ${tipVal > 0 ? `
+                            <div class="total-row">
+                                <span>Tip</span>
+                                <span>₹${tipVal}</span>
+                            </div>
+                        ` : ''}
+                        ${donationVal > 0 ? `
+                            <div class="total-row">
+                                <span>Donation</span>
+                                <span>₹${donationVal}</span>
+                            </div>
+                        ` : ''}
                         <div class="total-row grand-total">
                             <span>Total Paid</span>
                             <span>₹${(order.pricing?.total || order.bill?.grandTotal || 0) + 
-                                (Number(localStorage.getItem(`donation_${order?.orderId || order?.id || 'latest'}`)) || Number(localStorage.getItem('latest_donation_amount')) || 0)}</span>
+                                (donationVal > 0 && !order.pricing?.total?.toString().includes(donationVal.toString()) ? donationVal : 0)}</span>
                         </div>
                     </div>
                 </body>
@@ -206,27 +226,37 @@ const InvoiceModal = ({ isOpen, onClose, order }) => {
                                     </div>
                                     <div className="flex justify-between text-sm text-slate-500">
                                         <span>Tax</span>
-                                        <span>₹{order.pricing?.tax || order.bill?.tax || 0}</span>
+                                        <span>₹{taxVal}</span>
                                     </div>
-                                    {(() => {
-                                        const donationKey = `donation_${order?.orderId || order?.id || 'latest'}`;
-                                        const localDonationAmount = Number(localStorage.getItem(donationKey)) || Number(localStorage.getItem('latest_donation_amount')) || 0;
-                                        
-                                        if (localDonationAmount > 0) {
-                                            return (
-                                                <div className="flex justify-between text-sm text-slate-500">
-                                                    <span>Donation</span>
-                                                    <span>₹{localDonationAmount}</span>
-                                                </div>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
+                                    {deliveryVal > 0 && (
+                                        <div className="flex justify-between text-sm text-slate-500">
+                                            <span>Delivery Fee</span>
+                                            <span>₹{deliveryVal}</span>
+                                        </div>
+                                    )}
+                                    {handlingVal > 0 && (
+                                        <div className="flex justify-between text-sm text-slate-500">
+                                            <span>Platform Fee</span>
+                                            <span>₹{handlingVal}</span>
+                                        </div>
+                                    )}
+                                    {tipVal > 0 && (
+                                        <div className="flex justify-between text-sm text-slate-500">
+                                            <span>Tip</span>
+                                            <span>₹{tipVal}</span>
+                                        </div>
+                                    )}
+                                    {donationVal > 0 && (
+                                        <div className="flex justify-between text-sm text-slate-500">
+                                            <span>Donation</span>
+                                            <span>₹{donationVal}</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between text-base font-black text-slate-800 pt-2 border-t border-slate-100">
                                         <span>Total Paid</span>
                                         <span>
                                             ₹{(order.pricing?.total || order.bill?.grandTotal || 0) + 
-                                              (Number(localStorage.getItem(`donation_${order?.orderId || order?.id || 'latest'}`)) || Number(localStorage.getItem('latest_donation_amount')) || 0)}
+                                              (donationVal > 0 && !order.pricing?.total?.toString().includes(donationVal.toString()) ? donationVal : 0)}
                                         </span>
                                     </div>
                                 </div>
@@ -234,7 +264,7 @@ const InvoiceModal = ({ isOpen, onClose, order }) => {
 
                              {/* Footer Actions */}
                             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-3 no-print">
-                                <button onClick={() => handlePrint('Print')} className="flex-1 py-3 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-lg" style={{ backgroundColor: primaryColor }}>
+                                <button onClick={() => handlePrint('Print')} className="flex-1 py-3 text-black rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-lg shadow-orange-100" style={{ backgroundColor: primaryColor }}>
                                     <Printer size={18} /> Print
                                 </button>
                                 <button onClick={() => handlePrint('PDF')} className="flex-1 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">

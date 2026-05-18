@@ -272,11 +272,7 @@ const EmptyCategoryView = ({ categoryName }) => {
                 </button>
             </div>
             
-            <div className="mt-16 mb-4 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                    - End of Catalog -
-                </p>
-            </div>
+
         </div>
     );
 };
@@ -289,19 +285,14 @@ const CategoryProductsPage = () => {
     const { settings } = useSettings();
     const { currentLocation } = useAppLocation();
     const finalCategoryId = location.state?.selectedCategory || categoryId;
-    const initialSubcategoryId = String(location.state?.activeSubcategoryId || 'all');
     const { isOpen: isProductDetailOpen } = useProductDetail();
-    const [selectedSubCategory, setSelectedSubCategory] = useState(initialSubcategoryId);
+    // Always default to 'all' so users immediately see products when opening a category
+    const [selectedSubCategory, setSelectedSubCategory] = useState('all');
     const [category, setCategory] = useState(null);
     const [subCategories, setSubCategories] = useState([{ id: 'all', name: 'All' }]);
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isMetaLoading, setIsMetaLoading] = useState(true);
-
-    useEffect(() => {
-        const target = String(location.state?.activeSubcategoryId || 'all');
-        setSelectedSubCategory(target);
-    }, [location.state?.activeSubcategoryId]);
 
     // Fetch ALL products for this category at once. Subcategory filtering is done
     // client-side so switching tabs never triggers a new API call and the page
@@ -339,7 +330,9 @@ const CategoryProductsPage = () => {
         };
 
         fetchProducts();
-    }, [finalCategoryId, currentLocation?.latitude, currentLocation?.longitude, selectedSubCategory]);
+    // NOTE: selectedSubCategory is intentionally NOT a dep — filtering is client-side
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [finalCategoryId, currentLocation?.latitude, currentLocation?.longitude]);
 
     useEffect(() => {
         if (!finalCategoryId) return;

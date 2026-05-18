@@ -54,13 +54,13 @@ const GuestProfilePrompt = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-black hover:text-[#f59931]"
               aria-label="Close login popup"
             >
               <X size={16} />
             </button>
 
-            <div className="absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-black text-white shadow-lg">
+            <div className="absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-black text-[#f59931] shadow-lg shadow-orange-500/10">
               <Lock size={18} />
             </div>
 
@@ -68,7 +68,7 @@ const GuestProfilePrompt = ({ isOpen, onClose }) => {
               id="guest-profile-prompt-title"
               className="mt-2 text-[1.35rem] font-black tracking-tight text-slate-900"
             >
-              Welcome to {appName}!
+              Welcome to <span className="text-[#f59931] font-black">{appName}</span>!
             </h2>
             <p className="mt-3 px-4 text-sm font-medium leading-6 text-slate-500">
               Please log in or sign up to continue with your account.
@@ -77,7 +77,7 @@ const GuestProfilePrompt = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={handleLogin}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-black text-white shadow-[0_10px_30px_rgba(15,23,42,0.2)] transition-transform duration-200 hover:scale-[1.01] active:scale-[0.98]"
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#f59931] hover:bg-black text-black hover:text-[#f59931] border border-transparent hover:border-[#f59931]/10 px-5 py-3.5 text-sm font-black shadow-lg shadow-orange-500/20 hover:shadow-black/10 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             >
               <LogIn size={16} />
               Login to Your Account
@@ -87,7 +87,7 @@ const GuestProfilePrompt = ({ isOpen, onClose }) => {
               By continuing, you agree to our{" "}
               <Link
                 to="/terms"
-                className="font-semibold text-slate-500 underline underline-offset-2"
+                className="font-semibold text-slate-500 hover:text-[#f59931] transition-colors underline underline-offset-2"
                 onClick={onClose}
               >
                 Terms
@@ -95,7 +95,7 @@ const GuestProfilePrompt = ({ isOpen, onClose }) => {
               and{" "}
               <Link
                 to="/privacy"
-                className="font-semibold text-slate-500 underline underline-offset-2"
+                className="font-semibold text-slate-500 hover:text-[#f59931] transition-colors underline underline-offset-2"
                 onClick={onClose}
               >
                 Privacy Policy

@@ -72,4 +72,8 @@ export const deliveryApi = {
     axiosInstance.post(`/orders/workflow/${orderId}/return-drop-otp/request`, body),
   verifyReturnDropOtp: (orderId, body) =>
     axiosInstance.post(`/orders/workflow/${orderId}/return-drop-otp/verify`, body),
+  createMediaUploadIntent: (data) =>
+    axiosInstance.post("/media/upload-intent", data),
+  confirmMediaUpload: (data) =>
+    axiosInstance.post("/media/confirm", data),
 };

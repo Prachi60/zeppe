@@ -97,7 +97,7 @@ export async function fetchSellerOrdersPage({
       .limit(limit)
       .populate("customer", "name phone")
       .populate("items.product", "name mainImage price salePrice")
-      .populate("deliveryBoy", "name phone")
+      .populate("deliveryBoy", "name phone avatar")
       .populate("seller", "shopName name")
       .lean(),
     Order.countDocuments(query),

@@ -20,6 +20,8 @@ import ApplicationPending from '../../modules/seller/pages/ApplicationPending';
 import AdminAuth from '../../modules/admin/pages/AdminAuth';
 import DeliveryAuth from '../../modules/delivery/pages/DeliveryAuth';
 import DeliveryApplicationPending from '../../modules/delivery/pages/DeliveryApplicationPending';
+import DeliveryTermsPage from '../../modules/delivery/pages/DeliveryTermsPage';
+import DeliveryPrivacyPage from '../../modules/delivery/pages/DeliveryPrivacyPage';
 import CustomerAuth from '../../modules/customer/pages/CustomerAuth';
 
 // Customer Pages (lazy-loaded)
@@ -128,6 +130,14 @@ const AppRouter = () => {
                 {
                     path: 'delivery/auth',
                     element: <DeliveryAuth />,
+                },
+                {
+                    path: 'delivery/terms',
+                    element: <DeliveryTermsPage />,
+                },
+                {
+                    path: 'delivery/privacy',
+                    element: <DeliveryPrivacyPage />,
                 },
                 {
                     path: 'delivery/pending-approval',

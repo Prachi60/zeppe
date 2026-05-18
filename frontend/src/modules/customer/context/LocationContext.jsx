@@ -264,7 +264,8 @@ export const LocationProvider = ({ children }) => {
               ? { lat: addr.location.lat, lng: addr.location.lng }
               : null,
           placeId: typeof addr?.placeId === "string" ? addr.placeId : null,
-          phone: profile?.phone ?? "",
+          name: addr.name || profile?.name || "",
+          phone: addr.phone || profile?.phone || "",
           isCurrent: idx === 0,
         })),
       );

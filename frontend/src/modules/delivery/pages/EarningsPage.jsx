@@ -57,6 +57,56 @@ const EarningsPage = () => {
       setLoading(false);
     }
   };
+  const handleDownload = () => {
+    try {
+      if (!earningsData.recentTransactions || earningsData.recentTransactions.length === 0) {
+        toast.info("No transaction history available to export.");
+        return;
+      }
+
+      // Generate CSV Content
+      const headers = [
+        "Zeppe Delivery Partner - Earnings Report",
+        `Date of Export: ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`,
+        "",
+        "SUMMARY OVERVIEW",
+        "Total Earnings,Incentives,Tips Received",
+        `Rs. ${earningsData.totalEarnings},Rs. ${earningsData.incentives},Rs. ${earningsData.tipsReceived}`,
+        "",
+        "TRANSACTION DETAILS",
+        "Transaction ID,Date,Type,Amount,Status,Tip Included"
+      ];
+
+      const rows = earningsData.recentTransactions.map((txn) => {
+        const id = txn.id || (txn._id ? txn._id.toString().slice(-6).toUpperCase() : "N/A");
+        const date = txn.date || new Date(txn.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+        const type = txn.type || "Earnings";
+        const prefix = String(type).includes("Withdrawal") ? "-" : "+";
+        const amount = `${prefix}Rs. ${txn.amount || 0}`;
+        const status = txn.status || "Settled";
+        const tip = resolveTipAmount(txn);
+        const tipAmount = tip > 0 ? `Rs. ${tip}` : "Rs. 0";
+
+        return `"${id}","${date}","${type}","${amount}","${status}","${tipAmount}"`;
+      });
+
+      const csvContent = [...headers, ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Zeppe_Delivery_Earnings_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("Earnings report downloaded successfully!");
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Failed to generate earnings report");
+    }
+  };
 
   React.useEffect(() => {
     fetchEarnings();
@@ -86,7 +136,7 @@ const EarningsPage = () => {
       <div className="bg-white shadow-sm p-6 sticky top-0 z-30">
         <div className="flex justify-between items-center mb-4">
           <h1 className="ds-h2 text-gray-900">My Earnings</h1>
-          <Button variant="ghost" size="icon">
+          <Button onClick={handleDownload} variant="ghost" size="icon">
             <Download size={20} className="text-gray-600" />
           </Button>
         </div>
@@ -133,14 +183,14 @@ const EarningsPage = () => {
               <div>
                 <p className="text-blue-100 text-xs mb-1">Incentives</p>
                 <p className="font-bold text-lg">
-                  +{RUPEE}
+                  + {RUPEE}
                   {Number(earningsData.incentives || 0).toLocaleString()}
                 </p>
               </div>
               <div>
                 <p className="text-blue-100 text-xs mb-1">Tips</p>
                 <p className="font-bold text-lg">
-                  +{RUPEE}
+                  + {RUPEE}
                   {Number(earningsData.tipsReceived || 0).toLocaleString()}
                 </p>
               </div>
@@ -232,7 +282,7 @@ const EarningsPage = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-gray-900">
-                        {String(txn.type || "").includes("Withdrawal") ? "-" : "+"}
+                        {String(txn.type || "").includes("Withdrawal") ? "- " : "+ "}
                         {RUPEE}
                         {Number(txn.amount || 0).toLocaleString()}
                       </p>

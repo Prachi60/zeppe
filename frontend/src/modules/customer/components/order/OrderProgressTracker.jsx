@@ -187,7 +187,7 @@ const OrderProgressTracker = ({
                 <p className="text-xs text-amber-600 font-semibold">Arriving in</p>
                 <p className="text-2xl font-black text-amber-900">{arrivingInText}</p>
               </div>
-              <div className="inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
+              <div className="inline-flex items-center whitespace-nowrap rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200 min-w-fit">
                 Total distance: {totalDistanceText}
               </div>
             </div>

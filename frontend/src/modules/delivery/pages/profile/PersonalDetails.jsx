@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, User, Mail, Phone, MapPin, Calendar, Droplet } from "lucide-react";
+import { ArrowLeft, Save, User, Mail, Phone, MapPin, Calendar, Droplet, Camera, Loader2 } from "lucide-react";
 import Button from "@/shared/components/ui/Button";
 import Input from "@/shared/components/ui/Input";
 import { toast } from "sonner";
@@ -8,44 +8,212 @@ import { useAuth } from "@core/context/AuthContext";
 import { deliveryApi } from "../../services/deliveryApi";
 import { useEffect } from "react";
 
+const getFileExtension = (file) => {
+  const fromName = String(file?.name || "")
+    .split(".")
+    .pop()
+    ?.trim()
+    .toLowerCase();
+  if (fromName) return fromName;
+
+  const mimeType = String(file?.type || "").toLowerCase();
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/gif") return "gif";
+  return "";
+};
+
 const PersonalDetails = () => {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: "",
-    phone: "",
-    email: "",
-    address: "",
-    dob: "",
-    bloodGroup: "",
+  const maxDob = (() => {
+    const today = new Date();
+    const minAgeDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+    return minAgeDate.toISOString().split("T")[0];
+  })();
+  const [isEditing, setIsEditing] = useState(() => {
+    return localStorage.getItem("zeppe_rider_profile_is_editing") === "true";
   });
+  const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const handleAvatarClick = () => {
+    if (isEditing && !avatarUploading) {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const extension = getFileExtension(file);
+    const mimeType = String(file.type || "").toLowerCase();
+    if (!mimeType.startsWith("image/") || !extension) {
+      toast.error("Please select a valid image file.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setAvatarUploading(true);
+      const toastId = toast.loading("Uploading profile image...");
+
+      const intentResponse = await deliveryApi.createMediaUploadIntent({
+        entityType: "profile",
+        resourceType: "image",
+        mimeType,
+        fileSize: file.size,
+        extension,
+        tags: ["delivery", "profile"],
+      });
+
+      const intent = intentResponse?.data?.result ?? intentResponse?.data;
+      const uploadUrl = intent?.uploadUrl;
+      const uploadFields = intent?.uploadFields;
+      const intentId = intent?.intentId;
+
+      if (!uploadUrl || !uploadFields || !intentId) {
+        throw new Error("Failed to prepare image upload");
+      }
+
+      const cloudinaryFormData = new FormData();
+      Object.entries(uploadFields).forEach(([key, value]) => {
+        cloudinaryFormData.append(key, value);
+      });
+      cloudinaryFormData.append("file", file);
+
+      const cloudinaryResponse = await fetch(uploadUrl, {
+        method: "POST",
+        body: cloudinaryFormData,
+      });
+
+      const cloudinaryPayload = await cloudinaryResponse.json().catch(() => ({}));
+      if (!cloudinaryResponse.ok) {
+        throw new Error(
+          cloudinaryPayload?.error?.message || "Cloudinary upload failed",
+        );
+      }
+
+      const confirmResponse = await deliveryApi.confirmMediaUpload({
+        intentId,
+        publicId: cloudinaryPayload.public_id,
+        secureUrl: cloudinaryPayload.secure_url,
+        resourceType: cloudinaryPayload.resource_type || "image",
+        format: cloudinaryPayload.format || extension,
+        mimeType,
+        width: cloudinaryPayload.width,
+        height: cloudinaryPayload.height,
+        bytes: cloudinaryPayload.bytes || file.size,
+        etag: cloudinaryPayload.etag,
+        entityType: "profile",
+        tags: ["delivery", "profile"],
+      });
+
+      const confirmedMedia = confirmResponse?.data?.result ?? confirmResponse?.data;
+      const finalUrl = confirmedMedia?.secureUrl || cloudinaryPayload.secure_url || "";
+
+      if (!finalUrl) {
+        throw new Error("No image URL returned");
+      }
+
+      // Update rider profile on backend with the new avatar url
+      await deliveryApi.updateProfile({ avatar: finalUrl });
+      await refreshUser();
+      
+      toast.dismiss(toastId);
+      toast.success("Profile photo updated successfully!");
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+      toast.error(error.message || "Failed to upload profile image");
+    } finally {
+      setAvatarUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const [formData, setFormData] = useState(() => {
+    try {
+      const savedData = localStorage.getItem("zeppe_rider_profile_form_data");
+      if (savedData) {
+        return JSON.parse(savedData);
+      }
+    } catch (e) {
+      console.error("Error reading saved profile form data from localStorage:", e);
+    }
+    return {
+      fullName: "",
+      phone: "",
+      email: "",
+      address: "",
+      dob: "",
+      bloodGroup: "",
+    };
+  });
+
+  // Persist state to localStorage whenever isEditing or formData changes
+  useEffect(() => {
+    localStorage.setItem("zeppe_rider_profile_is_editing", String(isEditing));
+  }, [isEditing]);
+
+  useEffect(() => {
+    localStorage.setItem("zeppe_rider_profile_form_data", JSON.stringify(formData));
+  }, [formData]);
 
   useEffect(() => {
     if (user) {
-      setFormData({
-        fullName: user.name || "",
-        phone: user.phone || "",
-        email: user.email || "",
-        address: user.address || "",
-        dob: user.dob || "",
-        bloodGroup: user.bloodGroup || "",
-      });
+      const isCurrentlyEditing = localStorage.getItem("zeppe_rider_profile_is_editing") === "true";
+      const hasSavedData = localStorage.getItem("zeppe_rider_profile_form_data") !== null;
+      
+      if (!isCurrentlyEditing || !hasSavedData) {
+        setFormData({
+          fullName: user.name || "",
+          phone: user.phone || "",
+          email: user.email || "",
+          address: user.address || "",
+          dob: user.dob || "",
+          bloodGroup: user.bloodGroup || "",
+        });
+      }
     }
   }, [user]);
 
   const handleSave = async () => {
+    if (formData.dob) {
+      const dobDate = new Date(formData.dob);
+      const today = new Date();
+      const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+      if (dobDate > eighteenYearsAgo) {
+        toast.error("You must be at least 18 years old to be a delivery partner.");
+        return;
+      }
+    }
+
+    if (formData.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+    }
+
     try {
       setIsSaving(true);
       await deliveryApi.updateProfile({
         name: formData.fullName,
-        email: formData.email,
+        email: formData.email ? formData.email.trim() : "",
         address: formData.address,
         bloodGroup: formData.bloodGroup,
         dob: formData.dob,
       });
       await refreshUser();
+      
+      // Clear persistence upon successful save
+      localStorage.removeItem("zeppe_rider_profile_is_editing");
+      localStorage.removeItem("zeppe_rider_profile_form_data");
+      
       setIsEditing(false);
       toast.success("Personal details updated successfully!");
     } catch (error) {
@@ -91,18 +259,40 @@ const PersonalDetails = () => {
         {/* Profile Photo */}
         <div className="flex flex-col items-center justify-center py-6">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full p-1 bg-white shadow-md">
+            <div 
+              onClick={handleAvatarClick}
+              className={`w-24 h-24 rounded-full p-1 bg-white shadow-md relative overflow-hidden ${
+                isEditing && !avatarUploading ? "cursor-pointer hover:opacity-90" : ""
+              }`}
+            >
               <img
                 src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Felix'}`}
                 alt="Profile"
                 className="w-full h-full rounded-full object-cover bg-gray-100"
               />
+              {avatarUploading && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full backdrop-blur-[1px]">
+                  <Loader2 className="animate-spin text-white" size={24} />
+                </div>
+              )}
             </div>
             {isEditing && (
-              <button className="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full shadow-lg hover:bg-primary/90 transition-colors">
-                <User size={14} />
+              <button 
+                type="button"
+                disabled={avatarUploading}
+                onClick={handleAvatarClick}
+                className="absolute bottom-0 right-0 bg-primary text-white p-1.5 rounded-full shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center"
+              >
+                {avatarUploading ? <Loader2 className="animate-spin" size={14} /> : <Camera size={14} />}
               </button>
             )}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleAvatarChange} 
+            />
           </div>
           <p className="mt-3 text-sm text-gray-500">Delivery Partner ID: {user?._id?.slice(-6).toUpperCase() || "------"}</p>
         </div>
@@ -140,14 +330,11 @@ const PersonalDetails = () => {
           <div className="relative">
             <label className="block text-xs font-medium text-gray-700 mb-1 ml-1">Current Address</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <MapPin size={18} />
-              </div>
               <textarea
                 value={formData.address}
                 readOnly={!isEditing}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
-                className={`w-full pl-10 pr-4 py-2 rounded-xl text-sm border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none ${
+                className={`w-full px-4 py-2 rounded-xl text-sm border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none ${
                   !isEditing ? "bg-gray-50 border-transparent text-gray-600" : "bg-white border-gray-200"
                 }`}
                 rows={3}
@@ -163,6 +350,8 @@ const PersonalDetails = () => {
               onChange={(e) => setFormData({...formData, dob: e.target.value})}
               icon={Calendar}
               type="date"
+              max={maxDob}
+              helperText="You must be at least 18 years old"
               className={!isEditing ? "bg-gray-50 border-transparent" : ""}
             />
             <Input

@@ -42,11 +42,13 @@ function normalizeNotification(doc = {}) {
   const role = doc.role || roleFromRecipientModel(doc.recipientModel) || "customer";
   return {
     id: doc._id,
+    _id: doc._id,
     userId: doc.userId || doc.recipient,
     role,
     type: doc.type,
     title: doc.title,
     body: doc.body || doc.message || "",
+    message: doc.body || doc.message || "",
     data: doc.data || {},
     status: doc.status || "sent",
     isRead: Boolean(doc.isRead),
