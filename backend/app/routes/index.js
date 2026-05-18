@@ -24,6 +24,8 @@ import metricsRoute from "./metricsRoutes.js";
 import authOtpRoute from "../modules/otp/otp.routes.js";
 import subscriptionRoute from "./subscriptionRoutes.js";
 import scratchCardRoute from "./scratchCardRoutes.js";
+import chatRoute from "./chatRoutes.js";
+
 
 
 import express from "express";
@@ -61,6 +63,8 @@ const setupRoutes = (app) => {
     router.use("/admin/faqs", faqRoute);
     router.use("/", subscriptionRoute);
     router.use("/", scratchCardRoute);
+    router.use("/chat", chatRoute);
+
 
     router.use("/public/faqs", faqRoute); // For public access without admin prefix
 

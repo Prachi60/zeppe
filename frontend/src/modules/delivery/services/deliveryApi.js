@@ -52,8 +52,8 @@ export const deliveryApi = {
   markNotificationRead: (id) => axiosInstance.put(`/notifications/${id}/read`),
   markAllNotificationsRead: () =>
     axiosInstance.put("/notifications/mark-all-read"),
-  requestWithdrawal: (data) =>
-    axiosInstance.post("/delivery/request-withdrawal", data),
+  requestWithdrawal: (data, config = {}) =>
+    axiosInstance.post("/delivery/request-withdrawal", data, config),
   updateStatus: (orderId, data) =>
     axiosInstance.put(`/orders/status/${orderId}`, data),
   updateReturnStatus: (orderId, data) =>

@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Gift,
   Heart,
+  MessageSquare,
 } from "lucide-react";
 
 const Dashboard = React.lazy(() => import("../pages/Dashboard"));
@@ -96,6 +97,8 @@ const EnvSettings = React.lazy(() => import("../pages/EnvSettings"));
 const AdminProfile = React.lazy(() => import("../pages/AdminProfile"));
 const Subscriptions = React.lazy(() => import("../pages/Subscriptions"));
 const ScratchCardManagement = React.lazy(() => import("../pages/ScratchCardManagement"));
+const LiveChat = React.lazy(() => import("../pages/LiveChat"));
+
 
 const navItems = [
   {
@@ -147,9 +150,11 @@ const navItems = [
     icon: Receipt,
     color: "emerald",
     children: [
+      { label: "Live Chat", path: "/admin/live-chat" },
       { label: "Help Tickets", path: "/admin/support-tickets" },
       { label: "Review Content", path: "/admin/moderation" },
     ],
+
   },
   {
     label: "Sellers",
@@ -281,6 +286,8 @@ const AdminRoutes = () => {
           <Route path="/env" element={<EnvSettings />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/scratch-cards" element={<ScratchCardManagement />} />
+          <Route path="/live-chat" element={<LiveChat />} />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </React.Suspense>

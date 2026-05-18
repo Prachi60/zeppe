@@ -12,6 +12,17 @@ import { getRedisClient } from "../config/redis.js";
 import { distanceMeters } from "../utils/geoUtils.js";
 import { applyDeliveredSettlement } from "../services/orderSettlement.js";
 import { roundCurrency } from "../utils/money.js";
+import { OWNER_TYPE } from "../constants/finance.js";
+import { getOrCreateWallet } from "../services/finance/walletService.js";
+import { 
+    checkIdempotency, 
+    acquireIdempotencyLock, 
+    storeIdempotencyResult, 
+    storeIdempotencyError, 
+    releaseIdempotencyLock,
+    validateIdempotencyKey
+} from "../services/idempotencyService.js";
+
 
 const LOC_MIN_INTERVAL_MS = () =>
   parseInt(process.env.LOCATION_MIN_INTERVAL_MS || "3000", 10);
@@ -129,29 +140,73 @@ export const getDeliveryStats = async (req, res) => {
 ================================ */
 export const getDeliveryEarnings = async (req, res) => {
     try {
-        const deliveryBoyId = new mongoose.Types.ObjectId(req.user.id);
-        const transactions = await Transaction.find({ user: deliveryBoyId, userModel: 'Delivery' })
-            .sort({ createdAt: -1 })
-            .populate("order", "orderId pricing paymentBreakdown");
-        const wallet = await Wallet.findOne({
-            ownerType: "DELIVERY_PARTNER",
-            ownerId: deliveryBoyId,
+        const rawId = req.user?.id || req.user?._id;
+        const deliveryBoyId = new mongoose.Types.ObjectId(String(rawId));
+
+        // 1. Fetch all transactions and wallet
+        const transactions = await Transaction.find({ 
+            user: deliveryBoyId, 
+            userModel: { $in: ['Delivery', 'DeliveryPartner', 'Rider'] } // Be inclusive for safety
         })
-            .select("cashInHand")
+            .sort({ createdAt: -1 })
+            .populate("order", "orderId pricing paymentBreakdown")
             .lean();
 
-        const settledEarnings = transactions
-            .filter(t => t.status === 'Settled' && (t.type === 'Delivery Earning' || t.type === 'Incentive' || t.type === 'Bonus'))
-            .reduce((acc, t) => acc + t.amount, 0);
+        let wallet = await Wallet.findOne({
+            ownerType: "DELIVERY_PARTNER",
+            ownerId: deliveryBoyId,
+        });
+
+        if (!wallet) {
+            wallet = await getOrCreateWallet("DELIVERY_PARTNER", deliveryBoyId);
+        }
+
+        // 2. Derive Ground Truth from Transactions
+        // Credits: Delivery Earning, Incentive, Bonus (Only if Settled)
+        const settledEarningsTotal = transactions
+            .filter(t => {
+                const type = (t.type || "").toLowerCase();
+                return t.status === 'Settled' && 
+                       (type === 'delivery earning' || type === 'incentive' || type === 'bonus');
+            })
+            .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
+        // Debits: Withdrawals (Pending, Processing, or Settled)
+        const withdrawalsTotal = transactions
+            .filter(t => {
+                const type = (t.type || "").toLowerCase();
+                const status = (t.status || "");
+                return type === 'withdrawal' && 
+                       ['Pending', 'Processing', 'Settled', 'Completed'].includes(status);
+            })
+            .reduce((acc, t) => acc + Math.abs(Number(t.amount) || 0), 0);
 
         const pendingWithdrawalsTotal = transactions
-            .filter(t => (t.status === 'Pending' || t.status === 'Processing') && t.type === 'Withdrawal')
-            .reduce((acc, t) => acc + Math.abs(t.amount), 0);
+            .filter(t => {
+                const type = (t.type || "").toLowerCase();
+                const status = (t.status || "");
+                return type === 'withdrawal' && 
+                       ['Pending', 'Processing'].includes(status);
+            })
+            .reduce((acc, t) => acc + Math.abs(Number(t.amount) || 0), 0);
 
-        const spendableBalance = Math.max(settledEarnings - pendingWithdrawalsTotal, 0);
+        // Ground Truth Spendable Balance
+        const spendableBalance = Math.max(roundCurrency(settledEarningsTotal - withdrawalsTotal), 0);
+        const pendingEarnings = roundCurrency(wallet.pendingBalance || 0);
+        const cashCollected = roundCurrency(wallet.cashInHand || 0);
 
+        // 3. Sync Wallet (Keep it robust)
+        if (roundCurrency(wallet.availableBalance || 0) !== spendableBalance) {
+            console.log(`[Finance] Correcting Wallet Balance for Rider ${deliveryBoyId}: ${wallet.availableBalance} -> ${spendableBalance}`);
+            await Wallet.updateOne(
+                { _id: wallet._id },
+                { $set: { availableBalance: spendableBalance } }
+            );
+        }
+
+        // 4. Statistics
         const tipsReceived = transactions
-            .filter(t => t.type === 'Delivery Earning' && t.status === 'Settled')
+            .filter(t => (t.type || "").toLowerCase() === 'delivery earning' && t.status === 'Settled')
             .reduce(
                 (acc, t) =>
                     acc +
@@ -165,16 +220,17 @@ export const getDeliveryEarnings = async (req, res) => {
             );
 
         const onlinePay = transactions
-            .filter(t => t.type === 'Delivery Earning' && t.status === 'Settled')
-            .reduce((acc, t) => acc + t.amount, 0);
+            .filter(t => (t.type || "").toLowerCase() === 'delivery earning' && t.status === 'Settled')
+            .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
         const incentives = transactions
-            .filter(t => (t.type === 'Incentive' || t.type === 'Bonus') && t.status === 'Settled')
-            .reduce((acc, t) => acc + t.amount, 0);
+            .filter(t => {
+                const type = (t.type || "").toLowerCase();
+                return t.status === 'Settled' && (type === 'incentive' || type === 'bonus');
+            })
+            .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
-        const cashCollected = roundCurrency(wallet?.cashInHand || 0);
-
-        // Last 7 days aggregation for chart
+        // Chart Data (Last 7 Days)
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -182,7 +238,7 @@ export const getDeliveryEarnings = async (req, res) => {
             {
                 $match: {
                     user: deliveryBoyId,
-                    userModel: 'Delivery',
+                    userModel: { $in: ['Delivery', 'DeliveryPartner', 'Rider'] },
                     status: 'Settled',
                     createdAt: { $gte: sevenDaysAgo },
                     type: { $in: ['Delivery Earning', 'Incentive', 'Bonus'] }
@@ -207,13 +263,15 @@ export const getDeliveryEarnings = async (req, res) => {
             chartData.push({
                 name: dayNames[d.getDay()],
                 earnings: foundAt ? foundAt.amount : 0,
-                incentives: 0 // Could be further aggregated if needed
+                incentives: 0
             });
         }
 
         return handleResponse(res, 200, "Earnings fetched", {
-            lifetimeEarnings: settledEarnings,
+            lifetimeEarnings: settledEarningsTotal,
+            spendableBalance,
             totalEarnings: spendableBalance,
+            pendingEarnings,
             pendingWithdrawalsTotal,
             onlinePay,
             incentives,
@@ -221,9 +279,10 @@ export const getDeliveryEarnings = async (req, res) => {
             cashCollected,
             chartData,
             recentTransactions: transactions.slice(0, 50),
-            transactions: transactions.slice(0, 20) // Keep for backward compat
+            transactions: transactions.slice(0, 20)
         });
     } catch (error) {
+        console.error("[Earnings] Critical Error:", error);
         return handleResponse(res, 500, error.message);
     }
 };
@@ -560,60 +619,112 @@ export const getMyDeliveryOrders = async (req, res) => {
    REQUEST WITHDRAWAL (Delivery)
 ================================ */
 export const requestWithdrawal = async (req, res) => {
+    const rawId = req.user?.id || req.user?._id;
+    const deliveryBoyId = new mongoose.Types.ObjectId(String(rawId));
+    const { amount } = req.body;
+    const idempotencyKey = req.headers['idempotency-key'];
+
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+        return handleResponse(res, 400, "Please enter a valid amount");
+    }
+
+    const roundedAmount = roundCurrency(amount);
+
+    // 1. Idempotency Check
+    if (idempotencyKey) {
+        try {
+            if (!validateIdempotencyKey(idempotencyKey)) {
+                return handleResponse(res, 400, "Invalid idempotency key format");
+            }
+            const { exists, result, inProgress } = await checkIdempotency(idempotencyKey, { amount: roundedAmount });
+            if (exists) return handleResponse(res, 200, 'Request already processed', result.data);
+            if (inProgress) return handleResponse(res, 409, 'Request already in progress');
+
+            const locked = await acquireIdempotencyLock(idempotencyKey);
+            if (!locked) return handleResponse(res, 409, 'Request already in progress');
+        } catch (idemError) {
+            console.error("[Withdrawal] Idempotency check failed:", idemError);
+            // Continue if Redis fails, but log it
+        }
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-        const deliveryBoyId = req.user.id;
-        const { amount } = req.body;
-        const idempotencyKey = req.headers['idempotency-key'];
+        // 2. Lock and Update Wallet
+        // We use findOneAndUpdate with a balance check to ensure atomicity even without session (though we use session for Transaction safety)
+        const wallet = await Wallet.findOneAndUpdate(
+            {
+                ownerType: OWNER_TYPE.DELIVERY_PARTNER,
+                ownerId: deliveryBoyId,
+                availableBalance: { $gte: roundedAmount },
+                status: 'ACTIVE'
+            },
+            {
+                $inc: {
+                    availableBalance: -roundedAmount,
+                    pendingBalance: roundedAmount
+                }
+            },
+            { session, new: true }
+        );
 
-        if (!amount || amount <= 0) {
-            return handleResponse(res, 400, "Please enter a valid amount");
+        if (!wallet) {
+            // Check why it failed
+            const currentWallet = await Wallet.findOne({ ownerType: OWNER_TYPE.DELIVERY_PARTNER, ownerId: deliveryBoyId }).session(session);
+            if (!currentWallet) throw new Error("Wallet not found");
+            if (currentWallet.status !== 'ACTIVE') throw new Error("Wallet is not active");
+            if (currentWallet.availableBalance < roundedAmount) {
+                throw new Error(`Insufficient balance. Available: ₹${currentWallet.availableBalance}`);
+            }
+            throw new Error("Withdrawal validation failed");
         }
 
-        // Idempotency via Redis (if available) 
-        const redis = getRedisClient();
-        if (redis && idempotencyKey) {
-            const cacheKey = `withdrawal:idem:${deliveryBoyId}:${idempotencyKey}`;
-            const hit = await redis.get(cacheKey);
-            if (hit) return handleResponse(res, 200, 'Duplicate request', JSON.parse(hit));
+        // 3. Create Withdrawal Transaction
+        const withdrawal = await Transaction.create([
+            {
+                user: deliveryBoyId,
+                userModel: "Delivery",
+                type: "Withdrawal",
+                amount: -Math.abs(roundedAmount),
+                status: "Pending",
+                reference: `WDR-DL-${deliveryBoyId}-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                meta: {
+                    idempotencyKey,
+                    beforeBalance: wallet.availableBalance + roundedAmount,
+                    afterBalance: wallet.availableBalance
+                }
+            }
+        ], { session });
+
+        await session.commitTransaction();
+
+        const resultData = withdrawal[0];
+
+        // 4. Cache Result
+        if (idempotencyKey) {
+            await storeIdempotencyResult(idempotencyKey, resultData, { amount: roundedAmount });
         }
 
-        // 1. Calculate current available balance
-        const transactions = await Transaction.find({ user: deliveryBoyId, userModel: 'Delivery' });
-
-        const settledBalance = transactions
-            .filter(t => t.status === 'Settled')
-            .reduce((acc, t) => acc + t.amount, 0);
-
-        const pendingPayouts = transactions
-            .filter(t => (t.status === 'Pending' || t.status === 'Processing') && t.type === 'Withdrawal')
-            .reduce((acc, t) => acc + Math.abs(t.amount), 0);
-
-        const availableBalance = settledBalance - pendingPayouts;
-
-        if (amount > availableBalance) {
-            return handleResponse(res, 400, `Insufficient balance. Available: ₹${availableBalance}`);
-        }
-
-        // 2. Create Withdrawal Transaction
-        const withdrawal = await Transaction.create({
-            user: deliveryBoyId,
-            userModel: "Delivery",
-            type: "Withdrawal",
-            amount: -Math.abs(amount),
-            status: "Pending",
-            reference: `WDR-DL-${deliveryBoyId}-${Date.now()}` // Include deliveryBoyId for uniqueness
-        });
-
-        if (redis && idempotencyKey) {
-            await redis.set(`withdrawal:idem:${deliveryBoyId}:${idempotencyKey}`,
-                JSON.stringify(withdrawal), 'EX', 86400);
-        }
-
-        return handleResponse(res, 201, "Withdrawal request submitted successfully", withdrawal);
+        return handleResponse(res, 201, "Withdrawal request submitted successfully", resultData);
     } catch (error) {
-        return handleResponse(res, 500, error.message);
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
+
+        if (idempotencyKey) {
+            await releaseIdempotencyLock(idempotencyKey);
+        }
+
+        console.error("[Withdrawal] Error:", error);
+        return handleResponse(res, error.message.includes('Insufficient') ? 400 : 500, error.message);
+    } finally {
+        session.endSession();
     }
 };
+
 
 /* ===============================
    UPDATE LIVE LOCATION (Delivery)

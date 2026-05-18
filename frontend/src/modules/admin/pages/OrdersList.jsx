@@ -1,6 +1,6 @@
 // Comprehensive Order Management System
 import React, { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
 import Pagination from '@shared/components/ui/Pagination';
@@ -36,7 +36,9 @@ const OrdersList = () => {
     const { status = 'all' } = useParams();
     const navigate = useNavigate();
     const { showToast } = useToast();
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchParams] = useSearchParams();
+    const initialSearch = searchParams.get('search') || '';
+    const [searchTerm, setSearchTerm] = useState(initialSearch);
     const [dateRange, setDateRange] = useState('All Time');
     const [orders, setOrders] = useState([]);
     const [page, setPage] = useState(1);
@@ -44,8 +46,15 @@ const OrdersList = () => {
     const [total, setTotal] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
-    const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
     const [backendStats, setBackendStats] = useState(null);
+    const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+
+    useEffect(() => {
+        const q = searchParams.get('search');
+        if (q !== null && q !== searchTerm) {
+            setSearchTerm(q);
+        }
+    }, [searchParams]);
 
     const escapeCSV = (val) => {
         const str = String(val || "");

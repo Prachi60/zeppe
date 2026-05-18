@@ -33,6 +33,7 @@ export async function createPendingPayoutForOrder({
   amount,
   remarks = "Automatic payout creation on delivery.",
   metadata = {},
+  immediate = false,
 }) {
   if (!order || !beneficiaryId || amount <= 0) return null;
 
@@ -54,13 +55,17 @@ export async function createPendingPayoutForOrder({
     const ownerType = payoutTypeToOwnerType(payoutType);
     const wallet = await getOrCreateWallet(ownerType, beneficiaryId, { session });
 
+    const status = immediate ? PAYOUT_STATUS.COMPLETED : PAYOUT_STATUS.PENDING;
+    const processedAt = immediate ? new Date() : null;
+
     const payout = await Payout.create(
       [
         {
           payoutType,
           beneficiaryId,
           amount: roundCurrency(amount),
-          status: PAYOUT_STATUS.PENDING,
+          status,
+          processedAt,
           relatedOrderIds: [order._id],
           remarks,
           metadata: {
@@ -72,7 +77,11 @@ export async function createPendingPayoutForOrder({
       { session },
     );
 
-    wallet.pendingBalance = roundCurrency((wallet.pendingBalance || 0) + amount);
+    if (immediate) {
+      wallet.availableBalance = roundCurrency((wallet.availableBalance || 0) + amount);
+    } else {
+      wallet.pendingBalance = roundCurrency((wallet.pendingBalance || 0) + amount);
+    }
     wallet.totalCredited = roundCurrency((wallet.totalCredited || 0) + amount);
     await wallet.save({ session });
 
@@ -83,13 +92,34 @@ export async function createPendingPayoutForOrder({
         walletId: wallet._id,
         actorType: ownerType,
         actorId: beneficiaryId,
-        type: LEDGER_TRANSACTION_TYPE.PAYOUT_QUEUED,
+        type: immediate 
+          ? (payoutType === PAYOUT_TYPE.SELLER ? LEDGER_TRANSACTION_TYPE.SELLER_PAYOUT_PROCESSED : LEDGER_TRANSACTION_TYPE.RIDER_PAYOUT_PROCESSED)
+          : LEDGER_TRANSACTION_TYPE.PAYOUT_QUEUED,
         direction: LEDGER_DIRECTION.CREDIT,
         amount: roundCurrency(amount),
-        description: `${payoutType} payout queued for order ${order.orderId}`,
+        description: immediate 
+          ? `${payoutType} payout processed immediately for order ${order.orderId}`
+          : `${payoutType} payout queued for order ${order.orderId}`,
       },
       { session },
     );
+
+    if (immediate) {
+      await createFinanceAuditLog(
+        {
+          action: "PAYOUT_PROCESSED_IMMEDIATE",
+          actorType: OWNER_TYPE.ADMIN,
+          actorId: null,
+          payoutId: payout[0]._id,
+          metadata: {
+            payoutType,
+            beneficiaryId: String(beneficiaryId),
+            amount: roundCurrency(amount),
+          },
+        },
+        { session },
+      );
+    }
 
     await session.commitTransaction();
     return payout[0];
