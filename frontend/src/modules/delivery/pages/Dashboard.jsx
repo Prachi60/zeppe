@@ -284,7 +284,7 @@ const Dashboard = () => {
           <div className="flex items-baseline mb-6 relative z-10">
             <span className="text-2xl font-bold text-gray-400 mr-1">₹</span>
             <span className="text-4xl font-extrabold text-gray-900 tracking-tight">
-              {earnings.today}
+              {Number(earnings.today || 0).toLocaleString('en-IN')}
             </span>
             <span className="ml-3 text-brand-600 text-xs font-bold flex items-center bg-brand-50 border border-brand-100 px-2 py-1 rounded-full">
               <TrendingUp size={12} className="mr-1" /> +12%

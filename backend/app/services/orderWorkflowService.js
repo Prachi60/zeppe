@@ -31,6 +31,8 @@ import { applyDeliveredSettlement } from "./orderSettlement.js";
 import { requireCanonicalOrderId } from "../utils/orderLookup.js";
 import { emitNotificationEvent } from "../modules/notifications/notification.emitter.js";
 import { NOTIFICATION_EVENTS } from "../modules/notifications/notification.constants.js";
+import Wallet from "../models/wallet.js";
+import { roundCurrency } from "../utils/money.js";
 
 const DELIVERY_SEARCH_MAX_ATTEMPTS = () =>
   parseInt(process.env.DELIVERY_SEARCH_MAX_ATTEMPTS || "3", 10);
@@ -397,6 +399,29 @@ export async function deliveryAcceptAtomic(deliveryId, orderId, idempotencyKey) 
       }
     } catch {
       /* idempotency optional if Redis unavailable */
+    }
+  }
+
+  // COD Cash Limit Guard
+  const orderToCheck = await Order.findOne({ orderId }).select("paymentMode pricing paymentBreakdown").lean();
+  if (orderToCheck?.paymentMode === "COD") {
+    const COD_CASH_LIMIT = parseInt(process.env.COD_CASH_LIMIT || "5000", 10);
+    const riderWallet = await Wallet.findOne({
+      ownerType: "DELIVERY_PARTNER",
+      ownerId: deliveryOid,
+    }).select("cashInHand").lean();
+    
+    const currentCashInHand = roundCurrency(riderWallet?.cashInHand || 0);
+    const incomingCodAmount = roundCurrency(
+      orderToCheck.paymentBreakdown?.grandTotal ?? orderToCheck.pricing?.total ?? 0
+    );
+    
+    if (currentCashInHand + incomingCodAmount > COD_CASH_LIMIT) {
+      const err = new Error(
+        `COD cash limit exceeded. You are holding ₹${currentCashInHand}. Submit your existing COD cash before accepting new COD orders.`
+      );
+      err.statusCode = 403;
+      throw err;
     }
   }
 

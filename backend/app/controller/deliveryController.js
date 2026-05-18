@@ -14,6 +14,7 @@ import { applyDeliveredSettlement } from "../services/orderSettlement.js";
 import { roundCurrency } from "../utils/money.js";
 import { OWNER_TYPE } from "../constants/finance.js";
 import { getOrCreateWallet } from "../services/finance/walletService.js";
+import { reconcileCodCash } from "../services/finance/orderFinanceService.js";
 import { 
     checkIdempotency, 
     acquireIdempotencyLock, 
@@ -205,7 +206,28 @@ export const getDeliveryEarnings = async (req, res) => {
         }
 
         // 4. Statistics
-        const tipsReceived = transactions
+        const period = req.query.period || 'weekly';
+        const now = new Date();
+        let periodStart;
+        let daysToLoop = 7;
+        
+        if (period === 'today') {
+            periodStart = new Date(now);
+            periodStart.setHours(0, 0, 0, 0);
+            daysToLoop = 1;
+        } else if (period === 'monthly') {
+            periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            daysToLoop = Math.min(Math.floor((now - periodStart) / (1000 * 60 * 60 * 24)) + 1, 31);
+        } else {
+            // weekly
+            periodStart = new Date(now);
+            periodStart.setDate(now.getDate() - 7);
+            daysToLoop = 7;
+        }
+
+        const periodTransactions = transactions.filter(t => new Date(t.createdAt) >= periodStart);
+
+        const tipsReceived = periodTransactions
             .filter(t => (t.type || "").toLowerCase() === 'delivery earning' && t.status === 'Settled')
             .reduce(
                 (acc, t) =>
@@ -219,35 +241,37 @@ export const getDeliveryEarnings = async (req, res) => {
                 0,
             );
 
-        const onlinePay = transactions
+        const onlinePay = periodTransactions
             .filter(t => (t.type || "").toLowerCase() === 'delivery earning' && t.status === 'Settled')
             .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
-        const incentives = transactions
+        const incentives = periodTransactions
             .filter(t => {
                 const type = (t.type || "").toLowerCase();
                 return t.status === 'Settled' && (type === 'incentive' || type === 'bonus');
             })
             .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
-        // Chart Data (Last 7 Days)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
+        // Chart Data
         const dailyAggregation = await Transaction.aggregate([
             {
                 $match: {
                     user: deliveryBoyId,
                     userModel: { $in: ['Delivery', 'DeliveryPartner', 'Rider'] },
                     status: 'Settled',
-                    createdAt: { $gte: sevenDaysAgo },
+                    createdAt: { $gte: periodStart },
                     type: { $in: ['Delivery Earning', 'Incentive', 'Bonus'] }
                 }
             },
             {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                    amount: { $sum: "$amount" }
+                    amount: { $sum: "$amount" },
+                    incentives: {
+                        $sum: {
+                            $cond: [{ $in: ['$type', ['Incentive', 'Bonus']] }, '$amount', 0]
+                        }
+                    }
                 }
             },
             { $sort: { _id: 1 } }
@@ -255,22 +279,22 @@ export const getDeliveryEarnings = async (req, res) => {
 
         const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const chartData = [];
-        for (let i = 6; i >= 0; i--) {
+        for (let i = daysToLoop - 1; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
             const dateStr = d.toISOString().split('T')[0];
             const foundAt = dailyAggregation.find(a => a._id === dateStr);
             chartData.push({
-                name: dayNames[d.getDay()],
-                earnings: foundAt ? foundAt.amount : 0,
-                incentives: 0
+                name: period === 'monthly' ? dateStr.split('-')[2] : dayNames[d.getDay()],
+                earnings: foundAt ? roundCurrency(foundAt.amount - (foundAt.incentives || 0)) : 0,
+                incentives: foundAt ? roundCurrency(foundAt.incentives || 0) : 0
             });
         }
 
         return handleResponse(res, 200, "Earnings fetched", {
             lifetimeEarnings: settledEarningsTotal,
             spendableBalance,
-            totalEarnings: spendableBalance,
+            totalEarnings: settledEarningsTotal,
             pendingEarnings,
             pendingWithdrawalsTotal,
             onlinePay,
@@ -346,8 +370,11 @@ export const getDeliveryCodCashSummary = async (req, res) => {
             };
         });
 
+        // Only collected orders that still have pending remittance
         const systemFloatCOD = roundCurrency(
-            normalized.reduce((sum, row) => sum + Number(row.systemFloatContribution || 0), 0),
+            normalized
+                .filter((row) => row.codMarkedCollected && Number(row.amountNetPending || 0) > 0)
+                .reduce((sum, row) => sum + Number(row.amountNetPending || 0), 0),
         );
 
         const toRemit = normalized

@@ -36,10 +36,10 @@ const EarningsPage = () => {
     recentTransactions: [],
   });
 
-  const fetchEarnings = async () => {
+  const fetchEarnings = async (period = activeTab) => {
     try {
       setLoading(true);
-      const response = await deliveryApi.getEarnings();
+      const response = await deliveryApi.getEarnings({ period });
       if (response.data.success && response.data.result) {
         const result = response.data.result;
         setEarningsData({
@@ -84,7 +84,7 @@ const EarningsPage = () => {
         const date = txn.date || new Date(txn.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
         const type = txn.type || "Earnings";
         const prefix = String(type).includes("Withdrawal") ? "-" : "+";
-        const amount = `${prefix}Rs. ${txn.amount || 0}`;
+        const amount = `${prefix}Rs. ${Math.abs(txn.amount || 0)}`;
         const status = txn.status || "Settled";
         const tip = resolveTipAmount(txn);
         const tipAmount = tip > 0 ? `Rs. ${tip}` : "Rs. 0";
@@ -111,9 +111,9 @@ const EarningsPage = () => {
   };
 
   React.useEffect(() => {
-    fetchEarnings();
+    fetchEarnings(activeTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeTab]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -296,7 +296,7 @@ const EarningsPage = () => {
                       <p className="font-bold text-gray-900">
                         {String(txn.type || "").includes("Withdrawal") ? "- " : "+ "}
                         {RUPEE}
-                        {Number(txn.amount || 0).toLocaleString()}
+                        {Math.abs(Number(txn.amount || 0)).toLocaleString()}
                       </p>
                       <p
                         className={`text-xs font-bold ${
