@@ -61,6 +61,9 @@ export function createRateLimiter({
   keyGenerator,
   message = "Too many requests. Please try again later.",
 }) {
+  if (max <= 0 || windowMs <= 0) {
+    return (req, res, next) => next();
+  }
   const safeWindowMs = Math.max(1000, Number(windowMs || 60000));
   const safeMax = Math.max(1, Number(max || 60));
   const windowSec = Math.ceil(safeWindowMs / 1000);

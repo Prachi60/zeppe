@@ -65,6 +65,9 @@ function hashOtp(target, otp) {
 }
 
 async function incrementWindowCounter(redisKey, { limit, windowSeconds }) {
+  if (limit <= 0 || windowSeconds <= 0) {
+    return true;
+  }
   const redis = getRedisClient();
   if (redis) {
     try {

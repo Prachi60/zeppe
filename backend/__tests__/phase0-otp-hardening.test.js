@@ -3,18 +3,21 @@ import { jest } from "@jest/globals";
 const mockCustomerFindOne = jest.fn();
 const mockCustomerCreate = jest.fn();
 const mockCustomerFindById = jest.fn();
+const mockCustomerUpdateOne = jest.fn().mockResolvedValue(true);
 
 jest.unstable_mockModule("../app/models/customer.js", () => ({
   default: {
     findOne: mockCustomerFindOne,
     create: mockCustomerCreate,
     findById: mockCustomerFindById,
+    updateOne: mockCustomerUpdateOne,
   },
 }));
 
 jest.unstable_mockModule("../app/utils/otp.js", () => ({
   generateOTP: jest.fn(() => "1234"),
   useRealSMS: jest.fn(() => false),
+  useRealEmail: jest.fn(() => false),
 }));
 
 const { issueCustomerOtp, verifyCustomerOtpCode } = await import(
@@ -25,7 +28,7 @@ function buildCustomer(overrides = {}) {
   return {
     _id: "customer-1",
     name: "Test User",
-    phone: "+919876543210",
+    email: "test@example.com",
     isVerified: false,
     otpHash: null,
     otpExpiresAt: null,
@@ -55,7 +58,7 @@ describe("Phase 0 OTP hardening", () => {
 
   it("enforces resend cooldown", async () => {
     const customer = buildCustomer({
-      phone: "+919876543211",
+      email: "user1@example.com",
       otpLastSentAt: new Date(Date.now() - 10 * 1000),
     });
     mockFindOneSelect(customer);
@@ -63,7 +66,7 @@ describe("Phase 0 OTP hardening", () => {
     await expect(
       issueCustomerOtp({
         name: "User 1",
-        rawPhone: "9876543211",
+        rawEmail: "user1@example.com",
         flow: "signup",
         ipAddress: "127.0.0.1",
       }),
@@ -72,7 +75,7 @@ describe("Phase 0 OTP hardening", () => {
 
   it("locks out number after repeated OTP verification failures", async () => {
     const customer = buildCustomer({
-      phone: "+919876543212",
+      email: "user2@example.com",
       otpHash: "some-other-hash",
       otpExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
       otpFailedAttempts: 4,
@@ -81,7 +84,7 @@ describe("Phase 0 OTP hardening", () => {
 
     await expect(
       verifyCustomerOtpCode({
-        rawPhone: "9876543212",
+        rawEmail: "user2@example.com",
         otp: "9999",
         ipAddress: "127.0.0.1",
       }),
@@ -93,14 +96,14 @@ describe("Phase 0 OTP hardening", () => {
 
   it("never stores raw OTP in DB fields", async () => {
     const customer = buildCustomer({
-      phone: "+919876543213",
+      email: "user3@example.com",
       otpLastSentAt: new Date(Date.now() - 120 * 1000),
     });
     mockFindOneSelect(customer);
 
     await issueCustomerOtp({
       name: "User 3",
-      rawPhone: "9876543213",
+      rawEmail: "user3@example.com",
       flow: "signup",
       ipAddress: "127.0.0.1",
     });
